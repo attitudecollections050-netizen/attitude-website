@@ -89,7 +89,7 @@ export default async function HomePage() {
       <section className="overflow-hidden bg-blush py-24 sm:py-32" aria-labelledby="intro-heading">
         <div className="container-luxe grid items-center gap-12 lg:grid-cols-[auto_1fr] lg:gap-24">
           <Reveal className="hidden lg:block">
-            <Monogram className="size-56 text-plum" />
+            <Monogram className="size-60 drop-shadow-[0_30px_40px_rgba(217,79,145,0.25)]" />
           </Reveal>
           <Reveal>
             <p className="eyebrow text-rose-deep">The house of attitude</p>

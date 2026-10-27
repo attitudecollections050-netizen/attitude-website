@@ -6,7 +6,7 @@ export function AuthShell({ eyebrow, title, children, footer }: { eyebrow: strin
       <div className="relative hidden overflow-hidden bg-plum lg:block">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(217,79,145,0.45),transparent_55%),radial-gradient(circle_at_80%_90%,rgba(251,228,238,0.25),transparent_50%)]" />
         <div className="relative flex h-full flex-col justify-between p-14 text-white">
-          <Monogram className="size-16 text-white" />
+          <Monogram className="size-20" />
           <p className="display max-w-md text-6xl">
             Wear your <span className="italic text-pale">attitude.</span>
           </p>

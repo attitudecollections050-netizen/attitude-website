@@ -16,7 +16,7 @@ export function SmartImage({ src, alt, className, fallbackLabel, ...props }: Omi
         {...(alt ? { role: "img", "aria-label": alt } : { "aria-hidden": true })}
         className={cn("absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-blush via-pale to-[#f6d3e2] text-plum/70", className)}
       >
-        <Monogram className="size-10 text-plum/60" />
+        <Monogram className="size-12 opacity-40 grayscale-[30%]" />
         {fallbackLabel && <span className="px-4 text-center font-display text-lg italic">{fallbackLabel}</span>}
       </div>
     );
