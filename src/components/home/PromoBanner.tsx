@@ -28,11 +28,11 @@ export function PromoBanners({ banners }: { banners: HomeBanner[] }) {
         return (
           <Reveal key={b.id} delay={i * 0.1}>
             {b.cta_href ? (
-              <Link href={b.cta_href} className="group relative block aspect-[4/5] overflow-hidden bg-plum sm:aspect-[5/4]">
+              <Link href={b.cta_href} className="group relative block aspect-[4/5] overflow-hidden rounded-[2rem] bg-plum sm:aspect-[5/4]">
                 {inner}
               </Link>
             ) : (
-              <div className="group relative aspect-[4/5] overflow-hidden bg-plum sm:aspect-[5/4]">{inner}</div>
+              <div className="group relative aspect-[4/5] overflow-hidden rounded-[2rem] bg-plum sm:aspect-[5/4]">{inner}</div>
             )}
           </Reveal>
         );

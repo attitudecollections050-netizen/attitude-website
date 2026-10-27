@@ -10,7 +10,7 @@ export function DiscountForm() {
 
   if (cart.discount) {
     return (
-      <div className="flex items-center justify-between bg-pale px-3 py-2 text-sm">
+      <div className="flex items-center justify-between rounded-full bg-pale px-4 py-2 text-sm">
         <span>
           <span className="font-semibold">{cart.discount.code}</span> · {cart.discount.label}
         </span>
@@ -44,7 +44,7 @@ export function DiscountForm() {
           aria-invalid={Boolean(error)}
           aria-describedby={error ? "discount-error" : undefined}
         />
-        <button type="submit" disabled={pending || code.trim().length < 3} className="shrink-0 border border-plum px-4 text-[0.68rem] font-bold uppercase tracking-[0.18em] transition hover:bg-plum hover:text-white disabled:opacity-40">
+        <button type="submit" disabled={pending || code.trim().length < 3} className="shrink-0 rounded-full border border-plum px-5 text-[0.68rem] font-bold uppercase tracking-[0.18em] transition hover:bg-plum hover:text-white disabled:opacity-40">
           Apply
         </button>
       </div>

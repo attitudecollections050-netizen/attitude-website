@@ -5,9 +5,9 @@ type Variant = "primary" | "rose" | "outline" | "ghost" | "light";
 type Size = "sm" | "md" | "lg";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-plum text-white hover:bg-rose-deep",
+  primary: "bg-plum text-white shadow-[0_12px_30px_-14px_rgba(37,25,35,0.7)] hover:bg-rose-deep",
   rose: "bg-rose-deep text-white hover:bg-plum",
-  outline: "border border-plum text-plum hover:bg-plum hover:text-white",
+  outline: "border border-plum/25 bg-white/60 text-plum hover:border-plum hover:bg-plum hover:text-white",
   ghost: "text-plum hover:bg-blush",
   light: "bg-white text-plum hover:bg-blush",
 };
@@ -19,7 +19,7 @@ const sizes: Record<Size, string> = {
 
 export function buttonClasses(variant: Variant = "primary", size: Size = "md", className?: string) {
   return cn(
-    "group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-[2px] font-sans font-bold uppercase tracking-[0.2em]",
+    "group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full font-sans font-bold uppercase tracking-[0.16em]",
     "transition-[background-color,color,border-color,transform] duration-300 ease-[var(--ease-luxe)] active:scale-[0.98]",
     "disabled:pointer-events-none disabled:opacity-50",
     variants[variant],

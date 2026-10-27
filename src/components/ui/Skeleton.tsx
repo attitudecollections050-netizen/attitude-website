@@ -1,7 +1,7 @@
 import { cn } from "@/lib/cn";
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("skeleton rounded-[2px]", className)} aria-hidden />;
+  return <div className={cn("skeleton rounded-[1rem]", className)} aria-hidden />;
 }
 
 export function ProductGridSkeleton({ count = 8 }: { count?: number }) {

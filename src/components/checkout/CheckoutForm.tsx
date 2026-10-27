@@ -304,7 +304,7 @@ export function CheckoutForm({
                 {activeQuote.options.map((o) => {
                   const window = formatDeliveryWindow(o.minDays, o.maxDays);
                   return (
-                    <label key={o.rateId} className={cn("flex cursor-pointer items-center gap-4 border px-4 py-4 transition", rateId === o.rateId ? "border-plum bg-blush" : "border-line hover:border-plum/40")}>
+                    <label key={o.rateId} className={cn("flex cursor-pointer items-center gap-4 rounded-2xl border px-4 py-4 transition", rateId === o.rateId ? "border-plum bg-blush" : "border-line hover:border-plum/40")}>
                       <input type="radio" name="shipping" className="size-4 accent-[#d94f91]" checked={rateId === o.rateId} onChange={() => setRateId(o.rateId)} />
                       <Truck className="size-4 text-rose" aria-hidden />
                       <span className="flex-1 text-sm">
@@ -332,7 +332,7 @@ export function CheckoutForm({
         </section>
       </form>
 
-      <aside className="h-fit bg-neutral p-6 lg:sticky lg:top-28" aria-label="Order summary">
+      <aside className="h-fit rounded-[1.75rem] bg-neutral p-6 lg:sticky lg:top-28" aria-label="Order summary">
         <h2 className="font-display text-2xl">Order summary</h2>
         <ul className="mt-5 max-h-80 space-y-4 overflow-y-auto pr-1">
           {cart.lines.map((l) => (

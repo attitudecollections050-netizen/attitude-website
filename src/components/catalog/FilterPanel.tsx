@@ -120,7 +120,7 @@ function FilterControls({ filters, facets }: { filters: CatalogFilters; facets: 
                   type="button"
                   onClick={() => toggleList("size", s)}
                   aria-pressed={on}
-                  className={cn("min-w-11 border px-3 py-2 text-xs font-semibold transition", on ? "border-plum bg-plum text-white" : "border-line hover:border-plum")}
+                  className={cn("min-w-11 rounded-full border px-3 py-2 text-xs font-semibold transition", on ? "border-plum bg-plum text-white" : "border-line hover:border-plum")}
                 >
                   {s}
                 </button>
@@ -166,7 +166,7 @@ function FilterControls({ filters, facets }: { filters: CatalogFilters; facets: 
             Max
             <input inputMode="numeric" value={max} onChange={(e) => setMax(e.target.value)} placeholder={facets.max_price ? String(Math.ceil(facets.max_price / 100)) : ""} className="field mt-1 !py-2" />
           </label>
-          <button type="submit" className="h-[2.4rem] bg-plum px-3 text-[0.65rem] font-bold uppercase tracking-[0.15em] text-white hover:bg-rose-deep">
+          <button type="submit" className="h-[2.4rem] rounded-full bg-plum px-4 text-[0.65rem] font-bold uppercase tracking-[0.15em] text-white hover:bg-rose-deep">
             Go
           </button>
         </form>
@@ -198,7 +198,7 @@ export function MobileFilterButton({ filters, facets, activeCount }: { filters: 
   useDialog(open, () => setOpen(false), ref);
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="flex items-center gap-2 border border-line px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] lg:hidden" aria-expanded={open}>
+      <button type="button" onClick={() => setOpen(true)} className="flex items-center gap-2 rounded-full border border-line px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] lg:hidden" aria-expanded={open}>
         <SlidersHorizontal className="size-3.5" /> Filter {activeCount > 0 && <span className="rounded-full bg-rose-deep px-1.5 text-[0.6rem] text-white">{activeCount}</span>}
       </button>
       <AnimatePresence>
@@ -225,7 +225,7 @@ export function MobileFilterButton({ filters, facets, activeCount }: { filters: 
                 </button>
               </div>
               <FilterControls filters={filters} facets={facets} />
-              <button type="button" onClick={() => setOpen(false)} className="mt-6 h-12 w-full bg-plum text-xs font-bold uppercase tracking-[0.2em] text-white">
+              <button type="button" onClick={() => setOpen(false)} className="mt-6 h-12 w-full rounded-full bg-plum text-xs font-bold uppercase tracking-[0.2em] text-white">
                 Show results
               </button>
             </m.div>

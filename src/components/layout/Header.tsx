@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
-import { Menu, Search, ShoppingBag, User } from "lucide-react";
+import { ArrowRight, Menu, Search, ShoppingBag, User } from "lucide-react";
 import type { CategoryNode } from "@/lib/catalog/types";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { useCart } from "@/components/cart/CartProvider";
@@ -58,59 +58,57 @@ export function Header({ categories, signedIn }: { categories: CategoryNode[]; s
         onMouseLeave={scheduleClose}
         onKeyDown={(e) => e.key === "Escape" && setActive(null)}
       >
-        <div className={cn("container-luxe grid grid-cols-[1fr_auto_1fr] items-center transition-[height] duration-300", scrolled ? "h-16" : "h-[4.5rem] lg:h-20")}>
+        <div className={cn("container-luxe grid grid-cols-[1fr_auto_1fr] items-center gap-4 transition-[height] duration-300 lg:grid-cols-[auto_1fr_auto]", scrolled ? "h-16" : "h-[4.5rem] lg:h-20")}>
           <div className="flex items-center gap-1">
             <button
               type="button"
-              className="-ml-2 p-2 lg:hidden"
+              className="-ml-2 grid size-10 place-items-center rounded-full transition hover:bg-blush lg:hidden"
               onClick={() => setMobileOpen(true)}
               aria-label="Open menu"
               aria-expanded={mobileOpen}
             >
               <Menu className="size-5" />
             </button>
-            <nav aria-label="Main" className="hidden lg:block">
-              <ul className="flex items-center">
-                {categories.map((cat) => (
-                  <li key={cat.id} onMouseEnter={() => openMenu(cat.slug)}>
-                    <Link
-                      href={cat.href}
-                      className={cn(
-                        "relative block px-3 py-3 text-[0.68rem] font-bold uppercase tracking-[0.18em] transition-colors xl:px-4",
-                        active === cat.slug || pathname.startsWith(cat.href) ? "text-rose-deep" : "hover:text-rose-deep",
-                      )}
-                      aria-haspopup={cat.children.length > 0 ? "true" : undefined}
-                      aria-expanded={cat.children.length > 0 ? active === cat.slug : undefined}
-                      onFocus={() => openMenu(cat.slug)}
-                    >
-                      {cat.name.replace("Clothing", "").trim()}
-                      <span
-                        className={cn(
-                          "absolute inset-x-3 bottom-1.5 h-px origin-left bg-rose-deep transition-transform duration-300 xl:inset-x-4",
-                          active === cat.slug ? "scale-x-100" : "scale-x-0",
-                        )}
-                      />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
+            <Link href="/" className="hidden lg:block" aria-label="Attitude Collections — home">
+              <Wordmark inline />
+            </Link>
           </div>
 
-          <Link href="/" className="justify-self-center" aria-label="Attitude Collections — home">
-            <Wordmark />
+          <Link href="/" className="justify-self-center lg:hidden" aria-label="Attitude Collections — home">
+            <Wordmark inline />
           </Link>
 
-          <div className="flex items-center justify-end gap-0.5 sm:gap-1">
-            <button type="button" className="p-2.5 transition hover:text-rose-deep" onClick={() => setSearchOpen(true)} aria-label="Search products">
+          <nav aria-label="Main" className="hidden justify-self-center lg:block">
+            <ul className="flex items-center gap-1 xl:gap-2">
+              <li onMouseEnter={scheduleClose}>
+                <NavLink href="/" active={pathname === "/"}>Home</NavLink>
+              </li>
+              {categories.map((cat) => (
+                <li key={cat.id} onMouseEnter={() => openMenu(cat.slug)}>
+                  <NavLink
+                    href={cat.href}
+                    active={active === cat.slug || pathname.startsWith(cat.href)}
+                    hasMenu={cat.children.length > 0}
+                    expanded={active === cat.slug}
+                    onFocus={() => openMenu(cat.slug)}
+                  >
+                    {cat.name.replace("Clothing", "").trim()}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <div className="flex items-center justify-end gap-0.5 sm:gap-1.5">
+            <button type="button" className="grid size-10 place-items-center rounded-full transition hover:bg-blush" onClick={() => setSearchOpen(true)} aria-label="Search products">
               <Search className="size-[1.15rem]" />
             </button>
-            <Link href={signedIn ? "/account" : "/account/login"} className="hidden p-2.5 transition hover:text-rose-deep sm:block" aria-label={signedIn ? "My account" : "Sign in"}>
+            <Link href={signedIn ? "/account" : "/account/login"} className="hidden size-10 place-items-center rounded-full transition hover:bg-blush sm:grid" aria-label={signedIn ? "My account" : "Sign in"}>
               <User className="size-[1.15rem]" />
             </Link>
             <button
               type="button"
-              className="relative -mr-2 p-2.5 transition hover:text-rose-deep"
+              className="relative grid size-10 place-items-center rounded-full transition hover:bg-blush"
               onClick={() => setOpen(true)}
               aria-label={`Shopping bag, ${cart.itemCount} item${cart.itemCount === 1 ? "" : "s"}`}
             >
@@ -123,13 +121,20 @@ export function Header({ categories, signedIn }: { categories: CategoryNode[]; s
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.4, opacity: 0 }}
                     transition={{ type: "spring", stiffness: 500, damping: 22 }}
-                    className="absolute right-0.5 top-0.5 grid min-w-[1.1rem] place-items-center rounded-full bg-rose-deep px-1 text-[0.6rem] font-bold leading-[1.1rem] text-white"
+                    className="absolute right-0.5 top-0.5 grid min-w-[1.1rem] place-items-center rounded-full bg-plum px-1 text-[0.6rem] font-bold leading-[1.1rem] text-white ring-2 ring-white"
                   >
                     {cart.itemCount > 99 ? "99+" : cart.itemCount}
                   </m.span>
                 )}
               </AnimatePresence>
             </button>
+            <Link
+              href="/shop"
+              className="group ml-2 hidden h-11 items-center gap-2 rounded-full bg-plum pl-5 pr-4 text-[0.8rem] font-semibold text-white shadow-[0_10px_25px_-12px_rgba(37,25,35,0.7)] transition hover:bg-rose-deep xl:inline-flex"
+            >
+              Shop the collection
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
+            </Link>
           </div>
         </div>
 
@@ -186,5 +191,35 @@ export function Header({ categories, signedIn }: { categories: CategoryNode[]; s
       <MobileMenu open={mobileOpen} onClose={() => setMobileOpen(false)} categories={categories} signedIn={signedIn} />
       <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
+  );
+}
+
+function NavLink({
+  href,
+  active,
+  hasMenu,
+  expanded,
+  onFocus,
+  children,
+}: {
+  href: string;
+  active: boolean;
+  hasMenu?: boolean;
+  expanded?: boolean;
+  onFocus?: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      onFocus={onFocus}
+      aria-haspopup={hasMenu ? "true" : undefined}
+      aria-expanded={hasMenu ? expanded : undefined}
+      aria-current={active && href === "/" ? "page" : undefined}
+      className={cn("relative block px-3 py-3 text-[0.86rem] transition-colors", active ? "font-semibold text-plum" : "text-plum-soft hover:text-plum")}
+    >
+      {children}
+      <span className={cn("absolute inset-x-3 bottom-1 h-[2px] origin-center rounded-full bg-plum transition-transform duration-300", active ? "scale-x-100" : "scale-x-0")} />
+    </Link>
   );
 }

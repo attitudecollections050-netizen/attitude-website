@@ -9,7 +9,7 @@ export function CategoryCards({ categories }: { categories: CategoryNode[] }) {
     <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
       {categories.map((c, i) => (
         <Reveal as="li" key={c.id} delay={i * 0.07} className={cn(i === 0 && "col-span-2 lg:col-span-1")}>
-          <Link href={c.href} className="group relative block aspect-[4/5] overflow-hidden bg-blush lg:aspect-[3/4.4]">
+          <Link href={c.href} className="group relative block aspect-[4/5] overflow-hidden rounded-[1.75rem] bg-blush lg:aspect-[3/4.4]">
             <SmartImage
               src={c.image_url}
               alt={c.name}

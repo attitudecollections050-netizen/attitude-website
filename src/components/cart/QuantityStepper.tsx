@@ -21,7 +21,7 @@ export function QuantityStepper({
 }) {
   const h = size === "sm" ? "h-9" : "h-12";
   return (
-    <div className={cn("inline-flex items-center border border-line", h)} role="group" aria-label={label}>
+    <div className={cn("inline-flex items-center rounded-full border border-line bg-white px-0.5", h)} role="group" aria-label={label}>
       <button
         type="button"
         className={cn("grid place-items-center text-plum transition hover:bg-blush disabled:opacity-30", size === "sm" ? "w-8" : "w-11", "h-full")}

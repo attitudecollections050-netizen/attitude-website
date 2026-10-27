@@ -16,7 +16,7 @@ export function ProductCard({ product, priority = false, sizes = "(min-width:102
 
   return (
     <article className="group relative" onMouseLeave={() => setQuickOpen(false)}>
-      <div className="relative aspect-[3/4] overflow-hidden bg-neutral">
+      <div className="relative aspect-[3/4] overflow-hidden rounded-[1.25rem] bg-neutral">
         <Link href={href} className="absolute inset-0" aria-label={product.name} tabIndex={-1}>
           <SmartImage
             src={product.image_url}
@@ -42,8 +42,8 @@ export function ProductCard({ product, priority = false, sizes = "(min-width:102
         </Link>
 
         <div className="pointer-events-none absolute left-3 top-3 flex flex-col gap-1.5">
-          {onSale && <span className="bg-rose-deep px-2 py-1 text-[0.6rem] font-bold uppercase tracking-[0.18em] text-white">Sale</span>}
-          {!product.in_stock && <span className="bg-white/90 px-2 py-1 text-[0.6rem] font-bold uppercase tracking-[0.18em] text-plum">Sold out</span>}
+          {onSale && <span className="rounded-full bg-rose-deep px-2.5 py-1 text-[0.6rem] font-bold uppercase tracking-[0.18em] text-white">Sale</span>}
+          {!product.in_stock && <span className="rounded-full bg-white/90 px-2.5 py-1 text-[0.6rem] font-bold uppercase tracking-[0.18em] text-plum">Sold out</span>}
         </div>
 
         {product.in_stock && (

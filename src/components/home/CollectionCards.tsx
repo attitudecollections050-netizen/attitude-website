@@ -17,7 +17,7 @@ export function CollectionCards({ collections }: { collections: CollectionCard[]
       {collections.map((c, i) => (
         <Reveal as="li" key={c.id} delay={i * 0.08}>
           <Link href={`/collections/${c.slug}`} className="group grid gap-5 sm:grid-cols-[1.1fr_1fr] sm:items-center">
-            <span className="relative block aspect-[4/5] overflow-hidden bg-blush">
+            <span className="relative block aspect-[4/5] overflow-hidden rounded-[1.75rem] bg-blush">
               <SmartImage src={c.image_url} alt={c.name} fill sizes="(min-width:768px) 28vw, 100vw" className="object-cover transition-transform duration-[1.4s] ease-[var(--ease-luxe)] group-hover:scale-105" fallbackLabel={c.name} />
             </span>
             <span>

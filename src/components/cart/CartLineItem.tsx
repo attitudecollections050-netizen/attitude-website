@@ -19,7 +19,7 @@ export function CartLineItem({ line, compact = false }: { line: CartLine; compac
       exit={{ opacity: 0, x: -16, transition: { duration: 0.2 } }}
       className="flex gap-4 py-5"
     >
-      <Link href={`/products/${line.slug}`} className={cn("relative shrink-0 overflow-hidden bg-neutral", compact ? "h-28 w-21" : "h-36 w-27")}>
+      <Link href={`/products/${line.slug}`} className={cn("relative shrink-0 overflow-hidden rounded-xl bg-neutral", compact ? "h-28 w-21" : "h-36 w-27")}>
         <SmartImage src={line.imageUrl} alt={line.imageAlt || line.name} fill sizes="120px" className="object-cover" />
       </Link>
       <div className="flex min-w-0 flex-1 flex-col">

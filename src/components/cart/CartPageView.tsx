@@ -38,7 +38,7 @@ export function CartPageView() {
           Continue shopping
         </Link>
       </section>
-      <aside className="h-fit bg-neutral p-6 lg:sticky lg:top-28" aria-label="Order summary">
+      <aside className="h-fit rounded-[1.75rem] bg-neutral p-6 lg:sticky lg:top-28" aria-label="Order summary">
         <h2 className="font-display text-2xl">Summary</h2>
         <div className="mt-5">
           <DiscountForm />

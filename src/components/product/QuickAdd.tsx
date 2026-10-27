@@ -44,7 +44,7 @@ export function QuickAdd({ slug, onDone }: { slug: string; onDone: () => void })
   };
 
   return (
-    <div className="bg-white p-3 shadow-xl" role="group" aria-label="Quick add">
+    <div className="rounded-2xl bg-white/95 p-3 shadow-xl backdrop-blur" role="group" aria-label="Quick add">
       {colors.length > 1 && (
         <div className="mb-2 flex flex-wrap gap-1.5">
           {colors.map((c) => {
@@ -74,7 +74,7 @@ export function QuickAdd({ slug, onDone }: { slug: string; onDone: () => void })
                 type="button"
                 disabled={!v.available || pending}
                 onClick={() => addVariant(v.id)}
-                className="min-w-10 border border-line px-2 py-1.5 text-xs font-semibold transition hover:border-plum hover:bg-plum hover:text-white disabled:cursor-not-allowed disabled:text-muted/50 disabled:line-through"
+                className="min-w-10 rounded-full border border-line px-2.5 py-1.5 text-xs font-semibold transition hover:border-plum hover:bg-plum hover:text-white disabled:cursor-not-allowed disabled:text-muted/50 disabled:line-through"
                 aria-label={`Add size ${size}${v.available ? "" : " (sold out)"}`}
               >
                 {size}
@@ -87,7 +87,7 @@ export function QuickAdd({ slug, onDone }: { slug: string; onDone: () => void })
           type="button"
           disabled={pending || !forColor[0]?.available}
           onClick={() => forColor[0] && addVariant(forColor[0].id)}
-          className="w-full bg-plum py-2.5 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-white transition hover:bg-rose-deep disabled:opacity-50"
+          className="w-full rounded-full bg-plum py-2.5 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-white transition hover:bg-rose-deep disabled:opacity-50"
         >
           {forColor[0]?.available ? "Add to bag" : "Sold out"}
         </button>

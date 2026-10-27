@@ -194,3 +194,15 @@ export async function getContentPage(slug: string) {
     .maybeSingle();
   return data;
 }
+
+/** Full details for the homepage showcase: featured products first, then newest, up to `limit`. */
+export async function getShowcaseProducts(limit = 5): Promise<ProductDetail[]> {
+  if (!isSupabaseConfigured()) return [];
+  const [featured, newest] = await Promise.all([
+    searchCatalog(BASE_FILTERS, { featured: true, limit }).catch(() => null),
+    searchCatalog(BASE_FILTERS, { limit }).catch(() => null),
+  ]);
+  const slugs = [...new Set([...(featured?.products ?? []), ...(newest?.products ?? [])].filter((p) => p.in_stock).map((p) => p.slug))].slice(0, limit);
+  const details = await Promise.all(slugs.map((s) => getProductBySlug(s)));
+  return details.filter((d): d is ProductDetail => d !== null);
+}

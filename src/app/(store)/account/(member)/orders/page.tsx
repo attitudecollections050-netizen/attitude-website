@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth";
 import { formatMoney } from "@/lib/money";
 import { CUSTOMER_STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { buttonClasses } from "@/components/ui/Button";
@@ -8,11 +9,14 @@ import { buttonClasses } from "@/components/ui/Button";
 export const metadata: Metadata = { title: "Order history", robots: { index: false } };
 
 export default async function OrdersPage() {
+  const user = await requireUser("/account/orders");
   const supabase = await createClient();
-  // RLS limits this to the signed-in customer's own orders.
+  // RLS already limits customers to their own orders; the explicit filter also keeps
+  // staff accounts (who may read every order) to their personal history here.
   const { data: orders } = await supabase
     .from("orders")
     .select("order_number, created_at, status, payment_status, total, currency, order_items ( id )")
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(100);
 

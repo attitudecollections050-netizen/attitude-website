@@ -4,7 +4,9 @@ import { getProductBySlug, getRelatedProducts } from "@/lib/catalog/queries";
 import { getSettings } from "@/lib/settings";
 import { listEnabledCountries, listRegionsByCountry } from "@/lib/shipping/service";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
-import { ProductPurchase } from "@/components/product/ProductPurchase";
+import Link from "next/link";
+import { Showcase } from "@/components/showcase/Showcase";
+import { DeliveryEstimator } from "@/components/product/DeliveryEstimator";
 import { ProductGrid } from "@/components/product/ProductGrid";
 import { Reveal } from "@/components/ui/Reveal";
 import { env } from "@/lib/env";
@@ -53,19 +55,23 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
   const top = product.category.parent ?? product.category;
 
   return (
-    <div className="container-luxe pb-24 pt-8">
+    <div className="pb-24">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
-      <Breadcrumbs
-        items={[
-          { label: "Home", href: "/" },
-          { label: top.name, href: `/shop/${top.slug}` },
-          ...(product.category.parent ? [{ label: product.category.name, href: `/shop/${top.slug}/${product.category.slug}` }] : []),
-          { label: product.name },
-        ]}
-      />
-      <div className="mt-8">
-        <ProductPurchase product={product} maxPerItem={settings.checkout.max_quantity_per_item} destinations={{ countries, regions }}>
-          <div className="mt-2">
+      <div className="container-luxe pt-6">
+        <Breadcrumbs
+          items={[
+            { label: "Home", href: "/" },
+            { label: top.name, href: `/shop/${top.slug}` },
+            ...(product.category.parent ? [{ label: product.category.name, href: `/shop/${top.slug}/${product.category.slug}` }] : []),
+            { label: product.name },
+          ]}
+        />
+      </div>
+      <Showcase mode="product" products={[product]} maxPerItem={settings.checkout.max_quantity_per_item} headline={top.name} caption={product.category.name} />
+
+      <div className="container-luxe">
+        <div className="grid gap-x-16 gap-y-2 py-10 lg:grid-cols-2">
+          <div>
             <details className="group border-b border-line py-5" open>
               <summary className="eyebrow flex cursor-pointer list-none items-center justify-between">
                 Description <span className="text-lg leading-none transition-transform group-open:rotate-45">+</span>
@@ -81,11 +87,21 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
               </details>
             )}
           </div>
-        </ProductPurchase>
-      </div>
+          <div>
+            <ul className="grid gap-3 border-b border-line py-5 text-sm text-plum-soft">
+              <li>Delivery fees and estimates are calculated for your address at checkout.</li>
+              <li>
+                See our{" "}
+                <Link href="/returns-policy" className="underline underline-offset-4">returns policy</Link> and{" "}
+                <Link href="/shipping-policy" className="underline underline-offset-4">shipping policy</Link>.
+              </li>
+            </ul>
+            <DeliveryEstimator slug={product.slug} destinations={{ countries, regions }} />
+          </div>
+        </div>
 
       {related.length > 0 && (
-        <section className="mt-28" aria-labelledby="related-heading">
+        <section className="mt-16" aria-labelledby="related-heading">
           <Reveal>
             <p className="eyebrow text-rose-deep">Complete the look</p>
             <h2 id="related-heading" className="display mt-3 text-4xl sm:text-5xl">
@@ -97,6 +113,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
           </div>
         </section>
       )}
+      </div>
     </div>
   );
 }
