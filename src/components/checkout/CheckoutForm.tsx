@@ -360,7 +360,7 @@ export function CheckoutForm({
           </div>
           {(totals.discountTotal > 0 || cart.discount?.freeShipping) && (
             <div className="flex justify-between text-rose-deep">
-              <dt>Discount{cart.discount ? ` (${cart.discount.code})` : ""}</dt>
+              <dt>{cart.discount?.automatic ? cart.discount.label : `Discount${cart.discount ? ` (${cart.discount.code})` : ""}`}</dt>
               <dd className="tabular-nums">{totals.discountTotal > 0 ? `−${formatMoney(totals.discountTotal)}` : "Free delivery"}</dd>
             </div>
           )}

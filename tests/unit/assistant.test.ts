@@ -59,14 +59,19 @@ describe("assistant endpoint", () => {
 
 describe("voice", () => {
   const v = (name: string, lang: string) => ({ name, lang }) as SpeechSynthesisVoice;
-  it("always picks an English, non-male voice, preferring light young voices", async () => {
-    const { pickVoice, BABY_VOICE } = await import("@/components/assistant/voice");
-    const voices = [v("Google Deutsch", "de-DE"), v("Microsoft David", "en-US"), v("Microsoft Zira", "en-US"), v("Microsoft Ana Online (Natural)", "en-US"), v("Amélie", "fr-CA")];
-    expect(pickVoice(voices)?.name).toBe("Microsoft Ana Online (Natural)");
+  it("always picks a natural female English voice with a US/UK accent", async () => {
+    const { pickVoice, englishVoices, CUTE_VOICE } = await import("@/components/assistant/voice");
+    const voices = [v("Google Deutsch", "de-DE"), v("Microsoft David", "en-US"), v("Microsoft Zira", "en-US"), v("Microsoft Jenny Online (Natural)", "en-US"), v("Amélie", "fr-CA")];
+    expect(pickVoice(voices)?.name).toBe("Microsoft Jenny Online (Natural)");
     expect(pickVoice([v("Daniel", "en-GB"), v("Samantha", "en-US"), v("Thomas", "fr-FR")])?.name).toBe("Samantha");
     expect(pickVoice([v("Anna", "de-DE"), v("Google US English", "en-US")])?.name).toBe("Google US English");
+    expect(pickVoice([v("English Nigeria", "en-NG"), v("English United States", "en-US")])?.name).toBe("English United States");
     expect(pickVoice([v("Thomas", "fr-FR")])).toBeNull();
-    expect(BABY_VOICE.pitch).toBeGreaterThan(1.5);
+    expect(englishVoices([v("Google UK English Male", "en-GB"), v("Kate", "en-GB")]).map((x) => x.name)).toEqual(["Kate"]);
+    // a voice the shopper picked wins
+    expect(pickVoice(voices, "Microsoft Zira")?.name).toBe("Microsoft Zira");
+    expect(CUTE_VOICE.pitch).toBeGreaterThan(1.1);
+    expect(CUTE_VOICE.pitch).toBeLessThan(1.6);
   });
 
   it("allows the microphone for this site in the security headers", async () => {

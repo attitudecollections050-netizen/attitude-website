@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { bool, dbError, guarded, intStr, optInt, optMoney, optStr, slug, str, uuid } from "./helpers";
+import { bool, dbError, guarded, intStr, money, optInt, optMoney, optStr, slug, str, uuid } from "./helpers";
 import type { AdminResult } from "./types";
 
 // -------------------------------------------------------------- discounts
@@ -219,5 +219,30 @@ export async function setMessageStatus(_prev: AdminResult, formData: FormData): 
     if (error) return dbError(error);
     revalidatePath("/admin/messages");
     return { ok: true, message: "Updated." };
+  });
+}
+
+// -------------------------------------------------------------- automatic offer
+export async function savePromotion(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
+  return guarded("discounts:write", async ({ db }) => {
+    const input = z
+      .object({
+        enabled: bool,
+        code: z.string().trim().toUpperCase().max(32),
+        min_subtotal: money,
+        free_delivery: bool,
+        label: str(80).min(1, "Enter the text shoppers see, e.g. 10% off + free delivery"),
+      })
+      .parse(Object.fromEntries(formData));
+    if (input.enabled) {
+      const { data: d } = await db.from("discounts").select("type, is_active").eq("code", input.code).maybeSingle();
+      if (!d) return { ok: false, message: `Create the discount code ${input.code || "(blank)"} first — it holds the percentage.` };
+      if (!d.is_active) return { ok: false, message: `The discount code ${input.code} is switched off. Activate it first.` };
+    }
+    const error = await putSetting(db, "promotion", input);
+    if (error) return dbError(error);
+    revalidatePath("/", "layout");
+    revalidatePath("/admin/discounts");
+    return { ok: true, message: input.enabled ? "Automatic offer is on." : "Automatic offer is off." };
   });
 }

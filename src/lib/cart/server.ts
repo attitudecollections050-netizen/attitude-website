@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getSettings } from "@/lib/settings";
-import { evaluateDiscount, normalizeDiscountCode, subtotalOf, type DiscountEvaluation, type DiscountRecord } from "@/lib/pricing";
+import { applyPromotion, evaluateDiscount, normalizeDiscountCode, subtotalOf, type DiscountEvaluation, type DiscountRecord } from "@/lib/pricing";
 import { assessLine, cartIsPurchasable, type CartLine, type RawCartLine } from "./assess";
 import { EMPTY_CART, type CartView } from "./types";
 
@@ -139,6 +139,10 @@ export async function priceCart(cartId: string): Promise<PricedCart> {
   if (discountCode) {
     discount = evaluateDiscount(await loadDiscount(discountCode), discountCode, subtotal);
   }
+  const promo = settings.promotion;
+  if (promo.enabled && promo.code && subtotal >= promo.min_subtotal) {
+    discount = applyPromotion(promo, await loadDiscount(promo.code), subtotal, discount);
+  }
   return { cartId, lines, subtotal, discount };
 }
 
@@ -151,7 +155,7 @@ export function toCartView(priced: PricedCart | null): CartView {
     itemCount: priced.lines.reduce((n, l) => n + l.quantity, 0),
     subtotal: priced.subtotal,
     discount: discountOk
-      ? { code: discountOk.code, label: discountOk.label, amount: discountOk.amount, freeShipping: discountOk.freeShipping }
+      ? { code: discountOk.code, label: discountOk.label, amount: discountOk.amount, freeShipping: discountOk.freeShipping, automatic: Boolean(discountOk.automatic) }
       : null,
     discountError: priced.discount && !priced.discount.ok ? priced.discount.reason : null,
     totalBeforeShipping: priced.subtotal - discountAmount,

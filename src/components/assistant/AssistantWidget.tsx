@@ -3,13 +3,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, m, useReducedMotion } from "motion/react";
-import { Mic, MicOff, SendHorizontal, Volume2, VolumeX, X } from "lucide-react";
+import { AudioLines, Check, Mic, MicOff, SendHorizontal, Volume2, VolumeX, X } from "lucide-react";
 import { ASSISTANT_NAME, MAX_MESSAGE_CHARS, basicReply, linkify, type AssistantReply, type ChatTurn, type ProductSuggestion } from "@/lib/assistant/shared";
 import { getConsent, browserOptedOut } from "@/lib/analytics/client";
 import { SmartImage } from "@/components/ui/SmartImage";
 import { cn } from "@/lib/cn";
 import { MiniAvatar } from "./MiniAvatar";
-import { RECOGNITION_LANG, canSpeak, getRecognitionCtor, primeVoices, requestMicrophone, speak, stopSpeaking, type Recognition } from "./voice";
+import { RECOGNITION_LANG, canSpeak, englishVoices, getRecognitionCtor, pickVoice, primeVoices, requestMicrophone, saveVoiceName, savedVoiceName, speak, stopSpeaking, type Recognition } from "./voice";
 
 const MIC_BLOCKED_HELP =
   "Your browser is blocking the microphone 🎤 To allow it: tap the lock (🔒) or settings icon beside the web address → Microphone → Allow, then tap the mic again.";
@@ -67,6 +67,8 @@ export function AssistantWidget() {
   const [micSupported, setMicSupported] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
   const [voiceNote, setVoiceNote] = useState<string | null>(null);
+  const [voicePicker, setVoicePicker] = useState<{ name: string; lang: string }[] | null>(null);
+  const [voiceName, setVoiceName] = useState<string | null>(null);
   const [greeting, setGreeting] = useState(false);
   const [restored, setRestored] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
@@ -311,6 +313,23 @@ export function AssistantWidget() {
               {speechSupported && (
                 <button
                   type="button"
+                  onClick={() => {
+                    if (voicePicker) return setVoicePicker(null);
+                    const voices = window.speechSynthesis.getVoices();
+                    setVoiceName(pickVoice(voices, savedVoiceName())?.name ?? null);
+                    setVoicePicker(englishVoices(voices).slice(0, 8).map((v) => ({ name: v.name, lang: v.lang })));
+                  }}
+                  aria-expanded={Boolean(voicePicker)}
+                  aria-label="Choose her voice"
+                  title="Choose her voice"
+                  className="grid size-9 place-items-center rounded-full text-white/80 transition hover:bg-white/10 hover:text-white"
+                >
+                  <AudioLines className="size-4" />
+                </button>
+              )}
+              {speechSupported && (
+                <button
+                  type="button"
                   onClick={() => { if (voiceOn) stopSpeaking(); setVoiceOn((v) => !v); }}
                   aria-pressed={voiceOn}
                   aria-label={voiceOn ? "Stop reading replies aloud" : "Read replies aloud"}
@@ -324,6 +343,35 @@ export function AssistantWidget() {
                 <X className="size-5" />
               </button>
             </header>
+            {voicePicker && (
+              <div className="border-b border-line bg-white px-3 py-3" role="group" aria-label="Choose her voice">
+                <p className="px-1 text-xs font-semibold">Pick the voice you like 💗 <span className="font-normal text-muted">(English voices on this device)</span></p>
+                {voicePicker.length === 0 ? (
+                  <p className="mt-2 px-1 text-xs text-muted">This device has no English voices installed. Add one in your phone or computer&apos;s speech settings.</p>
+                ) : (
+                  <ul className="mt-2 flex max-h-36 flex-wrap gap-1.5 overflow-y-auto">
+                    {voicePicker.map((v) => (
+                      <li key={v.name}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            saveVoiceName(v.name);
+                            setVoiceName(v.name);
+                            void speak("Hi! I'm Dj Attitude Mini. Do you like my voice?", { onStart: () => setTalking(true), onEnd: () => setTalking(false) });
+                          }}
+                          aria-pressed={voiceName === v.name}
+                          className={cn("flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs transition", voiceName === v.name ? "border-rose bg-pale font-semibold text-rose-deep" : "border-line hover:border-rose")}
+                        >
+                          {voiceName === v.name && <Check className="size-3" aria-hidden />}
+                          {v.name.replace(/^(Microsoft|Google)\s+/i, "").replace(/\s*-\s*English.*$/i, "").replace(/\s*\(Natural\)/i, "").slice(0, 28)}
+                          <span className="text-[0.6rem] text-muted">{v.lang.replace("_", "-")}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
 
             <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto bg-blush/50 px-3 py-4" aria-live="polite" aria-relevant="additions">
               {messages.map((msg) => (

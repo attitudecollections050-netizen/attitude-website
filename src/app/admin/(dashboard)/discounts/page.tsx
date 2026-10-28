@@ -1,7 +1,8 @@
 import { requireStaffPage } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney, toMajorString } from "@/lib/money";
-import { deleteDiscount, saveDiscount } from "@/app/admin/actions/store";
+import { deleteDiscount, saveDiscount, savePromotion } from "@/app/admin/actions/store";
+import { getSettings } from "@/lib/settings";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { Badge, Card, Field, PageHeader, inputCls } from "@/components/admin/ui";
 
@@ -34,10 +35,24 @@ function Fields({ d }: { d?: D }) {
 export default async function DiscountsPage() {
   await requireStaffPage("discounts:write");
   const db = await createClient();
-  const { data } = await db.from("discounts").select("*").order("created_at", { ascending: false });
+  const [{ data }, settings] = await Promise.all([db.from("discounts").select("*").order("created_at", { ascending: false }), getSettings()]);
+  const promo = settings.promotion;
   return (
     <div className="space-y-6">
       <PageHeader title="Discount codes" description="Codes are validated on the server at checkout. Usage is counted only when a payment is verified." />
+      <Card title="Automatic offer" description="Applied automatically (no code needed) when the bag's item total reaches the minimum. The amount comes from the discount code below; free delivery sets the delivery fee to ₦0.">
+        <ActionForm action={savePromotion} submitLabel="Save offer">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Field label="Discount code used" hint="e.g. SPEND200K (10% off)"><input name="code" defaultValue={promo.code} className={`${inputCls} uppercase`} /></Field>
+            <Field label="Minimum item total (₦)"><input name="min_subtotal" defaultValue={toMajorString(promo.min_subtotal) || "200000"} className={inputCls} /></Field>
+            <Field label="Text shoppers see"><input name="label" defaultValue={promo.label || "10% off + free delivery"} maxLength={80} className={inputCls} /></Field>
+            <div className="flex flex-col justify-end gap-2 text-sm">
+              <label className="flex items-center gap-2"><input type="checkbox" name="free_delivery" defaultChecked={promo.free_delivery} className="size-4 accent-[#d94f91]" /> Free delivery too</label>
+              <label className="flex items-center gap-2"><input type="checkbox" name="enabled" defaultChecked={promo.enabled} className="size-4 accent-[#d94f91]" /> Offer is on</label>
+            </div>
+          </div>
+        </ActionForm>
+      </Card>
       <Card title="New discount code"><ActionForm action={saveDiscount} submitLabel="Create code" resetOnSuccess><Fields /></ActionForm></Card>
       {((data ?? []) as D[]).map((d) => (
         <Card

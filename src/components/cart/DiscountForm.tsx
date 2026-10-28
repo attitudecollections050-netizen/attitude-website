@@ -8,6 +8,14 @@ export function DiscountForm() {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  if (cart.discount?.automatic) {
+    return (
+      <p className="rounded-2xl bg-pale px-4 py-2.5 text-sm" role="status">
+        <span className="font-semibold">🎉 {cart.discount.label}</span>
+        <span className="block text-xs text-muted">Applied automatically to your order.</span>
+      </p>
+    );
+  }
   if (cart.discount) {
     return (
       <div className="flex items-center justify-between rounded-full bg-pale px-4 py-2 text-sm">

@@ -34,6 +34,7 @@ Name: ${s.name} — "${s.tagline}". Online fashion store in Nigeria. Currency: $
 Guest checkout: ${settings.checkout.guest_checkout_enabled ? "allowed" : "sign-in required"}.
 Payment: Paystack, at checkout. The store never sees or stores card details.
 Delivery: fees and delivery times are calculated for the customer's address at checkout (Nigeria and selected international destinations). Do not quote delivery prices.
+${settings.promotion.enabled ? `Current offer (applied automatically at checkout, no code needed): ${settings.promotion.label} — when the item total is ${formatMoney(settings.promotion.min_subtotal, "NGN")} or more.` : "There is no store-wide offer running right now."}
 Contact details published by the store: ${contact.length ? contact.join(" · ") : "none yet — send people to /contact"}.
 
 # Useful pages

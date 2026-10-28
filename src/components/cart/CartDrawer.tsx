@@ -81,13 +81,13 @@ export function CartDrawer() {
                     </div>
                     {cart.discount && (
                       <div className="flex justify-between text-rose-deep">
-                        <dt>Discount ({cart.discount.code})</dt>
-                        <dd className="tabular-nums">{cart.discount.freeShipping ? "Free delivery" : `−${formatMoney(cart.discount.amount)}`}</dd>
+                        <dt>{cart.discount.automatic ? cart.discount.label : `Discount (${cart.discount.code})`}</dt>
+                        <dd className="tabular-nums">{cart.discount.amount > 0 ? `−${formatMoney(cart.discount.amount)}` : "Free delivery"}</dd>
                       </div>
                     )}
                     <div className="flex justify-between text-muted">
                       <dt>Delivery</dt>
-                      <dd>Calculated at checkout</dd>
+                      <dd>{cart.discount?.freeShipping ? <span className="font-semibold text-rose-deep">Free</span> : "Calculated at checkout"}</dd>
                     </div>
                   </dl>
                   {!cart.purchasable && (

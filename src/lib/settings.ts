@@ -2,7 +2,9 @@ import "server-only";
 import { cache } from "react";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/env";
-import type { TaxConfig } from "@/lib/pricing";
+import type { PromotionConfig, TaxConfig } from "@/lib/pricing";
+import { createPublicClient } from "@/lib/supabase/public";
+import { serverSecrets } from "@/lib/env";
 
 export interface StoreSettings {
   announcement: { enabled: boolean; text: string; href: string | null };
@@ -21,6 +23,7 @@ export interface StoreSettings {
     x: string | null;
   };
   checkout: { guest_checkout_enabled: boolean; max_quantity_per_item: number };
+  promotion: PromotionConfig;
   tax: TaxConfig & { duties_notice: string };
   home: {
     show_new_arrivals: boolean;
@@ -48,6 +51,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
     x: null,
   },
   checkout: { guest_checkout_enabled: true, max_quantity_per_item: 10 },
+  promotion: { enabled: false, code: "", min_subtotal: 0, free_delivery: false, label: "" },
   tax: { mode: "none", rate_bps: 0, label: "VAT", duties_notice: "" },
   home: {
     show_new_arrivals: true,
@@ -72,7 +76,10 @@ export function mergeSettings(rows: { key: string; value: unknown }[]): StoreSet
 export const getSettings = cache(async (): Promise<StoreSettings> => {
   if (!isSupabaseConfigured()) return DEFAULT_SETTINGS;
   try {
-    const { data, error } = await createServiceClient().from("store_settings").select("key, value");
+    // Settings shown on the storefront are public, so the public key is enough when the
+    // secret key isn't configured (e.g. a deployment without SUPABASE_SECRET_KEY).
+    const db = serverSecrets().supabaseSecretKey ? createServiceClient() : createPublicClient();
+    const { data, error } = await db.from("store_settings").select("key, value");
     if (error) throw error;
     return mergeSettings(data ?? []);
   } catch (e) {

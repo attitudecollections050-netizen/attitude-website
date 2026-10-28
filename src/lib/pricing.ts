@@ -17,7 +17,7 @@ export interface DiscountRecord {
 }
 
 export type DiscountEvaluation =
-  | { ok: true; code: string; amount: number; freeShipping: boolean; label: string }
+  | { ok: true; code: string; amount: number; freeShipping: boolean; label: string; automatic?: boolean }
   | { ok: false; code: string; reason: string };
 
 export interface TaxConfig {
@@ -65,6 +65,36 @@ export function evaluateDiscount(
     case "free_shipping":
       return { ok: true, code: discount.code, amount: 0, freeShipping: true, label: "Free delivery" };
   }
+}
+
+/** Store-wide automatic offer, e.g. 10% off + free delivery on orders of ₦200,000 or more. */
+export interface PromotionConfig {
+  enabled: boolean;
+  /** Code of a real discount row (percentage/fixed) that holds the amount; it is re-validated at checkout. */
+  code: string;
+  /** Minimum merchandise subtotal in kobo, before discounts. */
+  min_subtotal: number;
+  free_delivery: boolean;
+  label: string;
+}
+
+/**
+ * Applies the automatic offer when the bag qualifies. It replaces a code the
+ * shopper typed (one discount per order) unless that code saves more.
+ */
+export function applyPromotion(
+  promo: PromotionConfig | null | undefined,
+  record: DiscountRecord | null,
+  subtotal: number,
+  entered: DiscountEvaluation | null,
+  now: Date = new Date(),
+): DiscountEvaluation | null {
+  if (!promo?.enabled || !promo.code || subtotal < promo.min_subtotal) return entered;
+  const ev = evaluateDiscount(record, promo.code, subtotal, now);
+  if (!ev.ok) return entered;
+  const auto: DiscountEvaluation = { ...ev, freeShipping: ev.freeShipping || promo.free_delivery, label: promo.label || ev.label, automatic: true };
+  if (entered?.ok && entered.amount > auto.amount) return entered;
+  return auto;
 }
 
 export interface PricedLine {

@@ -4,7 +4,7 @@ export interface CartView {
   lines: CartLine[];
   itemCount: number;
   subtotal: number;
-  discount: { code: string; label: string; amount: number; freeShipping: boolean } | null;
+  discount: { code: string; label: string; amount: number; freeShipping: boolean; automatic?: boolean } | null;
   discountError: string | null;
   totalBeforeShipping: number;
   purchasable: boolean;
