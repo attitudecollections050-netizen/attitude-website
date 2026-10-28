@@ -151,6 +151,18 @@ No supplier API is integrated, so supplier orders are never placed automatically
 
 Reviews are never published automatically: only product reviews where the customer ticked consent and an admin pressed **Publish review** appear on the site. Staff can mark feedback reviewed, add private notes, flag spam/abuse (hides it but keeps the record), reply publicly and export CSV. Ratings and customer wording can't be edited. Submissions are validated on the server, rate-limited, and protected by a hidden spam-trap field and a minimum fill time; link-stuffed text is flagged for moderation rather than discarded.
 
+## 7b. Dj Attitude Mini (chat assistant)
+
+A floating pink DJ-girl avatar (bottom-right on every store page except checkout and order pages) opens a chat where shoppers can:
+- ask short questions about the store (delivery, returns, payment, tracking, sizes, contact) — answers come only from your store settings, categories and the About / FAQ / Shipping / Returns pages, so **keep those pages filled in**;
+- ask for products ("pink dress under ₦30,000", "white sneakers") — it searches your published catalogue and shows real product cards with live prices and stock;
+- get clean fashion jokes and fun style questions;
+- talk by **voice**: tap the mic, speak, and the message is sent automatically and the reply is read aloud in a bright voice (a speaker button turns voice replies on/off; each reply has a Listen button). Voice uses the browser's built-in speech features: speaking works in all modern browsers; voice input works in Chrome, Edge and Safari (the mic button is hidden where it isn't supported). In Chrome, speech is converted to text by Google's speech service; the widget says that voice is turned into text by the browser.
+
+**Setup:** create an API key at platform.claude.com and add `ANTHROPIC_API_KEY` in Vercel → Settings → Environment Variables, then redeploy. Without a key the chat runs in **basic mode** (scripted answers, links and jokes, labelled "Basic mode") instead of breaking. The assistant uses Claude (`claude-opus-5-5` at low effort; set `ASSISTANT_MODEL` to change it) with Anthropic's automatic fallback model for requests the main model declines. Each message is a paid API call: chats are rate-limited to 30 messages per 10 minutes per visitor and history is capped, but set a monthly spend limit in the Anthropic console.
+
+**Guard rails:** it cannot see orders, accounts or payments; it is told never to invent prices, fees, stock, contact details or promotions, never to ask for card details or passwords, and to send order problems to /contact. Conversations stay in the shopper's browser tab and are not saved in your database.
+
 ## 8. Deploying to Vercel
 
 1. Push the repository to GitHub and import it in Vercel. The framework is detected automatically.
@@ -197,4 +209,5 @@ docs/DATABASE.md          schema documentation
 - **Verified shipping prices** for Nigeria and any international destinations.
 - Business details, policies, returns terms and tax decisions.
 - Real product photography and supplier products (replace the demo catalogue).
+- Optional: Anthropic API key for the Dj Attitude Mini chat (basic mode works without it).
 - Optional: Resend API key and a verified sender domain for order emails; custom SMTP for Supabase Auth emails.
