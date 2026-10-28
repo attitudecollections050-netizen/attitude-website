@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { AnimatePresence, m, useReducedMotion, type Variants } from "motion/react";
-import { ArrowUpRight, ChevronDown, Sparkles, X } from "lucide-react";
+import { ArrowUpRight, ChevronDown, Sparkles } from "lucide-react";
+import { CloseIcon } from "@/components/brand/StoreIcons";
 import type { CategoryNode } from "@/lib/catalog/types";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { useDialog } from "@/components/ui/useDialog";
@@ -74,7 +75,7 @@ export function MobileMenu({ open, onClose, categories, signedIn }: { open: bool
                 transition={{ delay: 0.25, type: "spring", stiffness: 300, damping: 18 }}
                 whileTap={{ scale: 0.9 }}
               >
-                <X className="size-5" />
+                <CloseIcon className="size-5" />
               </m.button>
             </div>
 

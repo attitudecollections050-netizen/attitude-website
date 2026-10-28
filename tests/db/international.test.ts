@@ -8,7 +8,7 @@ run("database: international store (currencies, rates, translations, preferences
   let db: Client;
   let drop: () => Promise<void>;
   let admin: string, alice: string;
-  const anon = { role: "anon" };
+  const anon = { role: "anon" as const };
 
   beforeAll(async () => {
     const t = await createTestDatabase("ac_intl_" + process.pid);
@@ -25,7 +25,7 @@ run("database: international store (currencies, rates, translations, preferences
     await drop?.();
   });
 
-  const user = (id: string) => ({ role: "authenticated", userId: id });
+  const user = (id: string) => ({ role: "authenticated" as const, userId: id });
 
   it("seeds NGN as the base currency and charges in NGN only", async () => {
     const { rows } = await db.query(`select code, is_enabled, markup_bps from currencies where code = 'NGN'`);

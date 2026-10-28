@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
-import { Search, X } from "lucide-react";
+import { CloseIcon, SearchIcon } from "@/components/brand/StoreIcons";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useDialog } from "@/components/ui/useDialog";
@@ -43,7 +43,7 @@ export function SearchOverlay({ open, onClose }: { open: boolean; onClose: () =>
                 }}
                 className="flex items-center gap-4 border-b-2 border-plum pb-3"
               >
-                <Search className="size-6 shrink-0 text-muted" aria-hidden />
+                <SearchIcon className="size-6 shrink-0 text-muted" aria-hidden />
                 <label htmlFor="site-search" className="sr-only">
                   {t("inputLabel")}
                 </label>
@@ -58,7 +58,7 @@ export function SearchOverlay({ open, onClose }: { open: boolean; onClose: () =>
                   enterKeyHint="search"
                 />
                 <button type="button" onClick={onClose} className="p-2" aria-label={t("close")}>
-                  <X className="size-5" />
+                  <CloseIcon className="size-5" />
                 </button>
               </form>
               <div className="mt-6 flex flex-wrap items-center gap-2">

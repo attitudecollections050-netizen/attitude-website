@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { m } from "motion/react";
-import { X } from "lucide-react";
+import { CloseIcon } from "@/components/brand/StoreIcons";
 import type { CartLine } from "@/lib/cart/assess";
 import { useTranslations } from "next-intl";
 import { useMoney } from "@/components/intl/PreferencesProvider";
@@ -24,7 +24,7 @@ export function CartLineItem({ line, compact = false }: { line: CartLine; compac
       exit={{ opacity: 0, x: -16, transition: { duration: 0.2 } }}
       className="flex gap-4 py-5"
     >
-      <Link href={`/products/${line.slug}`} className={cn("relative shrink-0 overflow-hidden rounded-xl bg-neutral", compact ? "h-28 w-21" : "h-36 w-27")}>
+      <Link href={`/products/${line.slug}`} className={cn("relative shrink-0 overflow-hidden rounded-[1.2rem_0.4rem_1.2rem_0.4rem] bg-neutral", compact ? "h-28 w-21" : "h-36 w-27")}>
         <SmartImage src={line.imageUrl} alt={line.imageAlt || name} fill sizes="120px" className="object-cover" />
       </Link>
       <div className="flex min-w-0 flex-1 flex-col">
@@ -39,10 +39,10 @@ export function CartLineItem({ line, compact = false }: { line: CartLine; compac
             type="button"
             onClick={() => remove(line.itemId)}
             disabled={pending}
-            className="-m-1 p-1 text-muted transition hover:text-rose-deep"
+            className="-m-1 grid size-8 place-items-center rounded-[0.8rem_0.3rem] text-muted transition hover:rotate-90 hover:bg-blush hover:text-rose-deep"
             aria-label={t("removeItem", { name })}
           >
-            <X className="size-4" />
+            <CloseIcon className="size-4" />
           </button>
         </div>
         <div className="mt-auto flex items-end justify-between gap-3 pt-3">

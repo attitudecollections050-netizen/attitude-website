@@ -3,7 +3,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
-import { ArrowRight, Menu, Search, ShoppingBag, User } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { BagIcon, HeartBadge, MenuIcon, SearchIcon } from "@/components/brand/StoreIcons";
+import { ProfileMenu } from "./ProfileMenu";
 import type { CategoryNode } from "@/lib/catalog/types";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { useCart } from "@/components/cart/CartProvider";
@@ -13,6 +15,10 @@ import { MobileMenu } from "./MobileMenu";
 import { SearchOverlay } from "./SearchOverlay";
 import { SmartImage } from "@/components/ui/SmartImage";
 import { PreferencesSwitcher } from "@/components/intl/PreferencesSwitcher";
+
+/** Petal-shaped icon button: corners swap on hover so the shape "turns" like a leaf. */
+const ICON_BTN =
+  "group relative grid size-10 place-items-center rounded-[1.15rem_0.45rem_1.15rem_0.45rem] text-plum sm:size-11 outline-offset-2 transition-[border-radius,background-color,color,transform,box-shadow] duration-300 ease-[var(--ease-luxe)] hover:-translate-y-0.5 hover:rounded-[0.45rem_1.15rem_0.45rem_1.15rem] hover:bg-gradient-to-br hover:from-blush hover:to-pale hover:text-rose-deep [&.is-open]:rounded-[0.45rem_1.15rem_0.45rem_1.15rem] [&.is-open]:bg-pale [&.is-open]:text-rose-deep";
 
 export function Header({ categories, signedIn }: { categories: CategoryNode[]; signedIn: boolean }) {
   const { cart, setOpen } = useCart();
@@ -24,6 +30,13 @@ export function Header({ categories, signedIn }: { categories: CategoryNode[]; s
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Each time the bag count goes up, a little heart drops into the bag and the handle swings.
+  const [drops, setDrops] = useState(0);
+  const [lastCount, setLastCount] = useState(cart.itemCount);
+  if (lastCount !== cart.itemCount) {
+    if (cart.itemCount > lastCount) setDrops((d) => d + 1);
+    setLastCount(cart.itemCount);
+  }
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -66,12 +79,12 @@ export function Header({ categories, signedIn }: { categories: CategoryNode[]; s
           <div className="flex items-center gap-1">
             <button
               type="button"
-              className="-ml-2 grid size-10 place-items-center rounded-full transition hover:bg-blush lg:hidden"
+              className={cn(ICON_BTN, "-ms-1.5 lg:hidden")}
               onClick={() => setMobileOpen(true)}
               aria-label={t("openMenu")}
               aria-expanded={mobileOpen}
             >
-              <Menu className="size-5" />
+              <MenuIcon className="size-[1.35rem] rtl:-scale-x-100" />
             </button>
             <Link href="/" className="hidden lg:block" aria-label={tc("brandHome")}>
               <Wordmark inline />
@@ -107,34 +120,56 @@ export function Header({ categories, signedIn }: { categories: CategoryNode[]; s
             {/* Phones get the switcher inside the menu; the header only has room for it from md up. */}
             <span className="mr-1 hidden md:inline-flex 2xl:hidden"><PreferencesSwitcher compact /></span>
             <span className="mr-1 hidden 2xl:inline-flex"><PreferencesSwitcher /></span>
-            <button type="button" className="grid size-10 place-items-center rounded-full transition hover:bg-blush" onClick={() => setSearchOpen(true)} aria-label={t("search")}>
-              <Search className="size-[1.15rem]" />
-            </button>
-            <Link href={signedIn ? "/account" : "/account/login"} className="hidden size-10 place-items-center rounded-full transition hover:bg-blush sm:grid" aria-label={signedIn ? t("account") : t("signIn")}>
-              <User className="size-[1.15rem]" />
-            </Link>
-            <button
-              type="button"
-              className="relative grid size-10 place-items-center rounded-full transition hover:bg-blush"
-              onClick={() => setOpen(true)}
-              aria-label={t("bag", { count: cart.itemCount })}
-            >
-              <ShoppingBag className="size-[1.15rem]" />
-              <AnimatePresence>
-                {cart.itemCount > 0 && (
-                  <m.span
-                    key={cart.itemCount}
-                    initial={{ scale: 0.4, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.4, opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 22 }}
-                    className="absolute right-0.5 top-0.5 grid min-w-[1.1rem] place-items-center rounded-full bg-plum px-1 text-[0.6rem] font-bold leading-[1.1rem] text-white ring-2 ring-white"
-                  >
-                    {cart.itemCount > 99 ? "99+" : cart.itemCount}
-                  </m.span>
-                )}
-              </AnimatePresence>
-            </button>
+            <div className="flex items-center gap-0.5 sm:rounded-[1.5rem_0.7rem_1.5rem_0.7rem] sm:border sm:border-line/70 sm:bg-white/80 sm:p-1 sm:shadow-[0_10px_30px_-22px_rgba(37,25,35,0.6)] sm:backdrop-blur">
+              <button type="button" className={ICON_BTN} onClick={() => setSearchOpen(true)} aria-label={t("search")}>
+                <SearchIcon className="size-[1.2rem] transition-transform duration-300 group-hover:-rotate-12 group-hover:scale-110" />
+              </button>
+              <ProfileMenu signedIn={signedIn} buttonClassName={ICON_BTN} />
+              <button
+                type="button"
+                data-bag-anchor
+                className="group relative grid size-10 place-items-center rounded-[1.15rem_0.45rem_1.15rem_0.45rem] bg-plum sm:size-11 text-white shadow-[0_10px_22px_-10px_rgba(37,25,35,0.8)] transition-[border-radius,background-color,transform] duration-300 ease-[var(--ease-luxe)] hover:-translate-y-0.5 hover:rounded-[0.45rem_1.15rem_0.45rem_1.15rem] hover:bg-rose-deep"
+                onClick={() => setOpen(true)}
+                aria-label={t("bag", { count: cart.itemCount })}
+              >
+                <m.span
+                  key={`bag-${drops}`}
+                  className="grid place-items-center"
+                  initial={drops ? { scaleY: 0.78, scaleX: 1.12 } : false}
+                  animate={{ scaleY: 1, scaleX: 1 }}
+                  transition={{ type: "spring", stiffness: 520, damping: 13, delay: 0.32 }}
+                  style={{ originY: 1 }}
+                >
+                  <BagIcon swing={drops} className="size-[1.25rem]" />
+                </m.span>
+                <AnimatePresence>
+                  {drops > 0 && (
+                    <m.span
+                      key={`drop-${drops}`}
+                      className="pointer-events-none absolute left-1/2 top-0 -ml-1 size-2 rotate-45 rounded-[2px_50%_50%_50%] bg-rose"
+                      initial={{ y: -16, opacity: 0, scale: 0.6 }}
+                      animate={{ y: [-16, -2, 12], opacity: [0, 1, 0], scale: [0.6, 1, 0.5] }}
+                      transition={{ duration: 0.55, ease: "easeIn" }}
+                      aria-hidden
+                    />
+                  )}
+                </AnimatePresence>
+                <AnimatePresence>
+                  {cart.itemCount > 0 && (
+                    <m.span
+                      key={cart.itemCount}
+                      initial={{ scale: 0.3, rotate: -25, opacity: 0 }}
+                      animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                      exit={{ scale: 0.3, opacity: 0 }}
+                      transition={{ type: "spring", stiffness: 520, damping: 18 }}
+                      className="absolute -end-2 -top-2"
+                    >
+                      <HeartBadge count={cart.itemCount} />
+                    </m.span>
+                  )}
+                </AnimatePresence>
+              </button>
+            </div>
             <Link
               href="/shop"
               className="group ml-2 hidden h-11 items-center gap-2 rounded-full bg-plum pl-5 pr-4 text-[0.8rem] font-semibold text-white shadow-[0_10px_25px_-12px_rgba(37,25,35,0.7)] transition hover:bg-rose-deep xl:inline-flex"

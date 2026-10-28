@@ -1,6 +1,7 @@
 "use client";
 import { AnimatePresence, m } from "motion/react";
-import { Check, AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { BagIcon } from "@/components/brand/StoreIcons";
 import { useCart } from "./CartProvider";
 
 export function CartToast() {
@@ -14,10 +15,10 @@ export function CartToast() {
             initial={{ opacity: 0, y: 20, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10 }}
-            className={`pointer-events-auto flex items-center gap-3 px-5 py-3 text-sm shadow-lg ${toast.tone === "error" ? "bg-danger text-white" : "bg-plum text-white"}`}
+            className={`pointer-events-auto flex items-center gap-3 rounded-[1.4rem_0.5rem_1.4rem_0.5rem] px-5 py-3 text-sm shadow-lg ${toast.tone === "error" ? "bg-danger text-white" : "bg-plum text-white"}`}
             role={toast.tone === "error" ? "alert" : "status"}
           >
-            {toast.tone === "error" ? <AlertTriangle className="size-4" /> : <Check className="size-4 text-rose" />}
+            {toast.tone === "error" ? <AlertTriangle className="size-4" /> : <BagIcon className="size-4 text-rose" />}
             {toast.text}
           </m.div>
         )}

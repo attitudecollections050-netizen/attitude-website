@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { AnimatePresence } from "motion/react";
-import { ShoppingBag } from "lucide-react";
+import { BagIcon } from "@/components/brand/StoreIcons";
 import { useCart } from "./CartProvider";
 import { CartLineItem } from "./CartLineItem";
 import { DiscountForm } from "./DiscountForm";
@@ -20,7 +20,7 @@ export function CartPageView() {
     return (
       <div className="flex flex-col items-center gap-5 py-24 text-center">
         <span className="grid size-16 place-items-center rounded-full bg-blush text-rose">
-          <ShoppingBag className="size-6" />
+          <BagIcon className="size-6" />
         </span>
         <p className="display text-4xl">{t("empty")}</p>
         <p className="text-sm text-muted">{t("emptyPage")}</p>
