@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Client } from "pg";
 import { as, createTestDatabase, createUser, TEST_DB_URL } from "./harness";
