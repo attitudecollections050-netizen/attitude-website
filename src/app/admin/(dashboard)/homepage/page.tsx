@@ -44,7 +44,7 @@ export default async function HomepageAdmin() {
       <Card title="Announcement bar">
         <ActionForm action={saveAnnouncement}>
           <div className="grid gap-3 sm:grid-cols-[1fr_16rem_auto]">
-            <Field label="Text"><input name="text" defaultValue={settings.announcement.text} maxLength={160} className={inputCls} /></Field>
+            <Field label="Text" hint="Scrolls across the top of the store. Separate messages with |, e.g. 10% DISCOUNT | FREE DELIVERY. Only advertise offers that checkout actually applies."><input name="text" defaultValue={settings.announcement.text} maxLength={160} className={inputCls} /></Field>
             <Field label="Link (optional)"><input name="href" defaultValue={settings.announcement.href ?? ""} className={inputCls} /></Field>
             <label className="flex items-end gap-2 pb-2 text-sm"><input type="checkbox" name="enabled" defaultChecked={settings.announcement.enabled} className="size-4 accent-[#d94f91]" /> Show</label>
           </div>

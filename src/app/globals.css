@@ -21,6 +21,13 @@
   --ease-luxe: cubic-bezier(0.22, 1, 0.36, 1);
   --animate-shimmer: shimmer 1.6s ease-in-out infinite;
 
+  --animate-marquee: marquee 32s linear infinite;
+
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
   @keyframes shimmer {
     0% { background-position: -400px 0; }
     100% { background-position: 400px 0; }

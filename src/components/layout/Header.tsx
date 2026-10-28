@@ -142,20 +142,29 @@ export function Header({ categories, signedIn }: { categories: CategoryNode[]; s
           {activeCat && activeCat.children.length > 0 && (
             <m.div
               key="mega"
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6, transition: { duration: 0.18 } }}
-              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute inset-x-0 top-full hidden border-b border-line bg-white lg:block"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.2 } }}
+              className="absolute inset-x-0 top-full hidden px-6 pt-3 lg:block"
               onMouseEnter={() => openMenu(activeCat.slug)}
             >
-              <div className="container-luxe grid grid-cols-[1fr_1.1fr] gap-12 py-10">
+              {/* Floating petal-shaped card that unfolds from the top */}
+              <m.div
+                initial={{ clipPath: "inset(0% 0% 100% 0% round 2rem)", y: -14, rotateX: -12 }}
+                animate={{ clipPath: "inset(0% 0% 0% 0% round 2rem)", y: 0, rotateX: 0 }}
+                exit={{ clipPath: "inset(0% 0% 100% 0% round 2rem)", y: -8, transition: { duration: 0.25, ease: [0.64, 0, 0.78, 0] } }}
+                transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                style={{ transformPerspective: 1200, transformOrigin: "top center" }}
+                className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] rounded-tl-[5.5rem] rounded-br-[5.5rem] border border-pale bg-white shadow-[0_40px_80px_-40px_rgba(37,25,35,0.45)]"
+              >
+                <div className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-gradient-to-br from-pale to-transparent blur-2xl" aria-hidden />
+              <div className="relative grid grid-cols-[1fr_1.1fr] gap-12 py-10 pl-16 pr-10">
                 <div>
                   <p className="eyebrow text-muted">{activeCat.name}</p>
                   <ul className="mt-5 grid grid-cols-2 gap-x-10 gap-y-3">
                     <li>
-                      <Link href={activeCat.href} className="font-display text-xl hover:text-rose-deep">
-                        Shop all
+                      <Link href={activeCat.href} className="inline-flex items-center gap-2 rounded-full rounded-tl-md bg-gradient-to-r from-rose-deep to-rose px-4 py-1.5 font-display text-xl text-white shadow-[0_10px_24px_-12px_rgba(217,79,145,0.9)] transition hover:brightness-110">
+                        Shop all <ArrowRight className="size-4" aria-hidden />
                       </Link>
                     </li>
                     {activeCat.children.map((child, i) => (
@@ -167,7 +176,7 @@ export function Header({ categories, signedIn }: { categories: CategoryNode[]; s
                     ))}
                   </ul>
                 </div>
-                <Link href={activeCat.href} className="group relative block aspect-[16/8] overflow-hidden bg-blush">
+                <Link href={activeCat.href} className="group relative block aspect-[16/8] overflow-hidden rounded-[1.5rem] rounded-tr-[4rem] bg-blush">
                   <SmartImage
                     src={activeCat.image_url}
                     alt={activeCat.name}
@@ -183,6 +192,7 @@ export function Header({ categories, signedIn }: { categories: CategoryNode[]; s
                   </span>
                 </Link>
               </div>
+              </m.div>
             </m.div>
           )}
         </AnimatePresence>
