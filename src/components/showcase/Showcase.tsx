@@ -10,6 +10,7 @@ import { formatMoney } from "@/lib/money";
 import { useCart } from "@/components/cart/CartProvider";
 import { SmartImage } from "@/components/ui/SmartImage";
 import { cn } from "@/lib/cn";
+import { FashionOrbit, LivelyProduct, Sparkle } from "./StageMotion";
 
 type Variant = ProductDetail["variants"][number];
 
@@ -222,7 +223,7 @@ export function Showcase({ products, mode, maxPerItem, headline, caption = "Bold
             </div>
 
             {/* Stage: product in a glowing ring with colour options on an orbit */}
-            <div className="relative mx-auto aspect-square w-full max-w-[34rem] [--r:9.5rem] sm:[--r:13rem] lg:max-w-none lg:[--r:11.5rem] xl:[--r:14.5rem] 2xl:[--r:16rem]">
+            <div className="relative mx-auto mb-8 aspect-square w-full max-w-[34rem] [--r:9.5rem] sm:[--r:13rem] lg:max-w-none lg:[--r:11.5rem] xl:[--r:14.5rem] 2xl:[--r:16rem]">
               {/* rings */}
               <div className="absolute left-1/2 top-1/2 size-[calc(var(--r)*2)] -translate-x-1/2 -translate-y-1/2 rounded-full border border-plum/10" aria-hidden />
               <div className="absolute left-1/2 top-1/2 size-[calc(var(--r)*2+2.5rem)] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-plum/[0.07]" aria-hidden />
@@ -234,11 +235,18 @@ export function Showcase({ products, mode, maxPerItem, headline, caption = "Bold
                 aria-hidden
               />
 
-              {/* product photo */}
-              <div className="absolute left-1/2 top-1/2 size-[calc(var(--r)*2-3.5rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full bg-neutral shadow-[0_25px_60px_-25px_rgba(37,25,35,0.45)]">
+              {/* clothing & accessory badges orbiting the ring, plus drifting sparkles */}
+              <FashionOrbit />
+              <Sparkle />
+
+              {/* product photo: floats, tilts toward the pointer, swipe to change */}
+              <div className="absolute left-1/2 top-1/2 size-[calc(var(--r)*2-3.5rem)] -translate-x-1/2 -translate-y-1/2">
+              <LivelyProduct onSwipe={total > 1 ? (dir) => go(dir) : undefined} className="relative size-full cursor-grab select-none active:cursor-grabbing">
+              <div className="absolute inset-0 overflow-hidden rounded-full bg-neutral shadow-[0_25px_60px_-25px_rgba(37,25,35,0.45)]">
                 <AnimatePresence mode="popLayout" initial={false}>
                   <m.div key={`${product.id}-${image?.id ?? "x"}`} className="absolute inset-0" {...blurIn}>
                     <SmartImage
+                      draggable={false}
                       src={image?.url}
                       alt={image?.alt || product.name}
                       fill
@@ -250,10 +258,17 @@ export function Showcase({ products, mode, maxPerItem, headline, caption = "Bold
                   </m.div>
                 </AnimatePresence>
               </div>
+              </LivelyProduct>
+              </div>
+              {total > 1 && (
+                <p className="pointer-events-none absolute inset-x-0 -bottom-9 text-center text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted" aria-hidden>
+                  Drag or swipe to explore
+                </p>
+              )}
 
               {/* orbit of colour options (desktop/tablet) */}
               {colors.length > 0 && (
-                <div className="absolute inset-0 hidden sm:block" role="radiogroup" aria-label="Colour">
+                <div className="pointer-events-none absolute inset-0 hidden sm:block" role="radiogroup" aria-label="Colour">
                   {colors.map((c, i) => {
                     const pos = onRing(angles[i], "3.4rem");
                     const dot = onRing(angles[i]);
@@ -279,7 +294,7 @@ export function Showcase({ products, mode, maxPerItem, headline, caption = "Bold
                             setSize(null);
                             setImageIndex(0);
                           }}
-                          className="group absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
+                          className="group pointer-events-auto absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
                           style={pos}
                         >
                           <span
