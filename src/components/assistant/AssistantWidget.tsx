@@ -9,7 +9,10 @@ import { getConsent, browserOptedOut } from "@/lib/analytics/client";
 import { SmartImage } from "@/components/ui/SmartImage";
 import { cn } from "@/lib/cn";
 import { MiniAvatar } from "./MiniAvatar";
-import { canSpeak, getRecognitionCtor, speak, stopSpeaking, type Recognition } from "./voice";
+import { RECOGNITION_LANG, canSpeak, getRecognitionCtor, primeVoices, requestMicrophone, speak, stopSpeaking, type Recognition } from "./voice";
+
+const MIC_BLOCKED_HELP =
+  "Your browser is blocking the microphone 🎤 To allow it: tap the lock (🔒) or settings icon beside the web address → Microphone → Allow, then tap the mic again.";
 
 interface Message extends ChatTurn {
   id: string;
@@ -79,6 +82,7 @@ export function AssistantWidget() {
       setVoiceOn(load<boolean>(VOICE_KEY, false));
       setMicSupported(Boolean(getRecognitionCtor()));
       setSpeechSupported(canSpeak());
+      primeVoices();
       setRestored(true);
     }, 0);
     return () => clearTimeout(t);
@@ -190,7 +194,7 @@ export function AssistantWidget() {
     [messages, mode, pending, say, voiceOn],
   );
 
-  const toggleMic = () => {
+  const toggleMic = async () => {
     if (listening) {
       recRef.current?.stop();
       return;
@@ -198,8 +202,15 @@ export function AssistantWidget() {
     const Ctor = getRecognitionCtor();
     if (!Ctor) return;
     stopSpeaking();
+    setVoiceNote(null);
+    // Ask for the microphone first so the browser shows its "Allow microphone" prompt.
+    const access = await requestMicrophone();
+    if (access !== "granted") {
+      setVoiceNote(access === "unavailable" ? "I can't find a microphone on this device 🎤" : MIC_BLOCKED_HELP);
+      return;
+    }
     const rec = new Ctor();
-    rec.lang = "en-NG";
+    rec.lang = RECOGNITION_LANG;
     rec.interimResults = true;
     rec.continuous = false;
     let finalText = "";
@@ -214,7 +225,7 @@ export function AssistantWidget() {
     };
     rec.onerror = (e) => {
       setListening(false);
-      if (e.error === "not-allowed" || e.error === "service-not-allowed") setVoiceNote("Microphone access is blocked. Allow it in your browser settings to send voice messages.");
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") setVoiceNote(MIC_BLOCKED_HELP);
       else if (e.error === "no-speech") setVoiceNote("I didn't hear anything 🙉 Tap the mic and try again.");
     };
     rec.onend = () => {
@@ -225,7 +236,6 @@ export function AssistantWidget() {
       }
     };
     recRef.current = rec;
-    setVoiceNote(null);
     try {
       rec.start();
       setListening(true);
@@ -350,7 +360,7 @@ export function AssistantWidget() {
                 {micSupported && (
                   <button
                     type="button"
-                    onClick={toggleMic}
+                    onClick={() => void toggleMic()}
                     aria-pressed={listening}
                     aria-label={listening ? "Stop recording voice message" : "Record a voice message"}
                     className={cn("relative grid size-11 shrink-0 place-items-center rounded-full transition", listening ? "bg-rose text-white" : "bg-pale text-rose-deep hover:bg-rose hover:text-white")}

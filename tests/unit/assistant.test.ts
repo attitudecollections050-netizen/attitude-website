@@ -56,3 +56,24 @@ describe("assistant endpoint", () => {
     expect(await res.json()).toEqual({ offline: true });
   });
 });
+
+describe("voice", () => {
+  const v = (name: string, lang: string) => ({ name, lang }) as SpeechSynthesisVoice;
+  it("always picks an English, non-male voice, preferring light young voices", async () => {
+    const { pickVoice, BABY_VOICE } = await import("@/components/assistant/voice");
+    const voices = [v("Google Deutsch", "de-DE"), v("Microsoft David", "en-US"), v("Microsoft Zira", "en-US"), v("Microsoft Ana Online (Natural)", "en-US"), v("Amélie", "fr-CA")];
+    expect(pickVoice(voices)?.name).toBe("Microsoft Ana Online (Natural)");
+    expect(pickVoice([v("Daniel", "en-GB"), v("Samantha", "en-US"), v("Thomas", "fr-FR")])?.name).toBe("Samantha");
+    expect(pickVoice([v("Anna", "de-DE"), v("Google US English", "en-US")])?.name).toBe("Google US English");
+    expect(pickVoice([v("Thomas", "fr-FR")])).toBeNull();
+    expect(BABY_VOICE.pitch).toBeGreaterThan(1.5);
+  });
+
+  it("allows the microphone for this site in the security headers", async () => {
+    const config = (await import("../../next.config")).default;
+    const rules = await config.headers!();
+    const policy = rules.flatMap((r) => r.headers).find((h) => h.key === "Permissions-Policy")!.value;
+    expect(policy).toContain("microphone=(self)");
+    expect(policy).toContain("camera=()");
+  });
+});
