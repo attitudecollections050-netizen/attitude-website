@@ -11,6 +11,7 @@ import { loadShippingConfig } from "@/lib/shipping/service";
 import { calculateShipping } from "@/lib/shipping/calculator";
 import { buildOrderPayload, describeOrderError } from "@/lib/orders/build";
 import { generatePaymentReference, initializeTransaction, PaystackError } from "@/lib/payments/paystack";
+import { consentedVisitorId } from "@/lib/analytics/server";
 
 export type PlaceOrderResult =
   | { ok: true; redirectUrl: string }
@@ -90,6 +91,10 @@ export async function placeOrder(input: unknown): Promise<PlaceOrderResult> {
   if (order.payment_status === "paid") {
     return { ok: true, redirectUrl: `/order/${order.order_number}?token=${order.access_token}` };
   }
+
+  // Lets the verified payment be attributed to this visitor in analytics (consented visitors only).
+  const visitorId = await consentedVisitorId();
+  if (visitorId) await db.from("orders").update({ analytics_visitor_id: visitorId }).eq("id", order.order_id).is("analytics_visitor_id", null);
 
   if (data.save_address && user) {
     const { count } = await db.from("addresses").select("id", { count: "exact", head: true }).eq("user_id", user.id);

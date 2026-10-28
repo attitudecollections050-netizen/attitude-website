@@ -2,6 +2,7 @@
 import { createContext, useCallback, useContext, useMemo, useState, useTransition } from "react";
 import { addToCart, applyDiscountCode, removeCartItem, removeDiscountCode, updateCartItem, type CartActionResult } from "@/app/actions/cart";
 import type { CartView } from "@/lib/cart/types";
+import { track } from "@/lib/analytics/client";
 
 interface CartContextValue {
   cart: CartView;
@@ -61,7 +62,11 @@ export function CartProvider({ initialCart, children }: { initialCart: CartView;
       setOpen,
       pending,
       toast,
-      add: (variantId, quantity = 1, opts) => run(() => addToCart(variantId, quantity), { openDrawer: opts?.openDrawer ?? true }),
+      add: (variantId, quantity = 1, opts) =>
+        run(() => addToCart(variantId, quantity), { openDrawer: opts?.openDrawer ?? true }).then((r) => {
+          if (r.ok) track("add_to_cart", { variantId });
+          return r;
+        }),
       update: (itemId, quantity) => run(() => updateCartItem(itemId, quantity)),
       remove: (itemId) => run(() => removeCartItem(itemId)),
       applyCode: (code) => run(() => applyDiscountCode(code), { silent: true }),

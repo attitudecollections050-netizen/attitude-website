@@ -1,13 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { assertPermission, AuthorizationError } from "@/lib/auth";
 import { parseAdminOrderFilters, queryAdminOrders } from "@/lib/orders/admin-query";
-
-function csvCell(v: unknown): string {
-  let s = v == null ? "" : String(v);
-  // Neutralise spreadsheet formula injection.
-  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
+import { csvCell } from "@/lib/csv";
 
 export async function GET(request: NextRequest) {
   try {

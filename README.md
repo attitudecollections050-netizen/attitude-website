@@ -135,6 +135,22 @@ Placeholders are shown in `[square brackets]` and highlighted on the site until 
 
 No supplier API is integrated, so supplier orders are never placed automatically. Supplier orders and fulfilment have their own tables, so an automated integration can be added later.
 
+## 7a. Analytics, reports and customer feedback
+
+**Analytics & Reports** (admin only) shows orders, paid/pending/failed payments, sales revenue, average order value, gross vs net sales, discounts, refunds, shipping and tax, pending deliveries, best sellers, category performance, visitors, page views, traffic sources, devices, countries and a conversion funnel, for Today / 7 / 30 / 90 days / this month / last month / this year / any custom range. Every chart and table can be exported as CSV. Definitions are shown at the bottom of the page.
+
+- **Timezone:** days, weeks (Monday start) and months use West Africa Time (`Africa/Lagos`, UTC+1).
+- **Sales** come straight from orders whose payment was verified on the server (callback or signed webhook). Orders are counted by the date placed; sales by the date paid. Unpaid, pending, failed, cancelled and refunded orders are never counted as sales. Currencies are reported separately (no exchange-rate conversion).
+- **Visitor analytics is first-party and consent-based.** No third-party service or credentials are needed. A small notice asks visitors to allow analytics; only then is a random visitor ID cookie set (13 months). Visitors who decline — or whose browser sends Global Privacy Control / Do Not Track — are not tracked, so real traffic is higher than shown. No IP address, user-agent string, name or email is stored with events; bots are ignored; country comes from Vercel's `x-vercel-ip-country` header. Update your **Privacy Policy** page to mention this analytics cookie.
+- **Purchases** in the funnel are recorded by the database when a payment is verified, at most once per order, and only for visitors who allowed analytics.
+
+**Customer Reviews & Feedback** (admin and staff) collects five-heart ratings with positive / neutral / negative experience, optional comment, reason, suggestion and name preference, from:
+- the `/feedback` page (linked in the footer);
+- a feedback invitation: on desktop when the pointer leaves the top of the window after 20 seconds on the site; on phones and tablets a small dismissible card after ~75 seconds and two pages. It never appears on cart, checkout, payment, order or account pages, shows at most once per visit, waits 14 days after "Maybe later" (60 days after two dismissals) and 120 days after feedback is sent. Browsers do not signal every exit, so not every leaving visitor will see it;
+- **product reviews** on product pages for signed-in customers, marked *Verified Purchase* only when their account has a paid, non-refunded order for that product. One review per product per account.
+
+Reviews are never published automatically: only product reviews where the customer ticked consent and an admin pressed **Publish review** appear on the site. Staff can mark feedback reviewed, add private notes, flag spam/abuse (hides it but keeps the record), reply publicly and export CSV. Ratings and customer wording can't be edited. Submissions are validated on the server, rate-limited, and protected by a hidden spam-trap field and a minimum fill time; link-stuffed text is flagged for moderation rather than discarded.
+
 ## 8. Deploying to Vercel
 
 1. Push the repository to GitHub and import it in Vercel. The framework is detected automatically.
@@ -153,6 +169,8 @@ Any Node.js host that runs `next build && next start` also works.
 | `npm run typecheck` | TypeScript |
 | `npm run test:unit` | Pricing, discounts, Nigerian and international shipping, unsupported destinations, cart and stock rules, checkout validation, server-side order totals, idempotency keys, Paystack signature checks, the payment verification flow, duplicate webhooks, permissions, upload validation, safe content rendering |
 | `npm run test:db` | Runs every migration against a **throwaway** PostgreSQL database and tests catalogue search and filters, RLS (customers isolated, supplier/payment data hidden, no self-granted admin), order creation (idempotency, tampered prices, stock, invalid discounts), payment finalisation (mismatch, idempotency, duplicate payments, inventory conflicts), status rules, tracking privacy and rate limiting. Requires `TEST_DATABASE_URL` pointing at a disposable Postgres 15+ server; skipped otherwise |
+| `tests/unit/analytics.test.ts`, `feedback.test.ts` | Report date presets and custom ranges in the business timezone, traffic-source/device classification, path and privacy-signal handling, CSV escaping, feedback validation, spam rules, popup frequency limits and quiet pages |
+| `tests/db/analytics.test.ts` | Revenue maths (gross, net, refunds, cancellations, shipping, tax, AOV, per currency), payment status counts, timezone-correct date filters and buckets, best sellers and categories, visitors vs visits vs page views, the funnel, once-only purchase events, admin-only reports, feedback summaries, public review moderation, customer isolation from feedback and notes, and verified-purchase checks |
 | `npm run check` | Lint, type-check and all tests |
 
 ## 10. Project layout
@@ -161,6 +179,8 @@ Any Node.js host that runs `next build && next start` also works.
 src/app/(store)/          storefront routes (home, shop, products, cart, checkout, account, policies…)
 src/app/admin/            admin login, dashboard routes and server actions
 src/app/api/webhooks/     Paystack webhook
+src/app/api/analytics/    first-party analytics collector (consented visitors only)
+src/app/api/admin/        CSV exports (orders, reports, feedback)
 src/app/actions/          storefront server actions (cart, checkout, shipping, auth, contact…)
 src/lib/                  pricing, shipping calculator, payments, cart, orders, catalogue queries, auth
 src/components/           UI, layout, product, cart, checkout, admin components

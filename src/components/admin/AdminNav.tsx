@@ -3,24 +3,28 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { AnimatePresence, m } from "motion/react";
-import { LayoutDashboard, Package, ShoppingBag, Layers, Truck, Tag, Home, Settings, Boxes, Mail, Menu, X, Store, LogOut, FileText } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingBag, Layers, Truck, Tag, Home, Settings, Boxes, Mail, Menu, X, Store, LogOut, FileText, CreditCard, Users, BarChart3, Heart } from "lucide-react";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { signOut } from "@/app/actions/auth";
 import { cn } from "@/lib/cn";
 
 const ITEMS = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard, perm: "orders:read" },
-  { href: "/admin/orders", label: "Orders", icon: ShoppingBag, perm: "orders:read" },
   { href: "/admin/products", label: "Products", icon: Package, perm: "catalog:write" },
   { href: "/admin/categories", label: "Categories", icon: Layers, perm: "catalog:write" },
   { href: "/admin/collections", label: "Collections", icon: Boxes, perm: "catalog:write" },
-  { href: "/admin/shipping", label: "Shipping", icon: Truck, perm: "shipping:write" },
+  { href: "/admin/orders", label: "Orders", icon: ShoppingBag, perm: "orders:read" },
+  { href: "/admin/payments", label: "Payments", icon: CreditCard, perm: "orders:read" },
+  { href: "/admin/customers", label: "Customers", icon: Users, perm: "customers:read" },
+  { href: "/admin/analytics", label: "Analytics & Reports", icon: BarChart3, perm: "reports:read" },
+  { href: "/admin/feedback", label: "Customer Reviews & Feedback", icon: Heart, perm: "feedback:manage" },
+  { href: "/admin/shipping", label: "Shipping Management", icon: Truck, perm: "shipping:write" },
+  { href: "/admin/suppliers", label: "Dropshipping & Fulfilment", icon: Store, perm: "suppliers:write" },
   { href: "/admin/discounts", label: "Discounts", icon: Tag, perm: "discounts:write" },
-  { href: "/admin/suppliers", label: "Suppliers", icon: Store, perm: "suppliers:write" },
   { href: "/admin/homepage", label: "Homepage", icon: Home, perm: "settings:write" },
   { href: "/admin/content", label: "Pages & policies", icon: FileText, perm: "settings:write" },
   { href: "/admin/messages", label: "Messages", icon: Mail, perm: "messages:read" },
-  { href: "/admin/settings", label: "Settings", icon: Settings, perm: "settings:write" },
+  { href: "/admin/settings", label: "Store Settings", icon: Settings, perm: "settings:write" },
 ] as const;
 
 export function AdminNav({ permissions, email }: { permissions: string[]; email: string }) {
@@ -30,16 +34,16 @@ export function AdminNav({ permissions, email }: { permissions: string[]; email:
   const isActive = (href: string) => (href === "/admin" ? pathname === "/admin" : pathname.startsWith(href));
 
   const list = (
-    <nav aria-label="Admin" className="flex flex-1 flex-col gap-0.5 px-3">
+    <nav aria-label="Admin" className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3">
       {items.map(({ href, label, icon: Icon }) => (
         <Link
           key={href}
           href={href}
           onClick={() => setOpen(false)}
           aria-current={isActive(href) ? "page" : undefined}
-          className={cn("flex items-center gap-3 rounded-[3px] px-3 py-2.5 text-sm transition", isActive(href) ? "bg-white/10 text-white" : "text-white/65 hover:bg-white/5 hover:text-white")}
+          className={cn("flex items-center gap-3 rounded-[3px] px-3 py-2 text-sm transition", isActive(href) ? "bg-white/10 text-white" : "text-white/65 hover:bg-white/5 hover:text-white")}
         >
-          <Icon className={cn("size-4", isActive(href) && "text-rose")} aria-hidden />
+          <Icon className={cn("size-4 shrink-0", isActive(href) && "text-rose")} aria-hidden />
           {label}
         </Link>
       ))}
@@ -60,7 +64,7 @@ export function AdminNav({ permissions, email }: { permissions: string[]; email:
   return (
     <>
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col bg-plum lg:flex">
-        <div className="px-6 py-7"><Wordmark tone="light" /></div>
+        <div className="px-6 py-6"><Wordmark tone="light" /></div>
         {list}
         {footer}
       </aside>

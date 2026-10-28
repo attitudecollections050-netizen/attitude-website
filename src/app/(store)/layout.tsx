@@ -9,6 +9,9 @@ import { CartToast } from "@/components/cart/CartToast";
 import { AnnouncementBar } from "@/components/layout/AnnouncementBar";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { AnalyticsTracker } from "@/components/analytics/AnalyticsTracker";
+import { CookieConsent } from "@/components/analytics/CookieConsent";
+import { FeedbackInvite } from "@/components/feedback/FeedbackInvite";
 
 // Cart, session and stock are per-request: never prerender these routes.
 export const dynamic = "force-dynamic";
@@ -29,6 +32,9 @@ export default async function StoreLayout({ children }: LayoutProps<"/">) {
         <Footer categories={categories} settings={settings} />
         <CartDrawer />
         <CartToast />
+        <AnalyticsTracker />
+        <CookieConsent />
+        <FeedbackInvite />
       </CartProvider>
     </MotionProvider>
   );

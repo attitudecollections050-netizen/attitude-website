@@ -16,7 +16,7 @@ export function PageHeader({ title, description, actions, back }: { title: strin
 
 export function Card({ title, description, children, className, actions }: { title?: string; description?: string; children: React.ReactNode; className?: string; actions?: React.ReactNode }) {
   return (
-    <section className={cn("border border-line bg-white p-5 sm:p-6", className)}>
+    <section className={cn("min-w-0 border border-line bg-white p-5 sm:p-6", className)}>
       {(title || actions) && (
         <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -53,10 +53,10 @@ export function Badge({ children, tone = "neutral" }: { children: React.ReactNod
   return <span className={cn("inline-flex items-center whitespace-nowrap border px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-[0.1em]", styles)}>{children}</span>;
 }
 
-export function Table({ children }: { children: React.ReactNode }) {
+export function Table({ children, fit = false }: { children: React.ReactNode; fit?: boolean }) {
   return (
     <div className="overflow-x-auto border border-line bg-white">
-      <table className="w-full min-w-[40rem] text-sm [&_td]:px-4 [&_td]:py-3 [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:text-[0.65rem] [&_th]:font-bold [&_th]:uppercase [&_th]:tracking-[0.12em] [&_th]:text-muted [&_thead]:border-b [&_thead]:border-line [&_tbody_tr]:border-b [&_tbody_tr]:border-line last:[&_tbody_tr]:border-0 [&_tbody_tr:hover]:bg-neutral/60">
+      <table className={cn("w-full text-sm", !fit && "min-w-[40rem]", "[&_td]:px-4 [&_td]:py-3 [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:text-[0.65rem] [&_th]:font-bold [&_th]:uppercase [&_th]:tracking-[0.12em] [&_th]:text-muted [&_thead]:border-b [&_thead]:border-line [&_tbody_tr]:border-b [&_tbody_tr]:border-line last:[&_tbody_tr]:border-0 [&_tbody_tr:hover]:bg-neutral/60")}>
         {children}
       </table>
     </div>

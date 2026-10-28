@@ -7,6 +7,8 @@ import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import Link from "next/link";
 import { Showcase } from "@/components/showcase/Showcase";
 import { DeliveryEstimator } from "@/components/product/DeliveryEstimator";
+import { ProductReviews, getReviewSummary } from "@/components/feedback/ProductReviews";
+import { TrackEvent } from "@/components/analytics/AnalyticsTracker";
 import { ProductGrid } from "@/components/product/ProductGrid";
 import { Reveal } from "@/components/ui/Reveal";
 import { env } from "@/lib/env";
@@ -32,7 +34,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
   const { slug } = await params;
   const product = await getProductBySlug(slug);
   if (!product) notFound();
-  const [related, settings, countries] = await Promise.all([getRelatedProducts(product), getSettings(), listEnabledCountries()]);
+  const [related, settings, countries, reviews] = await Promise.all([getRelatedProducts(product), getSettings(), listEnabledCountries(), getReviewSummary(product.id)]);
   const regions = await listRegionsByCountry(countries.map((c) => c.code));
 
   const inStock = product.allow_backorder || product.variants.some((v) => v.on_hand > 0);
@@ -51,11 +53,16 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
       price: ((product.sale_price ?? product.price) / 100).toFixed(2),
       availability: inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
     },
+    // Only real, approved reviews are summarised here.
+    ...(reviews.count > 0 && reviews.average != null
+      ? { aggregateRating: { "@type": "AggregateRating", ratingValue: reviews.average, reviewCount: reviews.count, bestRating: 5, worstRating: 1 } }
+      : {}),
   };
   const top = product.category.parent ?? product.category;
 
   return (
     <div className="pb-24">
+      <TrackEvent type="product_view" productId={product.id} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
       <div className="container-luxe pt-6">
         <Breadcrumbs
@@ -99,6 +106,8 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
             <DeliveryEstimator slug={product.slug} destinations={{ countries, regions }} />
           </div>
         </div>
+
+      <ProductReviews productId={product.id} slug={product.slug} />
 
       {related.length > 0 && (
         <section className="mt-16" aria-labelledby="related-heading">

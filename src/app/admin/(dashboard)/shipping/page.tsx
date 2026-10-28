@@ -64,7 +64,7 @@ export default async function ShippingAdmin() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Shipping" description="All delivery fees come from these settings and are recalculated on the server at checkout. These are manual rates, not live courier quotes." />
+      <PageHeader title="Shipping Management" description="All delivery fees come from these settings and are recalculated on the server at checkout. These are manual rates, not live courier quotes." />
       {unreviewed > 0 && (
         <Notice tone="warning" title={`${unreviewed} active rate(s) still need review`}>
           The seeded ₦2,500 same-city and ₦4,000 Nigeria rates are development defaults — sample values, not verified courier prices. Set the same-city zone to your real dispatch city, confirm each price, then tick “Price confirmed by me”.

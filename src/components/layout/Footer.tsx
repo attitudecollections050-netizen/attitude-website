@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { CategoryNode } from "@/lib/catalog/types";
 import type { StoreSettings } from "@/lib/settings";
 import { Wordmark } from "@/components/brand/Wordmark";
+import { CookieSettingsButton } from "@/components/analytics/CookieConsent";
 import { NewsletterForm } from "./NewsletterForm";
 
 export function Footer({ categories, settings }: { categories: CategoryNode[]; settings: StoreSettings }) {
@@ -32,6 +33,7 @@ export function Footer({ categories, settings }: { categories: CategoryNode[]; s
             { label: "FAQ", href: "/faq" },
             { label: "Shipping policy", href: "/shipping-policy" },
             { label: "Returns & refunds", href: "/returns-policy" },
+            { label: "Share feedback", href: "/feedback" },
           ]}
         />
         <div>
@@ -85,7 +87,10 @@ export function Footer({ categories, settings }: { categories: CategoryNode[]; s
               ))}
             </ul>
           )}
-          <p>Secure payments by Paystack</p>
+          <div className="flex items-center gap-5">
+            <CookieSettingsButton className="hover:text-white" />
+            <p>Secure payments by Paystack</p>
+          </div>
         </div>
       </div>
     </footer>

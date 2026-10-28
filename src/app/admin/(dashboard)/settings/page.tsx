@@ -13,7 +13,7 @@ export default async function SettingsPage() {
   const mode = paystackMode();
   return (
     <div className="space-y-6">
-      <PageHeader title="Settings" description="Leave unknown details blank — nothing is shown on the site until you fill it in." />
+      <PageHeader title="Store Settings" description="Leave unknown details blank — nothing is shown on the site until you fill it in." />
       <Card title="Store & customer support">
         <ActionForm action={saveStoreSettings}>
           <input type="hidden" name="currency" value="NGN" />

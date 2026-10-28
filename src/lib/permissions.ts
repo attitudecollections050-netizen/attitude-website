@@ -1,4 +1,4 @@
-// Role model. Admins can do everything. Staff can work orders & fulfilment only.
+// Role model. Admins can do everything. Staff can work orders, fulfilment, customers and feedback.
 export type AppRole = "admin" | "staff";
 
 export type Permission =
@@ -9,7 +9,10 @@ export type Permission =
   | "discounts:write"
   | "settings:write"
   | "suppliers:write"
-  | "messages:read";
+  | "messages:read"
+  | "customers:read"
+  | "feedback:manage"
+  | "reports:read";
 
 const MATRIX: Record<AppRole, Permission[]> = {
   admin: [
@@ -21,8 +24,12 @@ const MATRIX: Record<AppRole, Permission[]> = {
     "settings:write",
     "suppliers:write",
     "messages:read",
+    "customers:read",
+    "feedback:manage",
+    "reports:read",
   ],
-  staff: ["orders:read", "orders:update", "messages:read"],
+  // Financial reports and analytics stay admin-only.
+  staff: ["orders:read", "orders:update", "messages:read", "customers:read", "feedback:manage"],
 };
 
 export function can(roles: AppRole[], permission: Permission): boolean {

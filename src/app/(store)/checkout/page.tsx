@@ -9,6 +9,7 @@ import { CheckoutForm } from "@/components/checkout/CheckoutForm";
 import { Notice } from "@/components/ui/Notice";
 import { SetupNotice } from "@/components/ui/SetupNotice";
 import { buttonClasses } from "@/components/ui/Button";
+import { TrackCheckoutStart } from "@/components/analytics/AnalyticsTracker";
 
 export const metadata: Metadata = { title: "Checkout", robots: { index: false } };
 
@@ -49,6 +50,7 @@ export default async function CheckoutPage() {
 
   return (
     <div className="container-luxe pb-24 pt-12">
+      <TrackCheckoutStart />
       <h1 className="display text-5xl sm:text-6xl">Checkout</h1>
       {!isPaystackConfigured() && (
         <Notice tone="warning" title="Payments not configured" className="mt-6">

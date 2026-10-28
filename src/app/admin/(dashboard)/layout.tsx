@@ -6,7 +6,7 @@ import { MotionProvider } from "@/components/ui/MotionProvider";
 
 export const metadata: Metadata = { title: { default: "Admin", template: "%s · Admin" }, robots: { index: false, follow: false } };
 
-const ALL: Permission[] = ["orders:read", "orders:update", "catalog:write", "shipping:write", "discounts:write", "settings:write", "suppliers:write", "messages:read"];
+const ALL: Permission[] = ["orders:read", "orders:update", "catalog:write", "shipping:write", "discounts:write", "settings:write", "suppliers:write", "messages:read", "customers:read", "feedback:manage", "reports:read"];
 
 // Cart, session and stock are per-request: never prerender these routes.
 export const dynamic = "force-dynamic";

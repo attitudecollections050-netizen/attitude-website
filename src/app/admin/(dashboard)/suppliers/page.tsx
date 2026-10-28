@@ -29,7 +29,7 @@ export default async function SuppliersPage() {
   const { data } = await db.from("suppliers").select("*").order("name");
   return (
     <div className="space-y-6">
-      <PageHeader title="Suppliers" description="Dropshipping partners. Supplier details and costs are internal and never shown to customers. Supplier orders are placed manually — no supplier API is connected." />
+      <PageHeader title="Dropshipping & Fulfilment" description="Suppliers you dropship from. Track each order’s supplier order and dispatch on the order page. Supplier details and costs are internal and never shown to customers. Supplier orders are placed manually — no supplier API is connected." />
       <Card title="Add supplier"><ActionForm action={saveSupplier} submitLabel="Add supplier" resetOnSuccess><Fields /></ActionForm></Card>
       {((data ?? []) as S[]).map((s) => (
         <Card key={s.id} title={s.name} actions={!s.is_active ? <Badge tone="warning">Inactive</Badge> : undefined}>
