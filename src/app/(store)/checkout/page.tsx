@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { getLocale, getTranslations } from "next-intl/server";
+import { getPreferences } from "@/lib/intl/preferences";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
@@ -11,7 +13,9 @@ import { SetupNotice } from "@/components/ui/SetupNotice";
 import { buttonClasses } from "@/components/ui/Button";
 import { TrackCheckoutStart } from "@/components/analytics/AnalyticsTracker";
 
-export const metadata: Metadata = { title: "Checkout", robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getTranslations("checkout"))("title"), robots: { index: false } };
+}
 
 export default async function CheckoutPage() {
   if (!isSupabaseConfigured()) {
@@ -21,17 +25,25 @@ export default async function CheckoutPage() {
       </div>
     );
   }
-  const [user, settings, countries] = await Promise.all([getCurrentUser(), getSettings(), listEnabledCountries()]);
+  const [user, settings, countries, t, prefs, locale] = await Promise.all([getCurrentUser(), getSettings(), listEnabledCountries(), getTranslations("checkout"), getPreferences(), getLocale()]);
+  const prefCountryShips = countries.some((c) => c.code === prefs.country);
+  const prefCountryName = (() => {
+    try {
+      return new Intl.DisplayNames([locale], { type: "region" }).of(prefs.country) ?? prefs.country;
+    } catch {
+      return prefs.country;
+    }
+  })();
   const regions = await listRegionsByCountry(countries.map((c) => c.code));
 
   if (!user && !settings.checkout.guest_checkout_enabled) {
     return (
       <div className="container-luxe flex flex-col items-center gap-5 py-24 text-center">
-        <h1 className="display text-5xl">Sign in to check out</h1>
-        <p className="text-sm text-muted">Please sign in or create an account to complete your order.</p>
+        <h1 className="display text-5xl">{t("signInTitle")}</h1>
+        <p className="text-sm text-muted">{t("signInBody")}</p>
         <div className="flex gap-3">
-          <Link href="/account/login?next=/checkout" className={buttonClasses("primary")}>Sign in</Link>
-          <Link href="/account/register?next=/checkout" className={buttonClasses("outline")}>Create account</Link>
+          <Link href="/account/login?next=/checkout" className={buttonClasses("primary")}>{t("signIn")}</Link>
+          <Link href="/account/register?next=/checkout" className={buttonClasses("outline")}>{t("createAccount")}</Link>
         </div>
       </div>
     );
@@ -51,20 +63,25 @@ export default async function CheckoutPage() {
   return (
     <div className="container-luxe pb-24 pt-12">
       <TrackCheckoutStart />
-      <h1 className="display text-5xl sm:text-6xl">Checkout</h1>
+      <h1 className="display text-5xl sm:text-6xl">{t("title")}</h1>
       {!isPaystackConfigured() && (
-        <Notice tone="warning" title="Payments not configured" className="mt-6">
-          Paystack keys are missing, so orders cannot be paid yet. Add <code>PAYSTACK_SECRET_KEY</code> to the server environment.
+        <Notice tone="warning" title={t("notConfiguredTitle")} className="mt-6">
+          {t("notConfigured")}
         </Notice>
       )}
       {paystackMode() === "test" && (
-        <Notice tone="info" title="Test mode" className="mt-6">
-          Payments are running in Paystack test mode — no real money will be charged.
+        <Notice tone="info" title={t("testMode")} className="mt-6">
+          {t("testModeBody")}
         </Notice>
       )}
       {countries.length === 0 && (
-        <Notice tone="error" className="mt-6" title="Delivery not available">
-          No delivery destinations are enabled yet. Please contact us.
+        <Notice tone="error" className="mt-6" title={t("noDestinationsTitle")}>
+          {t("noDestinations")}
+        </Notice>
+      )}
+      {countries.length > 0 && !prefCountryShips && (
+        <Notice tone="warning" className="mt-6">
+          {t("noDeliveryCountry", { country: prefCountryName })}
         </Notice>
       )}
       <div className="mt-10">
@@ -76,6 +93,7 @@ export default async function CheckoutPage() {
           signedIn={Boolean(user)}
           tax={settings.tax}
           dutiesNotice={settings.tax.duties_notice}
+          preferredCountry={prefs.country}
         />
       </div>
     </div>

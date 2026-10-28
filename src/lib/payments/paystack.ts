@@ -45,6 +45,8 @@ export async function initializeTransaction(input: {
   reference: string;
   callbackUrl: string;
   metadata: Record<string, unknown>;
+  /** Paystack payment channels to offer (e.g. card, bank, ussd, bank_transfer). Omit for the account default. */
+  channels?: string[];
 }): Promise<{ authorizationUrl: string; accessCode: string; reference: string }> {
   const res = await fetch(`${API}/transaction/initialize`, {
     method: "POST",
@@ -56,6 +58,7 @@ export async function initializeTransaction(input: {
       reference: input.reference,
       callback_url: input.callbackUrl,
       metadata: input.metadata,
+      ...(input.channels?.length ? { channels: input.channels } : {}),
     }),
     cache: "no-store",
   });

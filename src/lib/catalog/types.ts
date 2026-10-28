@@ -23,6 +23,8 @@ export interface CategoryNode {
   sort_order: number;
   children: CategoryNode[];
   href: string;
+  /** Shorter label for the main navigation (e.g. "Men's" for "Men's Clothing"). */
+  shortName?: string;
 }
 
 export interface ProductDetail {

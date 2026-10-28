@@ -6,7 +6,9 @@ import { AnimatePresence, m } from "motion/react";
 import { ArrowRight, ChevronDown, ChevronUp, Minus, PackageSearch, Plus, ShieldCheck, Truck } from "lucide-react";
 import type { ProductDetail } from "@/lib/catalog/types";
 import { sortSizes } from "@/lib/catalog/filters";
-import { formatMoney } from "@/lib/money";
+import { useTranslations } from "next-intl";
+import { useMoney } from "@/components/intl/PreferencesProvider";
+import { useColorName } from "@/components/intl/useColorName";
 import { useCart } from "@/components/cart/CartProvider";
 import { SmartImage } from "@/components/ui/SmartImage";
 import { cn } from "@/lib/cn";
@@ -77,7 +79,11 @@ export interface ShowcaseProps {
   footer?: React.ReactNode;
 }
 
-export function Showcase({ products, mode, maxPerItem, headline, caption = "Bold • Modern • Timeless", footer }: ShowcaseProps) {
+export function Showcase({ products, mode, maxPerItem, headline, caption, footer }: ShowcaseProps) {
+  const t = useTranslations("product");
+  const { format: formatMoney } = useMoney();
+  const colorName = useColorName();
+  caption ??= t("caption");
   const router = useRouter();
   const { add, pending } = useCart();
   const [index, setIndex] = useState(0);
@@ -137,17 +143,17 @@ export function Showcase({ products, mode, maxPerItem, headline, caption = "Bold
   const TitleTag = mode === "hero" ? "h2" : "h1";
 
   const stock = (() => {
-    if (!anyAvailable) return { text: "Sold out", tone: "text-danger" };
+    if (!anyAvailable) return { text: t("soldOut"), tone: "text-danger" };
     if (!variant) return null;
-    if (variant.on_hand <= 0) return product.allow_backorder ? { text: "Available on backorder", tone: "text-warning" } : { text: "This option is sold out", tone: "text-danger" };
+    if (variant.on_hand <= 0) return product.allow_backorder ? { text: t("backorder"), tone: "text-warning" } : { text: t("optionSoldOut"), tone: "text-danger" };
     if (variant.on_hand <= 3) return { text: `Only ${variant.on_hand} left`, tone: "text-warning" };
-    return { text: "In stock", tone: "text-success" };
+    return { text: t("inStock"), tone: "text-success" };
   })();
 
   const submit = async (buyNow: boolean) => {
     setError(null);
-    if (!variant) return setError("Please choose a size.");
-    if (!available(variant)) return setError("This option is sold out.");
+    if (!variant) return setError(t("chooseSize"));
+    if (!available(variant)) return setError(t("optionSoldOutDot"));
     const r = await add(variant.id, Math.min(qty, maxQty), { openDrawer: !buyNow });
     if (!r.ok) setError(r.error);
     else if (buyNow) router.push("/checkout");
@@ -169,11 +175,11 @@ export function Showcase({ products, mode, maxPerItem, headline, caption = "Bold
         <p className="text-sm tabular-nums text-muted">/ {String(total).padStart(2, "0")}</p>
       </div>
       <div className="flex flex-col items-center gap-2 pb-1">
-        <button type="button" onClick={() => go(-1)} disabled={total <= 1} className="grid size-8 place-items-center rounded-full transition hover:bg-white disabled:opacity-30" aria-label={mode === "hero" ? "Previous product" : "Previous photo"}>
+        <button type="button" onClick={() => go(-1)} disabled={total <= 1} className="grid size-8 place-items-center rounded-full transition hover:bg-white disabled:opacity-30" aria-label={mode === "hero" ? t("prevProduct") : t("prevPhoto")}>
           <ChevronUp className="size-4" />
         </button>
         <span className="h-px w-3 bg-plum/40" aria-hidden />
-        <button type="button" onClick={() => go(1)} disabled={total <= 1} className="grid size-8 place-items-center rounded-full transition hover:bg-white disabled:opacity-30" aria-label={mode === "hero" ? "Next product" : "Next photo"}>
+        <button type="button" onClick={() => go(1)} disabled={total <= 1} className="grid size-8 place-items-center rounded-full transition hover:bg-white disabled:opacity-30" aria-label={mode === "hero" ? t("nextProduct") : t("nextPhoto")}>
           <ChevronDown className="size-4" />
         </button>
       </div>
@@ -184,7 +190,7 @@ export function Showcase({ products, mode, maxPerItem, headline, caption = "Bold
     <section
       className="relative isolate overflow-hidden bg-neutral"
       aria-roledescription={mode === "hero" ? "carousel" : undefined}
-      aria-label={mode === "hero" ? "Featured pieces" : product.name}
+      aria-label={mode === "hero" ? t("featured") : product.name}
     >
       {/* Soft, blurred backdrop taken from the current photo */}
       <AnimatePresence initial={false}>
@@ -262,13 +268,13 @@ export function Showcase({ products, mode, maxPerItem, headline, caption = "Bold
               </div>
               {total > 1 && (
                 <p className="pointer-events-none absolute inset-x-0 -bottom-9 text-center text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted" aria-hidden>
-                  Drag or swipe to explore
+                  {t("swipe")}
                 </p>
               )}
 
               {/* orbit of colour options (desktop/tablet) */}
               {colors.length > 0 && (
-                <div className="pointer-events-none absolute inset-0 hidden sm:block" role="radiogroup" aria-label="Colour">
+                <div className="pointer-events-none absolute inset-0 hidden sm:block" role="radiogroup" aria-label={t("colour")}>
                   {colors.map((c, i) => {
                     const pos = onRing(angles[i], "3.4rem");
                     const dot = onRing(angles[i]);
@@ -288,7 +294,7 @@ export function Showcase({ products, mode, maxPerItem, headline, caption = "Bold
                           type="button"
                           role="radio"
                           aria-checked={selected}
-                          aria-label={`${c.name}${has ? "" : " (sold out)"}`}
+                          aria-label={has ? colorName(c.name) : t("colourSoldOut", { colour: colorName(c.name) })}
                           onClick={() => {
                             setColor(c.name);
                             setSize(null);
@@ -306,7 +312,7 @@ export function Showcase({ products, mode, maxPerItem, headline, caption = "Bold
                           >
                             {img ? <SmartImage src={img.url} alt="" fill sizes="64px" className="object-cover" /> : <Gem hex={c.hex} />}
                           </span>
-                          <span className={cn("text-[0.7rem]", selected ? "font-semibold text-plum" : "text-muted")}>{c.name}</span>
+                          <span className={cn("text-[0.7rem]", selected ? "font-semibold text-plum" : "text-muted")}>{colorName(c.name)}</span>
                         </button>
                       </div>
                     );
@@ -338,8 +344,8 @@ export function Showcase({ products, mode, maxPerItem, headline, caption = "Bold
 
               {/* mobile colour row */}
               {colors.length > 0 && (
-                <div className="mt-6 sm:hidden" role="radiogroup" aria-label="Colour">
-                  <p className="eyebrow text-[0.62rem]">Colour · <span className="normal-case tracking-normal text-muted">{color}</span></p>
+                <div className="mt-6 sm:hidden" role="radiogroup" aria-label={t("colour")}>
+                  <p className="eyebrow text-[0.62rem]">{t("colour")} · <span className="normal-case tracking-normal text-muted">{color ? colorName(color) : ""}</span></p>
                   <div className="mt-3 flex flex-wrap gap-3">
                     {colors.map((c) => (
                       <button
@@ -347,7 +353,7 @@ export function Showcase({ products, mode, maxPerItem, headline, caption = "Bold
                         type="button"
                         role="radio"
                         aria-checked={c.name === color}
-                        aria-label={c.name}
+                        aria-label={colorName(c.name)}
                         onClick={() => {
                           setColor(c.name);
                           setSize(null);
@@ -364,7 +370,7 @@ export function Showcase({ products, mode, maxPerItem, headline, caption = "Bold
 
               {sizes.length > 0 && (
                 <fieldset className="mt-7">
-                  <legend className="eyebrow text-[0.65rem]">Size{size ? ` · ${size}` : ""}</legend>
+                  <legend className="eyebrow text-[0.65rem]">{t("size")}{size ? ` · ${size}` : ""}</legend>
                   <div className="mt-3 flex flex-wrap gap-2.5">
                     {sizes.map((s) => {
                       const v = forColor.find((x) => x.size === s)!;
@@ -381,7 +387,7 @@ export function Showcase({ products, mode, maxPerItem, headline, caption = "Bold
                             setError(null);
                           }}
                           aria-pressed={on}
-                          aria-label={`Size ${s}${ok ? "" : " — sold out"}`}
+                          aria-label={ok ? t("sizeOption", { size: s }) : t("sizeSoldOut", { size: s })}
                           className={cn(
                             "grid h-12 min-w-12 place-items-center rounded-full border px-3 text-sm font-medium tabular-nums transition duration-300",
                             on ? "border-plum bg-plum text-white shadow-lg shadow-plum/25" : "border-plum/15 bg-white/60 hover:border-plum",
@@ -397,13 +403,13 @@ export function Showcase({ products, mode, maxPerItem, headline, caption = "Bold
               )}
 
               <div className="mt-7">
-                <p className="eyebrow text-[0.65rem]">Price</p>
+                <p className="eyebrow text-[0.65rem]">{t("price")}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-3">
                   <span className="font-sans text-[2rem] font-bold leading-none tabular-nums">{formatMoney(price)}</span>
                   {onSale && (
                     <>
                       <s className="text-base text-muted tabular-nums">{formatMoney(product.price)}</s>
-                      <span className="rounded-full bg-pale px-3 py-1 text-xs font-bold text-rose-deep">{Math.round((1 - product.sale_price! / product.price) * 100)}% OFF</span>
+                      <span className="rounded-full bg-pale px-3 py-1 text-xs font-bold text-rose-deep">{t("percentOff", { percent: Math.round((1 - product.sale_price! / product.price) * 100) })}</span>
                     </>
                   )}
                 </div>
@@ -411,18 +417,18 @@ export function Showcase({ products, mode, maxPerItem, headline, caption = "Bold
               </div>
 
               <ul className="mt-6 grid grid-cols-3 gap-3 text-[0.72rem] leading-tight text-plum-soft">
-                <li className="flex items-center gap-2"><ShieldCheck className="size-5 shrink-0" aria-hidden /> Secure checkout</li>
-                <li className="flex items-center gap-2"><Truck className="size-5 shrink-0" aria-hidden /> Doorstep delivery</li>
-                <li className="flex items-center gap-2"><PackageSearch className="size-5 shrink-0" aria-hidden /> Order tracking</li>
+                <li className="flex items-center gap-2"><ShieldCheck className="size-5 shrink-0" aria-hidden /> {t("secureCheckout")}</li>
+                <li className="flex items-center gap-2"><Truck className="size-5 shrink-0" aria-hidden /> {t("doorstep")}</li>
+                <li className="flex items-center gap-2"><PackageSearch className="size-5 shrink-0" aria-hidden /> {t("tracking")}</li>
               </ul>
 
               <div className="mt-7 flex flex-wrap items-center gap-3">
-                <div className="inline-flex h-14 items-center rounded-full bg-white px-2 shadow-[0_10px_30px_-15px_rgba(37,25,35,0.4)]" role="group" aria-label="Quantity">
-                  <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} disabled={qty <= 1 || !anyAvailable} className="grid size-10 place-items-center rounded-full transition hover:bg-blush disabled:opacity-30" aria-label="Decrease quantity">
+                <div className="inline-flex h-14 items-center rounded-full bg-white px-2 shadow-[0_10px_30px_-15px_rgba(37,25,35,0.4)]" role="group" aria-label={t("quantity")}>
+                  <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} disabled={qty <= 1 || !anyAvailable} className="grid size-10 place-items-center rounded-full transition hover:bg-blush disabled:opacity-30" aria-label={t("decrease")}>
                     <Minus className="size-4" />
                   </button>
                   <output className="w-8 text-center text-lg font-semibold tabular-nums" aria-live="polite">{qty}</output>
-                  <button type="button" onClick={() => setQty((q) => Math.min(maxQty, q + 1))} disabled={qty >= maxQty || !anyAvailable} className="grid size-10 place-items-center rounded-full transition hover:bg-blush disabled:opacity-30" aria-label="Increase quantity">
+                  <button type="button" onClick={() => setQty((q) => Math.min(maxQty, q + 1))} disabled={qty >= maxQty || !anyAvailable} className="grid size-10 place-items-center rounded-full transition hover:bg-blush disabled:opacity-30" aria-label={t("increase")}>
                     <Plus className="size-4" />
                   </button>
                 </div>
@@ -433,19 +439,19 @@ export function Showcase({ products, mode, maxPerItem, headline, caption = "Bold
                   aria-busy={pending || undefined}
                   className="group inline-flex h-14 flex-1 items-center justify-between gap-4 whitespace-nowrap rounded-full bg-plum pl-7 pr-6 text-xs font-bold uppercase tracking-[0.16em] text-white shadow-[0_15px_35px_-15px_rgba(37,25,35,0.8)] transition duration-300 hover:bg-rose-deep active:scale-[0.98] disabled:opacity-50 sm:flex-none sm:min-w-56"
                 >
-                  {anyAvailable ? "Add to bag" : "Sold out"}
+                  {anyAvailable ? t("addToBag") : t("soldOut")}
                   <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" aria-hidden />
                 </button>
               </div>
               <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
                 {mode === "product" && anyAvailable && (
                   <button type="button" onClick={() => submit(true)} disabled={pending} className="font-bold uppercase tracking-[0.16em] underline underline-offset-4 hover:text-rose-deep">
-                    Buy now
+                    {t("buyNow")}
                   </button>
                 )}
                 {mode === "hero" && (
                   <Link href={`/products/${product.slug}`} className="font-bold uppercase tracking-[0.16em] underline underline-offset-4 hover:text-rose-deep">
-                    View details
+                    {t("viewDetails")}
                   </Link>
                 )}
               </div>

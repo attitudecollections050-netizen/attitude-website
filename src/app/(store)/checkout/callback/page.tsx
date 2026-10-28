@@ -6,13 +6,17 @@ import { processPayment } from "@/lib/payments/server";
 import { isPaystackConfigured, isSupabaseConfigured } from "@/lib/env";
 import { buttonClasses } from "@/components/ui/Button";
 import { RetryPaymentButton } from "@/components/checkout/RetryPaymentButton";
+import { getTranslations } from "next-intl/server";
 
-export const metadata: Metadata = { title: "Confirming payment", robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getTranslations("callback"))("metaTitle"), robots: { index: false } };
+}
 
 export default async function PaymentCallbackPage({ searchParams }: PageProps<"/checkout/callback">) {
   const sp = await searchParams;
   const reference = typeof sp.reference === "string" ? sp.reference : typeof sp.trxref === "string" ? sp.trxref : "";
   if (!reference || !isSupabaseConfigured() || !isPaystackConfigured()) redirect("/cart");
+  const t = await getTranslations("callback");
 
   const { data: payment } = await createServiceClient()
     .from("payments")
@@ -21,7 +25,7 @@ export default async function PaymentCallbackPage({ searchParams }: PageProps<"/
     .maybeSingle();
   const order = (Array.isArray(payment?.order) ? payment?.order[0] : payment?.order) as { order_number: string; access_token: string } | undefined;
   if (!order) {
-    return <Message title="We couldn't find that payment" body="If you were charged, please contact us with your payment reference." reference={reference} />;
+    return <Message title={t("notFoundTitle")} body={t("notFoundBody")} reference={reference} />;
   }
 
   let code: string;
@@ -39,33 +43,34 @@ export default async function PaymentCallbackPage({ searchParams }: PageProps<"/
   if (code === "pending") {
     return (
       <Message
-        title="Your payment is being confirmed"
-        body="We haven't received confirmation from the payment provider yet. This usually takes a moment. You can view your order status below — we'll update it as soon as payment is confirmed."
+        title={t("pendingTitle")}
+        body={t("pendingBody")}
         reference={reference}
-        action={<Link href={`/order/${order.order_number}?token=${order.access_token}`} className={buttonClasses("primary")}>View order status</Link>}
+        action={<Link href={`/order/${order.order_number}?token=${order.access_token}`} className={buttonClasses("primary")}>{t("viewStatus")}</Link>}
       />
     );
   }
 
   return (
     <Message
-      title="Payment not completed"
-      body={code === "amount_mismatch" ? "The payment amount didn't match your order, so it was not accepted. Please contact us — you will not be charged twice." : "Your payment was not successful and you have not been charged for this attempt. You can try again below."}
+      title={t("failedTitle")}
+      body={code === "amount_mismatch" ? t("mismatchBody") : t("failedBody")}
       reference={reference}
       action={code === "amount_mismatch" ? undefined : <RetryPaymentButton orderNumber={order.order_number} token={order.access_token} />}
     />
   );
 }
 
-function Message({ title, body, reference, action }: { title: string; body: string; reference: string; action?: React.ReactNode }) {
+async function Message({ title, body, reference, action }: { title: string; body: string; reference: string; action?: React.ReactNode }) {
+  const t = await getTranslations("callback");
   return (
     <div className="container-luxe flex max-w-2xl flex-col items-center gap-5 py-24 text-center">
       <h1 className="display text-5xl">{title}</h1>
       <p className="text-sm leading-relaxed text-plum-soft">{body}</p>
-      <p className="text-xs text-muted">Reference: {reference}</p>
+      <p className="text-xs text-muted">{t("reference", { reference })}</p>
       <div className="flex flex-wrap justify-center gap-3">
         {action}
-        <Link href="/contact" className={buttonClasses("outline")}>Contact us</Link>
+        <Link href="/contact" className={buttonClasses("outline")}>{t("contact")}</Link>
       </div>
     </div>
   );

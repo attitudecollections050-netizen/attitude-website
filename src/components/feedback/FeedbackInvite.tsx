@@ -1,4 +1,5 @@
 "use client";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, m } from "motion/react";
@@ -126,6 +127,7 @@ export function FeedbackInvite() {
   }, [eligible, show]);
 
   useDialog(visible === "dialog", close, panel);
+  const t = useTranslations("feedback.invite");
 
   const choose = (s: Sentiment | null) => {
     setSentiment(s);
@@ -142,20 +144,20 @@ export function FeedbackInvite() {
       {visible === "nudge" && (
         <m.aside
           key="nudge"
-          aria-label="Feedback invitation"
+          aria-label={t("aria")}
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 30 }}
           className="fixed inset-x-3 bottom-3 z-[55] rounded-2xl border border-line bg-white p-4 shadow-[0_24px_60px_-20px_rgba(37,25,35,0.4)]"
         >
-          <button type="button" onClick={close} className="absolute right-2 top-2 grid size-9 place-items-center rounded-full text-muted hover:bg-neutral" aria-label="Close feedback invitation">
+          <button type="button" onClick={close} className="absolute right-2 top-2 grid size-9 place-items-center rounded-full text-muted hover:bg-neutral" aria-label={t("closeAria")}>
             <X className="size-4" />
           </button>
-          <p className="pr-8 text-sm font-semibold">How was your experience at Attitude Collections? 💗</p>
-          <p className="mt-1 text-xs text-muted">Your feedback helps us improve your shopping experience.</p>
+          <p className="pr-8 text-sm font-semibold">{t("title")}</p>
+          <p className="mt-1 text-xs text-muted">{t("body")}</p>
           <div className="mt-3 flex gap-2">
-            <button type="button" onClick={() => setMode("dialog")} className="rounded-full bg-plum px-4 py-2 text-xs font-semibold text-white">Share feedback</button>
-            <button type="button" onClick={close} className="rounded-full border border-line px-4 py-2 text-xs font-semibold">Maybe later</button>
+            <button type="button" onClick={() => setMode("dialog")} className="rounded-full bg-plum px-4 py-2 text-xs font-semibold text-white">{t("share")}</button>
+            <button type="button" onClick={close} className="rounded-full border border-line px-4 py-2 text-xs font-semibold">{t("later")}</button>
           </div>
         </m.aside>
       )}
@@ -175,29 +177,29 @@ export function FeedbackInvite() {
             transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
             className="relative max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl bg-white p-6 shadow-2xl outline-none sm:max-w-lg sm:rounded-3xl sm:p-8"
           >
-            <button type="button" onClick={close} className="absolute right-3 top-3 grid size-10 place-items-center rounded-full text-muted transition hover:bg-neutral hover:text-plum" aria-label="Close">
+            <button type="button" onClick={close} className="absolute right-3 top-3 grid size-10 place-items-center rounded-full text-muted transition hover:bg-neutral hover:text-plum" aria-label={t("close")}>
               <X className="size-5" />
             </button>
             <div className="mx-auto mb-4 grid size-12 place-items-center rounded-full bg-pale text-rose" aria-hidden>
               <Heart className="size-6 fill-rose" />
             </div>
-            <h2 id="feedback-invite-title" className="text-center font-display text-3xl leading-tight">How was your experience at Attitude Collections? 💗</h2>
-            <p className="mt-2 text-center text-sm text-muted">Your feedback helps us improve your shopping experience.</p>
+            <h2 id="feedback-invite-title" className="text-center font-display text-3xl leading-tight">{t("title")}</h2>
+            <p className="mt-2 text-center text-sm text-muted">{t("body")}</p>
 
             {step === "choose" ? (
               <div className="mt-6 space-y-2.5">
-                <ChoiceButton icon={<Smile className="size-5" />} onClick={() => choose("positive")}>Positive experience</ChoiceButton>
-                <ChoiceButton icon={<Frown className="size-5" />} onClick={() => choose("negative")}>Negative experience</ChoiceButton>
-                <ChoiceButton icon={<Heart className="size-5" />} onClick={() => choose(null)}>Rate with hearts</ChoiceButton>
+                <ChoiceButton icon={<Smile className="size-5" />} onClick={() => choose("positive")}>{t("positive")}</ChoiceButton>
+                <ChoiceButton icon={<Frown className="size-5" />} onClick={() => choose("negative")}>{t("negative")}</ChoiceButton>
+                <ChoiceButton icon={<Heart className="size-5" />} onClick={() => choose(null)}>{t("hearts")}</ChoiceButton>
                 <button type="button" onClick={close} className="mx-auto mt-2 block text-xs font-semibold text-muted underline-offset-4 hover:text-plum hover:underline">
-                  Maybe later
+                  {t("later")}
                 </button>
               </div>
             ) : (
               <div className="mt-6">
-                <FeedbackForm compact source={origin} initialSentiment={sentiment} onSubmitted={onSubmitted} onCancel={close} cancelLabel={submitted ? "Close" : "Maybe later"} />
+                <FeedbackForm compact source={origin} initialSentiment={sentiment} onSubmitted={onSubmitted} onCancel={close} cancelLabel={submitted ? t("close") : t("later")} />
                 {submitted && (
-                  <button type="button" onClick={close} className="mx-auto mt-2 block text-xs font-semibold text-muted underline-offset-4 hover:underline">Close</button>
+                  <button type="button" onClick={close} className="mx-auto mt-2 block text-xs font-semibold text-muted underline-offset-4 hover:underline">{t("close")}</button>
                 )}
               </div>
             )}

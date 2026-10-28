@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useMemo, useState, useTransitio
 import { addToCart, applyDiscountCode, removeCartItem, removeDiscountCode, updateCartItem, type CartActionResult } from "@/app/actions/cart";
 import type { CartView } from "@/lib/cart/types";
 import { track } from "@/lib/analytics/client";
+import { useTranslations } from "next-intl";
 
 interface CartContextValue {
   cart: CartView;
@@ -24,6 +25,7 @@ export function CartProvider({ initialCart, children }: { initialCart: CartView;
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [toast, setToast] = useState<CartContextValue["toast"]>(null);
+  const tc = useTranslations("common");
 
   const notify = useCallback((text: string, tone: "success" | "error") => {
     const id = Date.now();
@@ -46,13 +48,13 @@ export function CartProvider({ initialCart, children }: { initialCart: CartView;
             }
             resolve(result);
           } catch {
-            const result: CartActionResult = { ok: false, error: "Something went wrong. Please try again." };
+            const result: CartActionResult = { ok: false, error: tc("somethingWrong") };
             notify(result.error, "error");
             resolve(result);
           }
         });
       }),
-    [notify],
+    [notify, tc],
   );
 
   const value = useMemo<CartContextValue>(

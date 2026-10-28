@@ -5,5 +5,5 @@ export function generateMetadata() {
 }
 
 export default function Page() {
-  return <ContentPage slug="privacy-policy" eyebrow="Policies" />;
+  return <ContentPage slug="privacy-policy" eyebrow="policies" />;
 }

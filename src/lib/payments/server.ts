@@ -33,7 +33,7 @@ async function onFirstPaid(result: FinalizeResult) {
   const db = createServiceClient();
   const { data: order } = await db
     .from("orders")
-    .select("order_number, customer_name, email, total, currency, shipping_fee, shipping_method_name, access_token, cart_id, order_items(product_name, variant_label, quantity, line_total)")
+    .select("order_number, customer_name, email, total, currency, shipping_fee, shipping_method_name, access_token, cart_id, locale, order_items(product_name, variant_label, quantity, line_total)")
     .eq("id", result.order_id)
     .single();
   if (!order) return;

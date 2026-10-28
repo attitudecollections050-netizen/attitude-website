@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import type { CategoryNode } from "@/lib/catalog/types";
 import { SmartImage } from "@/components/ui/SmartImage";
@@ -5,6 +6,7 @@ import { Reveal } from "@/components/ui/Reveal";
 import { cn } from "@/lib/cn";
 
 export function CategoryCards({ categories }: { categories: CategoryNode[] }) {
+  const t = useTranslations("home");
   return (
     <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
       {categories.map((c, i) => (
@@ -21,7 +23,7 @@ export function CategoryCards({ categories }: { categories: CategoryNode[] }) {
             <span className="absolute inset-x-0 bottom-0 p-4 text-white sm:p-5">
               <span className="block font-display text-2xl leading-tight sm:text-3xl">{c.name}</span>
               <span className="mt-2 inline-flex items-center gap-2 text-[0.62rem] font-bold uppercase tracking-[0.22em] text-pale">
-                Shop now
+                {t("shopNowLower")}
                 <span className="h-px w-5 bg-pale transition-all duration-500 group-hover:w-9" />
               </span>
             </span>

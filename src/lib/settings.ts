@@ -24,6 +24,7 @@ export interface StoreSettings {
   };
   checkout: { guest_checkout_enabled: boolean; max_quantity_per_item: number };
   promotion: PromotionConfig;
+  intl: IntlSettings;
   tax: TaxConfig & { duties_notice: string };
   home: {
     show_new_arrivals: boolean;
@@ -32,6 +33,21 @@ export interface StoreSettings {
     intro_title: string;
     intro_body: string;
   };
+}
+
+export type RateProvider = "open_er_api" | "exchangerate_api" | "manual";
+export interface IntlSettings {
+  default_locale: string;
+  enabled_locales: string[];
+  default_country: string;
+  rate_provider: RateProvider;
+  auto_update: boolean;
+  /** Rates older than this are not used for display (prices fall back to NGN). */
+  max_rate_age_hours: number;
+  /** Currencies the payment provider account can actually charge in. NGN unless set otherwise. */
+  payment_currencies: string[];
+  /** Paystack payment channels by country code, with a "default" entry. */
+  payment_channels: Record<string, string[]>;
 }
 
 export const DEFAULT_SETTINGS: StoreSettings = {
@@ -52,6 +68,16 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   },
   checkout: { guest_checkout_enabled: true, max_quantity_per_item: 10 },
   promotion: { enabled: false, code: "", min_subtotal: 0, free_delivery: false, label: "" },
+  intl: {
+    default_locale: "en",
+    enabled_locales: ["en", "fr", "es", "pt", "ar", "de", "zh"],
+    default_country: "NG",
+    rate_provider: "open_er_api",
+    auto_update: true,
+    max_rate_age_hours: 36,
+    payment_currencies: ["NGN"],
+    payment_channels: { NG: ["card", "bank", "ussd", "bank_transfer"], default: ["card"] },
+  },
   tax: { mode: "none", rate_bps: 0, label: "VAT", duties_notice: "" },
   home: {
     show_new_arrivals: true,

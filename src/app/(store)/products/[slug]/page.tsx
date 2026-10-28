@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+import { CurrencyNotice } from "@/components/intl/CurrencyNotice";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getProductBySlug, getRelatedProducts } from "@/lib/catalog/queries";
@@ -16,8 +18,9 @@ import { env } from "@/lib/env";
 export async function generateMetadata({ params }: PageProps<"/products/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
-  if (!product) return { title: "Product not found" };
-  const description = product.description.slice(0, 155) || `Shop ${product.name} at Attitude Collections.`;
+  const tp = await getTranslations("pages");
+  if (!product) return { title: tp("productNotFound") };
+  const description = product.description.slice(0, 155) || tp("shopCategoryMeta", { name: product.name });
   return {
     title: product.name,
     description,
@@ -35,7 +38,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
   const product = await getProductBySlug(slug);
   if (!product) notFound();
   const [related, settings, countries, reviews] = await Promise.all([getRelatedProducts(product), getSettings(), listEnabledCountries(), getReviewSummary(product.id)]);
-  const regions = await listRegionsByCountry(countries.map((c) => c.code));
+  const [regions, t, tc] = await Promise.all([listRegionsByCountry(countries.map((c) => c.code)), getTranslations("product"), getTranslations("common")]);
 
   const inStock = product.allow_backorder || product.variants.some((v) => v.on_hand > 0);
   const jsonLd = {
@@ -67,7 +70,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
       <div className="container-luxe pt-6">
         <Breadcrumbs
           items={[
-            { label: "Home", href: "/" },
+            { label: tc("home"), href: "/" },
             { label: top.name, href: `/shop/${top.slug}` },
             ...(product.category.parent ? [{ label: product.category.name, href: `/shop/${top.slug}/${product.category.slug}` }] : []),
             { label: product.name },
@@ -81,14 +84,14 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
           <div>
             <details className="group border-b border-line py-5" open>
               <summary className="eyebrow flex cursor-pointer list-none items-center justify-between">
-                Description <span className="text-lg leading-none transition-transform group-open:rotate-45">+</span>
+                {t("description")} <span className="text-lg leading-none transition-transform group-open:rotate-45">+</span>
               </summary>
               <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-plum-soft">{product.description}</p>
             </details>
             {product.details && (
               <details className="group border-b border-line py-5">
                 <summary className="eyebrow flex cursor-pointer list-none items-center justify-between">
-                  Details & care <span className="text-lg leading-none transition-transform group-open:rotate-45">+</span>
+                  {t("details")} <span className="text-lg leading-none transition-transform group-open:rotate-45">+</span>
                 </summary>
                 <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-plum-soft">{product.details}</p>
               </details>
@@ -96,12 +99,14 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
           </div>
           <div>
             <ul className="grid gap-3 border-b border-line py-5 text-sm text-plum-soft">
-              <li>Delivery fees and estimates are calculated for your address at checkout.</li>
+              <li>{t("deliveryNote")}</li>
               <li>
-                See our{" "}
-                <Link href="/returns-policy" className="underline underline-offset-4">returns policy</Link> and{" "}
-                <Link href="/shipping-policy" className="underline underline-offset-4">shipping policy</Link>.
+                {t.rich("policies", {
+                  returns: (chunks) => <Link href="/returns-policy" className="underline underline-offset-4">{chunks}</Link>,
+                  shipping: (chunks) => <Link href="/shipping-policy" className="underline underline-offset-4">{chunks}</Link>,
+                })}
               </li>
+              <li><CurrencyNotice /></li>
             </ul>
             <DeliveryEstimator slug={product.slug} destinations={{ countries, regions }} />
           </div>
@@ -112,9 +117,9 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
       {related.length > 0 && (
         <section className="mt-16" aria-labelledby="related-heading">
           <Reveal>
-            <p className="eyebrow text-rose-deep">Complete the look</p>
+            <p className="eyebrow text-rose-deep">{t("completeLook")}</p>
             <h2 id="related-heading" className="display mt-3 text-4xl sm:text-5xl">
-              You may also like
+              {t("youMayLike")}
             </h2>
           </Reveal>
           <div className="mt-10">

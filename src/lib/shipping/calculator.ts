@@ -76,7 +76,10 @@ export interface ShippingOption {
 
 export type ShippingQuote =
   | { ok: true; zoneName: string; options: ShippingOption[] }
-  | { ok: false; code: ShippingErrorCode; message: string };
+  | { ok: false; code: ShippingErrorCode; message: string; field?: AddressField; label?: string };
+
+/** Which address field an invalid_address error is about (lets the UI translate the message). */
+export type AddressField = "city" | "region_invalid" | "region_missing" | "postal_missing";
 
 export type ShippingErrorCode =
   | "country_unsupported"
@@ -97,7 +100,7 @@ export function validateAddressForCountry(
   address: ShippingAddressInput,
   country: CountryConfig | null,
   regions: RegionRecord[],
-): { ok: true; regionCode: string | null } | { ok: false; code: ShippingErrorCode; message: string } {
+): { ok: true; regionCode: string | null } | { ok: false; code: ShippingErrorCode; message: string; field?: AddressField; label?: string } {
   if (!country || !country.is_enabled) {
     return {
       ok: false,
@@ -106,21 +109,21 @@ export function validateAddressForCountry(
     };
   }
   if (!normalizePlace(address.city)) {
-    return { ok: false, code: "invalid_address", message: "Please enter your city or town." };
+    return { ok: false, code: "invalid_address", field: "city", message: "Please enter your city or town." };
   }
   let regionCode: string | null = null;
   if (regions.length > 0) {
     const wanted = normalizePlace(address.region);
     const match = regions.find((r) => normalizePlace(r.code) === wanted || normalizePlace(r.name) === wanted);
     if (!match) {
-      return { ok: false, code: "invalid_address", message: `Please choose a valid ${country.region_label.toLowerCase()}.` };
+      return { ok: false, code: "invalid_address", field: "region_invalid", label: country.region_label, message: `Please choose a valid ${country.region_label.toLowerCase()}.` };
     }
     regionCode = match.code;
   } else if (country.region_required && !normalizePlace(address.region)) {
-    return { ok: false, code: "invalid_address", message: `Please enter your ${country.region_label.toLowerCase()}.` };
+    return { ok: false, code: "invalid_address", field: "region_missing", label: country.region_label, message: `Please enter your ${country.region_label.toLowerCase()}.` };
   }
   if (country.postal_required && !(address.postal_code ?? "").trim()) {
-    return { ok: false, code: "invalid_address", message: `Please enter your ${country.postal_label.toLowerCase()}.` };
+    return { ok: false, code: "invalid_address", field: "postal_missing", label: country.postal_label, message: `Please enter your ${country.postal_label.toLowerCase()}.` };
   }
   return { ok: true, regionCode };
 }

@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 export function Breadcrumbs({ items }: { items: { label: string; href?: string }[] }) {
+  const t = useTranslations("common");
   return (
-    <nav aria-label="Breadcrumb" className="text-[0.7rem] uppercase tracking-[0.18em] text-muted">
+    <nav aria-label={t("breadcrumb")} className="text-[0.7rem] uppercase tracking-[0.18em] text-muted">
       <ol className="flex flex-wrap items-center gap-2">
         {items.map((item, i) => (
           <li key={i} className="flex items-center gap-2">

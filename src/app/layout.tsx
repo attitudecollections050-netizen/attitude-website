@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import { env } from "@/lib/env";
+import { localeDir } from "@/lib/intl/config";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -43,10 +46,16 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
   return (
-    <html lang="en" className={`${cormorant.variable} ${manrope.variable}`}>
-      <body className="min-h-dvh flex flex-col">{children}</body>
+    <html lang={locale} dir={localeDir(locale)} className={`${cormorant.variable} ${manrope.variable}`}>
+      <body className="min-h-dvh flex flex-col">
+        {/* Only what the root error page needs; store and admin layouts provide their own messages. */}
+        <NextIntlClientProvider locale={locale} messages={{ common: messages.common, errors: messages.errors }}>
+          {children}
+        </NextIntlClientProvider>
+      </body>
     </html>
   );
 }

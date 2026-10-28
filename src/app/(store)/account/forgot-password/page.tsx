@@ -1,14 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { AuthShell } from "@/components/account/AuthShell";
 import { ForgotPasswordForm } from "@/components/account/AuthForms";
 
-export const metadata: Metadata = { title: "Reset password", robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getTranslations("account"))("resetPassword"), robots: { index: false } };
+}
 
-export default function ForgotPasswordPage() {
+export default async function ForgotPasswordPage() {
+  const t = await getTranslations("account");
   return (
-    <AuthShell eyebrow="Account help" title="Reset password" footer={<Link href="/account/login" className="underline underline-offset-4">Back to sign in</Link>}>
-      <p className="mb-6 text-sm text-plum-soft">Enter your email and we&apos;ll send you a secure link to choose a new password.</p>
+    <AuthShell eyebrow={t("help")} title={t("resetPassword")} footer={<Link href="/account/login" className="underline underline-offset-4">{t("backToSignIn")}</Link>}>
+      <p className="mb-6 text-sm text-plum-soft">{t("forgotIntro")}</p>
       <ForgotPasswordForm />
     </AuthShell>
   );

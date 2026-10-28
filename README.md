@@ -163,6 +163,24 @@ A floating pink DJ-girl avatar (bottom-right on every store page except checkout
 
 **Guard rails:** it cannot see orders, accounts or payments; it is told never to invent prices, fees, stock, contact details or promotions, never to ask for card details or passwords, and to send order problems to /contact. Conversations stay in the shopper's browser tab and are not saved in your database.
 
+## 7c. Languages, countries and currencies
+
+**Customers.** On their first visit shoppers see a welcome screen ("Welcome to Attitude Collections. 💗 …") where they choose a **language**, **country/region** (searchable) and **display currency**, then *Continue shopping*. Language and currency are suggested from the browser, and country from the visitor's location when the host provides it (Vercel's `x-vercel-ip-country`). Suggestions are only pre-selected, never forced, and the country is never guessed from the language. The choice is stored in functional cookies (`ac_locale`, `ac_country`, `ac_currency`, `ac_prefs`) and, for signed-in customers, on their profile. It is restored when they sign in, and the screen isn't shown again. They can change it any time from the header button (e.g. `EN | 🇳🇬 Nigeria | NGN ₦`), the mobile menu or the footer. Changing it refreshes the page in place and keeps the bag.
+
+**Languages:** English, French, Spanish, Portuguese, Arabic (right-to-left), German and Chinese (Simplified). Interface text lives in `src/messages/<code>.json`. Anything missing falls back to English, so customers never see raw keys. The built-in translations were prepared with AI assistance: **have checkout, legal and policy wording reviewed by fluent speakers** before relying on them. You can correct any text without a code change in **Admin → International → Interface text & translations**. Product, category and collection names and descriptions can be translated there too. Pages written in Admin → Pages & policies are shown in English, with a short note for non-English shoppers. Order confirmation emails are sent in the language the order was placed in. Dj Attitude Mini's window is translated; her conversation stays in English.
+
+**Countries:** shoppers can choose any country to browse. Checkout only offers the countries you deliver to (Admin → Shipping Management), and shoppers from other countries are told so clearly.
+
+**Currencies.** All prices stay in **NGN**, and every payment is **charged in NGN** through Paystack. Other currencies (USD, GBP, EUR, CAD, GHS and ZAR on by default; more can be switched on) are **display estimates**:
+- Rates come from the provider chosen in Admin → International: open.er-api.com (free, no key), ExchangeRate-API (`EXCHANGE_RATE_API_KEY`), or rates you type in manually. They are fetched on the server, validated (positive, and no jump above 25% unless an admin accepts it), and stored with a timestamp. Each attempt is logged.
+- Rates update daily via the Vercel cron in `vercel.json` (`/api/cron/exchange-rates`, protected by `CRON_SECRET`), and also in the background when they get old. Saving rates needs `SUPABASE_SECRET_KEY`.
+- If the service fails, the last valid rate is kept until it expires (default 36 h). After that, prices show in NGN with a short explanation. No rate is ever invented.
+- An optional markup per currency only changes the displayed estimate, never the amount charged.
+- Converted prices are marked as estimates. At checkout the shopper sees **"You will be charged ₦…"** before paying. Totals are always recalculated on the server in NGN. Each order stores the NGN amount charged plus a snapshot of the display currency, rate, estimate and language, so past orders never change when rates move.
+- Charging in other currencies needs Paystack to enable them on your account, plus a code change. It is not switched on, and the store never claims it is.
+
+**Payment methods by country** (Paystack channels such as card, bank transfer and USSD) are set in Admin → International. Paystack only shows the methods your account supports. **Preview the store** on that page opens the storefront in any language/country/currency in your own browser. The admin dashboard itself stays in English.
+
 ## 8. Deploying to Vercel
 
 1. Push the repository to GitHub and import it in Vercel. The framework is detected automatically.
@@ -183,6 +201,7 @@ Any Node.js host that runs `next build && next start` also works.
 | `npm run test:db` | Runs every migration against a **throwaway** PostgreSQL database and tests catalogue search and filters, RLS (customers isolated, supplier/payment data hidden, no self-granted admin), order creation (idempotency, tampered prices, stock, invalid discounts), payment finalisation (mismatch, idempotency, duplicate payments, inventory conflicts), status rules, tracking privacy and rate limiting. Requires `TEST_DATABASE_URL` pointing at a disposable Postgres 15+ server; skipped otherwise |
 | `tests/unit/analytics.test.ts`, `feedback.test.ts` | Report date presets and custom ranges in the business timezone, traffic-source/device classification, path and privacy-signal handling, CSV escaping, feedback validation, spam rules, popup frequency limits and quiet pages |
 | `tests/db/analytics.test.ts` | Revenue maths (gross, net, refunds, cancellations, shipping, tax, AOV, per currency), payment status counts, timezone-correct date filters and buckets, best sellers and categories, visitors vs visits vs page views, the funnel, once-only purchase events, admin-only reports, feedback summaries, public review moderation, customer isolation from feedback and notes, and verified-purchase checks |
+| `tests/unit/intl.test.ts`, `tests/db/international.test.ts` | Every translation file has every English key and valid message syntax with the same placeholders; English fallback and admin text overrides; language suggestion; currency conversion and formatting (including Arabic); rate freshness, markups, manual rates, validation and provider failures; currency/rate/translation security rules; customer preference isolation; order display snapshots |
 | `npm run check` | Lint, type-check and all tests |
 
 ## 10. Project layout
@@ -209,5 +228,6 @@ docs/DATABASE.md          schema documentation
 - **Verified shipping prices** for Nigeria and any international destinations.
 - Business details, policies, returns terms and tax decisions.
 - Real product photography and supplier products (replace the demo catalogue).
+- `CRON_SECRET` on Vercel for the daily exchange-rate update (and optionally `EXCHANGE_RATE_API_KEY`). Review the AI-prepared translations, especially checkout and policy text.
 - Optional: Anthropic API key for the Dj Attitude Mini chat (basic mode works without it).
 - Optional: Resend API key and a verified sender domain for order emails; custom SMTP for Supabase Auth emails.

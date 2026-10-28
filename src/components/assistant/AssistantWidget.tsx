@@ -8,11 +8,10 @@ import { ASSISTANT_NAME, MAX_MESSAGE_CHARS, basicReply, linkify, type AssistantR
 import { getConsent, browserOptedOut } from "@/lib/analytics/client";
 import { SmartImage } from "@/components/ui/SmartImage";
 import { cn } from "@/lib/cn";
+import { useTranslations } from "next-intl";
+import { useMoney } from "@/components/intl/PreferencesProvider";
 import { MiniAvatar } from "./MiniAvatar";
 import { RECOGNITION_LANG, canSpeak, englishVoices, getRecognitionCtor, pickVoice, primeVoices, requestMicrophone, saveVoiceName, savedVoiceName, speak, stopSpeaking, type Recognition } from "./voice";
-
-const MIC_BLOCKED_HELP =
-  "Your browser is blocking the microphone 🎤 To allow it: tap the lock (🔒) or settings icon beside the web address → Microphone → Allow, then tap the mic again.";
 
 interface Message extends ChatTurn {
   id: string;
@@ -56,6 +55,8 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 export function AssistantWidget() {
   const pathname = usePathname();
   const reduce = useReducedMotion();
+  // Window labels follow the shopper's language; Dj Attitude Mini herself chats in English.
+  const t = useTranslations("assistant");
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
   const [input, setInput] = useState("");
@@ -208,7 +209,7 @@ export function AssistantWidget() {
     // Ask for the microphone first so the browser shows its "Allow microphone" prompt.
     const access = await requestMicrophone();
     if (access !== "granted") {
-      setVoiceNote(access === "unavailable" ? "I can't find a microphone on this device 🎤" : MIC_BLOCKED_HELP);
+      setVoiceNote(access === "unavailable" ? t("noMic") : t("micBlocked"));
       return;
     }
     const rec = new Ctor();
@@ -227,8 +228,8 @@ export function AssistantWidget() {
     };
     rec.onerror = (e) => {
       setListening(false);
-      if (e.error === "not-allowed" || e.error === "service-not-allowed") setVoiceNote(MIC_BLOCKED_HELP);
-      else if (e.error === "no-speech") setVoiceNote("I didn't hear anything 🙉 Tap the mic and try again.");
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") setVoiceNote(t("micBlocked"));
+      else if (e.error === "no-speech") setVoiceNote(t("noSpeech"));
     };
     rec.onend = () => {
       setListening(false);
@@ -260,12 +261,12 @@ export function AssistantWidget() {
             className="fixed bottom-[5.6rem] right-4 z-[52] w-60 rounded-2xl rounded-br-sm border border-pale bg-white p-3.5 pr-8 text-sm shadow-[0_18px_40px_-18px_rgba(217,79,145,0.6)] sm:right-6"
             role="status"
           >
-            <button type="button" onClick={() => setGreeting(false)} className="absolute right-1.5 top-1.5 grid size-7 place-items-center rounded-full text-muted hover:bg-neutral" aria-label="Dismiss greeting">
+            <button type="button" onClick={() => setGreeting(false)} className="absolute right-1.5 top-1.5 grid size-7 place-items-center rounded-full text-muted hover:bg-neutral" aria-label={t("dismiss")}>
               <X className="size-3.5" />
             </button>
-            <p className="font-semibold">Hi! I&apos;m {ASSISTANT_NAME} 🎧</p>
-            <p className="mt-0.5 text-xs text-muted">Need help, an outfit idea or a joke?</p>
-            <button type="button" onClick={() => { setGreeting(false); setOpen(true); }} className="mt-2 text-xs font-semibold text-rose-deep underline underline-offset-4">Chat with me</button>
+            <p className="font-semibold">{t("greetTitle", { name: ASSISTANT_NAME })}</p>
+            <p className="mt-0.5 text-xs text-muted">{t("greetBody")}</p>
+            <button type="button" onClick={() => { setGreeting(false); setOpen(true); }} className="mt-2 text-xs font-semibold text-rose-deep underline underline-offset-4">{t("chatWithMe")}</button>
           </m.div>
         )}
       </AnimatePresence>
@@ -276,7 +277,7 @@ export function AssistantWidget() {
         onClick={() => { setGreeting(false); if (open) closePanel(); else setOpen(true); }}
         aria-expanded={open}
         aria-controls="dj-mini-panel"
-        aria-label={open ? `Close ${ASSISTANT_NAME}` : `Chat with ${ASSISTANT_NAME}`}
+        aria-label={open ? t("closeNamed", { name: ASSISTANT_NAME }) : t("chatWith", { name: ASSISTANT_NAME })}
         className="fixed bottom-4 right-4 z-[52] size-16 rounded-full bg-white p-1 shadow-[0_14px_34px_-10px_rgba(217,79,145,0.75)] ring-2 ring-rose/70 transition hover:ring-rose sm:right-6"
         animate={reduce || open ? undefined : { y: [0, -5, 0] }}
         transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
@@ -293,7 +294,7 @@ export function AssistantWidget() {
             id="dj-mini-panel"
             role="dialog"
             aria-modal="false"
-            aria-label={`${ASSISTANT_NAME} chat`}
+            aria-label={t("chatAria", { name: ASSISTANT_NAME })}
             initial={{ opacity: 0, y: 24, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.96 }}
@@ -307,7 +308,7 @@ export function AssistantWidget() {
                 <p className="truncate font-display text-xl leading-tight">{ASSISTANT_NAME}</p>
                 <p className="flex items-center gap-1.5 text-[0.7rem] text-white/70">
                   <span className={cn("size-1.5 rounded-full", mode === "basic" ? "bg-amber-300" : "bg-emerald-400")} aria-hidden />
-                  {listening ? "Listening…" : talking ? "Talking…" : mode === "basic" ? "Basic mode" : "AI style assistant"}
+                  {listening ? t("listening") : talking ? t("talking") : mode === "basic" ? t("basicMode") : t("aiMode")}
                 </p>
               </div>
               {speechSupported && (
@@ -320,8 +321,8 @@ export function AssistantWidget() {
                     setVoicePicker(englishVoices(voices).slice(0, 8).map((v) => ({ name: v.name, lang: v.lang })));
                   }}
                   aria-expanded={Boolean(voicePicker)}
-                  aria-label="Choose her voice"
-                  title="Choose her voice"
+                  aria-label={t("chooseVoice")}
+                  title={t("chooseVoice")}
                   className="grid size-9 place-items-center rounded-full text-white/80 transition hover:bg-white/10 hover:text-white"
                 >
                   <AudioLines className="size-4" />
@@ -332,22 +333,22 @@ export function AssistantWidget() {
                   type="button"
                   onClick={() => { if (voiceOn) stopSpeaking(); setVoiceOn((v) => !v); }}
                   aria-pressed={voiceOn}
-                  aria-label={voiceOn ? "Stop reading replies aloud" : "Read replies aloud"}
-                  title={voiceOn ? "Voice replies on" : "Voice replies off"}
+                  aria-label={voiceOn ? t("voiceStop") : t("voiceStart")}
+                  title={voiceOn ? t("voiceOn") : t("voiceOff")}
                   className="grid size-9 place-items-center rounded-full text-white/80 transition hover:bg-white/10 hover:text-white"
                 >
                   {voiceOn ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
                 </button>
               )}
-              <button type="button" onClick={closePanel} aria-label="Close chat" className="grid size-9 place-items-center rounded-full text-white/80 transition hover:bg-white/10 hover:text-white">
+              <button type="button" onClick={closePanel} aria-label={t("close")} className="grid size-9 place-items-center rounded-full text-white/80 transition hover:bg-white/10 hover:text-white">
                 <X className="size-5" />
               </button>
             </header>
             {voicePicker && (
-              <div className="border-b border-line bg-white px-3 py-3" role="group" aria-label="Choose her voice">
-                <p className="px-1 text-xs font-semibold">Pick the voice you like 💗 <span className="font-normal text-muted">(English voices on this device)</span></p>
+              <div className="border-b border-line bg-white px-3 py-3" role="group" aria-label={t("chooseVoice")}>
+                <p className="px-1 text-xs font-semibold">{t("pickVoice")} <span className="font-normal text-muted">{t("englishVoices")}</span></p>
                 {voicePicker.length === 0 ? (
-                  <p className="mt-2 px-1 text-xs text-muted">This device has no English voices installed. Add one in your phone or computer&apos;s speech settings.</p>
+                  <p className="mt-2 px-1 text-xs text-muted">{t("noVoices")}</p>
                 ) : (
                   <ul className="mt-2 flex max-h-36 flex-wrap gap-1.5 overflow-y-auto">
                     {voicePicker.map((v) => (
@@ -381,7 +382,7 @@ export function AssistantWidget() {
                 <div className="flex items-end gap-2" role="status">
                   <span className="size-7 shrink-0"><MiniAvatar className="size-full" /></span>
                   <span className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-white px-3.5 py-3 shadow-sm">
-                    <span className="sr-only">{ASSISTANT_NAME} is typing</span>
+                    <span className="sr-only">{t("typing", { name: ASSISTANT_NAME })}</span>
                     {[0, 1, 2].map((i) => (
                       <m.span key={i} className="size-1.5 rounded-full bg-rose" animate={reduce ? undefined : { y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.12 }} aria-hidden />
                     ))}
@@ -410,14 +411,14 @@ export function AssistantWidget() {
                     type="button"
                     onClick={() => void toggleMic()}
                     aria-pressed={listening}
-                    aria-label={listening ? "Stop recording voice message" : "Record a voice message"}
+                    aria-label={listening ? t("micStop") : t("micStart")}
                     className={cn("relative grid size-11 shrink-0 place-items-center rounded-full transition", listening ? "bg-rose text-white" : "bg-pale text-rose-deep hover:bg-rose hover:text-white")}
                   >
                     {listening && !reduce && <m.span className="absolute inset-0 rounded-full bg-rose" animate={{ scale: [1, 1.5], opacity: [0.5, 0] }} transition={{ duration: 1, repeat: Infinity }} aria-hidden />}
                     {listening ? <MicOff className="relative size-5" /> : <Mic className="relative size-5" />}
                   </button>
                 )}
-                <label className="sr-only" htmlFor="dj-mini-input">Message {ASSISTANT_NAME}</label>
+                <label className="sr-only" htmlFor="dj-mini-input">{t("messageLabel", { name: ASSISTANT_NAME })}</label>
                 <textarea
                   id="dj-mini-input"
                   ref={inputRef}
@@ -431,16 +432,16 @@ export function AssistantWidget() {
                       void send(input);
                     }
                   }}
-                  placeholder={listening ? "Listening… speak now" : "Type or tap the mic…"}
+                  placeholder={listening ? t("speakNow") : t("placeholder")}
                   className="max-h-28 min-h-11 flex-1 resize-none rounded-2xl border border-line bg-neutral px-3.5 py-2.5 text-sm outline-none transition focus:border-rose focus:bg-white"
                 />
-                <button type="submit" disabled={!input.trim() || pending} aria-label="Send message" className="grid size-11 shrink-0 place-items-center rounded-full bg-plum text-white transition hover:bg-rose-deep disabled:opacity-40">
+                <button type="submit" disabled={!input.trim() || pending} aria-label={t("send")} className="grid size-11 shrink-0 place-items-center rounded-full bg-plum text-white transition hover:bg-rose-deep disabled:opacity-40">
                   <SendHorizontal className="size-5" />
                 </button>
               </div>
               <p className="mt-1.5 px-1 text-[0.65rem] leading-snug text-muted">
-                {mode === "basic" ? "Basic mode: quick answers and jokes. " : "AI replies can make mistakes — check details on the product page. "}
-                Never share card details or passwords.{micSupported ? " Voice messages are turned into text by your browser." : ""}
+                {mode === "basic" ? t("basicNote") : t("aiNote")} {t("privacyNote")}
+                {micSupported ? ` ${t("voiceNote")}` : ""}
               </p>
             </form>
           </m.section>
@@ -452,6 +453,8 @@ export function AssistantWidget() {
 
 function MessageBubble({ msg, onListen }: { msg: Message; onListen?: () => void }) {
   const mine = msg.role === "user";
+  const t = useTranslations("assistant");
+  const money = useMoney();
   return (
     <div className={cn("flex items-end gap-2", mine && "justify-end")}>
       {!mine && <span className="size-7 shrink-0"><MiniAvatar className="size-full" /></span>}
@@ -480,10 +483,10 @@ function MessageBubble({ msg, onListen }: { msg: Message; onListen?: () => void 
                   <div className="p-2">
                     <p className="line-clamp-2 text-[0.7rem] font-semibold leading-snug">{p.name}</p>
                     <p className="mt-0.5 text-[0.7rem] tabular-nums">
-                      {p.price}
-                      {p.wasPrice && <s className="ml-1 text-muted">{p.wasPrice}</s>}
+                      {p.priceMinor != null ? money.format(p.priceMinor) : p.price}
+                      {p.wasPrice && <s className="ml-1 text-muted">{p.wasPriceMinor != null ? money.format(p.wasPriceMinor) : p.wasPrice}</s>}
                     </p>
-                    {!p.inStock && <p className="text-[0.6rem] text-danger">Sold out</p>}
+                    {!p.inStock && <p className="text-[0.6rem] text-danger">{t("soldOut")}</p>}
                   </div>
                 </Link>
               </li>
@@ -491,8 +494,8 @@ function MessageBubble({ msg, onListen }: { msg: Message; onListen?: () => void 
           </ul>
         )}
         {!mine && onListen && msg.id !== "welcome" && (
-          <button type="button" onClick={onListen} className="mt-1 inline-flex items-center gap-1 text-[0.65rem] font-semibold text-muted hover:text-rose-deep" aria-label="Listen to this reply">
-            <Volume2 className="size-3" aria-hidden /> Listen
+          <button type="button" onClick={onListen} className="mt-1 inline-flex items-center gap-1 text-[0.65rem] font-semibold text-muted hover:text-rose-deep" aria-label={t("listenAria")}>
+            <Volume2 className="size-3" aria-hidden /> {t("listen")}
           </button>
         )}
       </div>

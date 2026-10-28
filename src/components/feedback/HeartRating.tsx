@@ -2,7 +2,7 @@
 import { useId, useState } from "react";
 import { m, useReducedMotion } from "motion/react";
 import { Heart } from "lucide-react";
-import { HEART_LABELS } from "@/lib/feedback/shared";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/cn";
 
 /**
@@ -14,7 +14,7 @@ export function HeartRating({
   onChange,
   name = "rating",
   size = "md",
-  legend = "Your rating",
+  legend,
   describedBy,
 }: {
   value: number;
@@ -25,6 +25,8 @@ export function HeartRating({
   describedBy?: string;
 }) {
   const id = useId();
+  const t = useTranslations("feedback");
+  const labels = [t("hearts.1"), t("hearts.2"), t("hearts.3"), t("hearts.4"), t("hearts.5")];
   const reduce = useReducedMotion();
   const [hover, setHover] = useState(0);
   const shown = hover || value;
@@ -32,9 +34,9 @@ export function HeartRating({
 
   return (
     <fieldset aria-describedby={describedBy}>
-      <legend className="text-sm font-semibold">{legend}</legend>
+      <legend className="text-sm font-semibold">{legend ?? t("yourRating")}</legend>
       <div className="mt-2 flex items-center gap-1" onMouseLeave={() => setHover(0)}>
-        {HEART_LABELS.map((label, i) => {
+        {labels.map((label, i) => {
           const n = i + 1;
           const active = n <= shown;
           const inputId = `${id}-${n}`;
@@ -48,7 +50,7 @@ export function HeartRating({
                 checked={value === n}
                 onChange={() => onChange(n)}
                 className="peer absolute inset-0 cursor-pointer opacity-0"
-                aria-label={`${n} ${n === 1 ? "heart" : "hearts"}: ${label}`}
+                aria-label={t("heartAria", { count: n, label })}
               />
               <label
                 htmlFor={inputId}
@@ -70,7 +72,7 @@ export function HeartRating({
           );
         })}
         <span className="ml-2 min-w-[5.5rem] text-sm font-medium text-rose-deep" aria-live="polite">
-          {shown ? HEART_LABELS[shown - 1] : ""}
+          {shown ? labels[shown - 1] : ""}
         </span>
       </div>
     </fieldset>
@@ -79,8 +81,9 @@ export function HeartRating({
 
 /** Read-only heart display (e.g. average rating). */
 export function Hearts({ value, className, label }: { value: number; className?: string; label?: string }) {
+  const t = useTranslations("feedback");
   return (
-    <span className={cn("inline-flex items-center gap-0.5", className)} role="img" aria-label={label ?? `${value} out of 5 hearts`}>
+    <span className={cn("inline-flex items-center gap-0.5", className)} role="img" aria-label={label ?? t("outOf5", { value })}>
       {[1, 2, 3, 4, 5].map((n) => {
         const fill = Math.max(0, Math.min(1, value - (n - 1)));
         return (

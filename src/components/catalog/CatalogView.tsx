@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Suspense } from "react";
 import type { CatalogFilters } from "@/lib/catalog/filters";
@@ -39,13 +40,15 @@ export function CatalogView({
   chips?: CategoryNode[];
   activeChip?: string | null;
 }) {
+  const t = useTranslations("catalog");
+  const tc = useTranslations("common");
   const params = filtersToSearchParams({ ...filters, page: 1 });
   const activeCount = filters.sizes.length + filters.colors.length + (filters.minPrice != null || filters.maxPrice != null ? 1 : 0) + (filters.availability ? 1 : 0) + (filters.onSale ? 1 : 0);
 
   return (
     <div className="container-luxe pb-24 pt-8">
       {chips && chips.length > 0 && (
-        <nav aria-label="Subcategories" className="-mx-4 mb-8 overflow-x-auto px-4">
+        <nav aria-label={t("subcategories")} className="-mx-4 mb-8 overflow-x-auto px-4">
           <ul className="flex gap-2">
             {chips.map((c) => (
               <li key={c.id}>
@@ -71,7 +74,7 @@ export function CatalogView({
         <div>
           <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-line pb-4">
             <p className="text-sm text-muted" aria-live="polite">
-              {result.total} {result.total === 1 ? "piece" : "pieces"}
+              {tc("pieces", { count: result.total })}
             </p>
             <div className="flex items-center gap-4">
               <Suspense>
@@ -82,10 +85,10 @@ export function CatalogView({
           </div>
           {result.products.length === 0 ? (
             <div className="flex flex-col items-center gap-4 py-24 text-center">
-              <p className="font-display text-3xl">No pieces match just yet</p>
-              <p className="max-w-sm text-sm text-muted">Try removing a filter or searching for something else.</p>
+              <p className="font-display text-3xl">{t("emptyTitle")}</p>
+              <p className="max-w-sm text-sm text-muted">{t("emptyBody")}</p>
               <Link href={basePath} className={buttonClasses("outline")}>
-                Clear filters
+                {t("clearFilters")}
               </Link>
             </div>
           ) : (

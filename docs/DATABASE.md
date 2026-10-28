@@ -79,6 +79,18 @@ Public (anon) users can read only **published** products and their images/varian
 ### Content & marketing
 `store_settings` (key/value JSON: announcement, store/support details, checkout, tax, homepage), `content_pages` (About, FAQ, policies — Markdown-like text with `[placeholders]`), `home_banners`, `newsletter_subscribers`, `contact_messages`, `rate_limits`.
 
+### International (migration 10)
+| Table / column | Purpose | Access |
+| --- | --- | --- |
+| `currencies` | Display currencies: enabled flag, markup (basis points), optional manual rate. NGN is the base and can't be disabled or marked up | Public read, admin write |
+| `exchange_rates` | Latest validated rate per currency (units per ₦1), source and fetch time | Public read, admin write (server updates use the service role) |
+| `exchange_rate_log` | Every rate-update attempt and its result | Admin read |
+| `translation_overrides` | Admin wording that replaces built-in interface text, per language and key | Public read, admin write |
+| `products/categories/collections.translations` | Per-language name/description (`{"fr": {"name": …}}`) | Same as the row |
+| `profiles.preferred_locale/country/currency` | Signed-in customers' saved choices | Own profile only |
+| `orders.display_currency/display_rate/display_total/locale` | Snapshot of what the shopper saw; `total`/`currency` remain the NGN amount charged | Same as the order |
+| `store_settings` key `intl` | Enabled languages, default language/country, rate provider, expiry, payment currency (NGN) and Paystack channels by country | Public read (no secrets) |
+
 ## Key functions
 
 | Function | Caller | What it does |

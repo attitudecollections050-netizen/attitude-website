@@ -5,5 +5,5 @@ export function generateMetadata() {
 }
 
 export default function Page() {
-  return <ContentPage slug="faq" eyebrow="Help" />;
+  return <ContentPage slug="faq" eyebrow="help" />;
 }

@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "next-intl";
+import { useColorName } from "@/components/intl/useColorName";
 import { useEffect, useState } from "react";
 import { getQuickAddOptions } from "@/app/actions/catalog";
 import { useCart } from "@/components/cart/CartProvider";
@@ -12,6 +14,8 @@ export function QuickAdd({ slug, onDone }: { slug: string; onDone: () => void })
   const { add, pending } = useCart();
   const [opts, setOpts] = useState<Options | null>(null);
   const [color, setColor] = useState<string | null>(null);
+  const t = useTranslations("product");
+  const colorName = useColorName();
 
   useEffect(() => {
     let alive = true;
@@ -44,7 +48,7 @@ export function QuickAdd({ slug, onDone }: { slug: string; onDone: () => void })
   };
 
   return (
-    <div className="rounded-2xl bg-white/95 p-3 shadow-xl backdrop-blur" role="group" aria-label="Quick add">
+    <div className="rounded-2xl bg-white/95 p-3 shadow-xl backdrop-blur" role="group" aria-label={t("quickAdd")}>
       {colors.length > 1 && (
         <div className="mb-2 flex flex-wrap gap-1.5">
           {colors.map((c) => {
@@ -55,7 +59,7 @@ export function QuickAdd({ slug, onDone }: { slug: string; onDone: () => void })
                 type="button"
                 onClick={() => setColor(c)}
                 className={cn("size-6 rounded-full border-2 transition", color === c ? "border-plum" : "border-transparent")}
-                aria-label={c}
+                aria-label={colorName(c)}
                 aria-pressed={color === c}
               >
                 <span className="block size-full rounded-full border border-plum/10" style={{ backgroundColor: hex ?? "#ccc" }} />
@@ -75,7 +79,7 @@ export function QuickAdd({ slug, onDone }: { slug: string; onDone: () => void })
                 disabled={!v.available || pending}
                 onClick={() => addVariant(v.id)}
                 className="min-w-10 rounded-full border border-line px-2.5 py-1.5 text-xs font-semibold transition hover:border-plum hover:bg-plum hover:text-white disabled:cursor-not-allowed disabled:text-muted/50 disabled:line-through"
-                aria-label={`Add size ${size}${v.available ? "" : " (sold out)"}`}
+                aria-label={v.available ? t("addSize", { size }) : t("sizeSoldOut", { size })}
               >
                 {size}
               </button>
@@ -89,7 +93,7 @@ export function QuickAdd({ slug, onDone }: { slug: string; onDone: () => void })
           onClick={() => forColor[0] && addVariant(forColor[0].id)}
           className="w-full rounded-full bg-plum py-2.5 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-white transition hover:bg-rose-deep disabled:opacity-50"
         >
-          {forColor[0]?.available ? "Add to bag" : "Sold out"}
+          {forColor[0]?.available ? t("addToBag") : t("soldOut")}
         </button>
       )}
     </div>

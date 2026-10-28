@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { AnimatePresence, m } from "motion/react";
-import { LayoutDashboard, Package, ShoppingBag, Layers, Truck, Tag, Home, Settings, Boxes, Mail, Menu, X, Store, LogOut, FileText, CreditCard, Users, BarChart3, Heart } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingBag, Layers, Truck, Tag, Home, Settings, Boxes, Mail, Menu, X, Store, LogOut, FileText, CreditCard, Users, BarChart3, Heart, Globe2 } from "lucide-react";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { signOut } from "@/app/actions/auth";
 import { cn } from "@/lib/cn";
@@ -24,6 +24,7 @@ const ITEMS = [
   { href: "/admin/homepage", label: "Homepage", icon: Home, perm: "settings:write" },
   { href: "/admin/content", label: "Pages & policies", icon: FileText, perm: "settings:write" },
   { href: "/admin/messages", label: "Messages", icon: Mail, perm: "messages:read" },
+  { href: "/admin/international", label: "International", icon: Globe2, perm: "settings:write" },
   { href: "/admin/settings", label: "Store Settings", icon: Settings, perm: "settings:write" },
 ] as const;
 

@@ -14,6 +14,9 @@ export interface ProductSuggestion {
   href: string;
   price: string;
   wasPrice: string | null;
+  /** Kobo amounts so the chat card can show the shopper's display currency. */
+  priceMinor?: number;
+  wasPriceMinor?: number | null;
   image: string | null;
   inStock: boolean;
 }

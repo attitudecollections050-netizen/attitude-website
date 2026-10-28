@@ -1,4 +1,5 @@
 "use client";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, m } from "motion/react";
@@ -14,10 +15,14 @@ export function CookieConsent() {
   const [optedOut, setOptedOut] = useState(false);
 
   useEffect(() => {
-    if (!browserOptedOut() && getConsent() === null) {
-      const t = setTimeout(() => setOpen(true), 1200);
-      return () => clearTimeout(t);
-    }
+    if (browserOptedOut() || getConsent() !== null) return;
+    // Wait until the welcome (language/country/currency) screen has been answered.
+    const t = setInterval(() => {
+      if (!/(?:^|; )ac_prefs=1/.test(document.cookie)) return;
+      clearInterval(t);
+      setTimeout(() => setOpen(true), 1200);
+    }, 800);
+    return () => clearInterval(t);
   }, []);
   useEffect(() => {
     const reopen = () => {
@@ -28,6 +33,7 @@ export function CookieConsent() {
     return () => window.removeEventListener(OPEN_CONSENT, reopen);
   }, []);
 
+  const t = useTranslations("cookies");
   const choose = (v: "granted" | "denied") => {
     setConsent(v);
     setOpen(false);
@@ -38,7 +44,7 @@ export function CookieConsent() {
       {open && (
         <m.section
           role="region"
-          aria-label="Analytics cookies"
+          aria-label={t("aria")}
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 24 }}
@@ -48,17 +54,17 @@ export function CookieConsent() {
           <div className="flex items-start gap-3">
             <span className="grid size-9 shrink-0 place-items-center rounded-full bg-pale text-rose-deep"><Cookie className="size-4" aria-hidden /></span>
             <div>
-              <p className="font-semibold">Help us improve the store?</p>
+              <p className="font-semibold">{t("title")}</p>
               <p className="mt-1 text-xs leading-relaxed text-muted">
-                With your permission we use one first-party cookie to count visits and see which pages and products people view. No advertising, no third parties, and we don&apos;t store your IP address.{" "}
-                <Link href="/privacy-policy" className="underline">Privacy policy</Link>
+                {t("body")}{" "}
+                <Link href="/privacy-policy" className="underline">{t("privacy")}</Link>
               </p>
               {optedOut ? (
-                <p className="mt-3 text-xs text-muted">Your browser asks sites not to track you, so analytics stays off.</p>
+                <p className="mt-3 text-xs text-muted">{t("dnt")}</p>
               ) : (
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <button type="button" onClick={() => choose("granted")} className="rounded-full bg-plum px-4 py-2 text-xs font-semibold text-white transition hover:bg-rose-deep">Allow analytics</button>
-                  <button type="button" onClick={() => choose("denied")} className="rounded-full border border-line px-4 py-2 text-xs font-semibold transition hover:border-plum">No thanks</button>
+                  <button type="button" onClick={() => choose("granted")} className="rounded-full bg-plum px-4 py-2 text-xs font-semibold text-white transition hover:bg-rose-deep">{t("allow")}</button>
+                  <button type="button" onClick={() => choose("denied")} className="rounded-full border border-line px-4 py-2 text-xs font-semibold transition hover:border-plum">{t("deny")}</button>
                 </div>
               )}
             </div>
@@ -71,9 +77,10 @@ export function CookieConsent() {
 
 /** Footer link to change the analytics choice later. */
 export function CookieSettingsButton({ className }: { className?: string }) {
+  const t = useTranslations("cookies");
   return (
     <button type="button" className={className} onClick={() => window.dispatchEvent(new Event(OPEN_CONSENT))}>
-      Cookie settings
+      {t("settings")}
     </button>
   );
 }

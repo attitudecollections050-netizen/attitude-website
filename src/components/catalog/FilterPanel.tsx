@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "next-intl";
+import { useColorName } from "@/components/intl/useColorName";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { AnimatePresence, m } from "motion/react";
@@ -39,9 +41,10 @@ function useFilterNav() {
 
 export function SortSelect({ value, hasSales }: { value: string; hasSales: boolean }) {
   const { setParams, pending } = useFilterNav();
+  const t = useTranslations("catalog");
   return (
     <label className="flex items-center gap-2 text-xs">
-      <span className="eyebrow text-muted">Sort</span>
+      <span className="eyebrow text-muted">{t("sort")}</span>
       <span className="relative">
         <select
           value={value}
@@ -51,7 +54,7 @@ export function SortSelect({ value, hasSales }: { value: string; hasSales: boole
         >
           {SORT_OPTIONS.filter((o) => o.value !== "popular" || hasSales || value === "popular").map((o) => (
             <option key={o.value} value={o.value}>
-              {o.label}
+              {t(`sortOptions.${o.value}`)}
             </option>
           ))}
         </select>
@@ -84,14 +87,16 @@ function FilterControls({ filters, facets }: { filters: CatalogFilters; facets: 
   const { setParams, toggleList, params } = useFilterNav();
   const [min, setMin] = useState(filters.minPrice != null ? String(filters.minPrice / 100) : "");
   const [max, setMax] = useState(filters.maxPrice != null ? String(filters.maxPrice / 100) : "");
+  const t = useTranslations("catalog");
+  const colorName = useColorName();
 
   return (
     <div>
-      <Section title="Availability">
+      <Section title={t("availability")}>
         <div className="flex flex-col gap-2.5 text-sm">
           {[
-            { v: "in_stock", l: "In stock" },
-            { v: "out_of_stock", l: "Sold out" },
+            { v: "in_stock", l: t("inStock") },
+            { v: "out_of_stock", l: t("soldOut") },
           ].map((o) => (
             <label key={o.v} className="flex cursor-pointer items-center gap-3">
               <input
@@ -105,12 +110,12 @@ function FilterControls({ filters, facets }: { filters: CatalogFilters; facets: 
           ))}
           <label className="flex cursor-pointer items-center gap-3">
             <input type="checkbox" className="size-4 accent-[#d94f91]" checked={filters.onSale} onChange={() => setParams((p) => (filters.onSale ? p.delete("sale") : p.set("sale", "1")))} />
-            On sale
+            {t("onSale")}
           </label>
         </div>
       </Section>
       {facets.sizes.length > 0 && (
-        <Section title="Size">
+        <Section title={t("size")}>
           <div className="flex flex-wrap gap-2">
             {facets.sizes.map((s) => {
               const on = filters.sizes.includes(s);
@@ -130,7 +135,7 @@ function FilterControls({ filters, facets }: { filters: CatalogFilters; facets: 
         </Section>
       )}
       {facets.colors.length > 0 && (
-        <Section title="Colour">
+        <Section title={t("colour")}>
           <div className="grid grid-cols-2 gap-2.5">
             {facets.colors.map((c) => {
               const on = filters.colors.includes(c.name.toLowerCase());
@@ -139,14 +144,14 @@ function FilterControls({ filters, facets }: { filters: CatalogFilters; facets: 
                   <span className={cn("grid size-6 place-items-center rounded-full border-2 transition", on ? "border-plum" : "border-transparent")}>
                     <span className="size-4.5 rounded-full border border-plum/15" style={{ backgroundColor: c.hex ?? "#ccc" }} />
                   </span>
-                  <span className={on ? "font-semibold" : ""}>{c.name}</span>
+                  <span className={on ? "font-semibold" : ""}>{colorName(c.name)}</span>
                 </button>
               );
             })}
           </div>
         </Section>
       )}
-      <Section title="Price (₦)">
+      <Section title={t("priceNgn")}>
         <form
           className="flex items-end gap-2"
           onSubmit={(e) => {
@@ -159,15 +164,15 @@ function FilterControls({ filters, facets }: { filters: CatalogFilters; facets: 
           }}
         >
           <label className="flex-1 text-xs text-muted">
-            Min
+            {t("min")}
             <input inputMode="numeric" value={min} onChange={(e) => setMin(e.target.value)} placeholder={facets.min_price ? String(Math.floor(facets.min_price / 100)) : "0"} className="field mt-1 !py-2" />
           </label>
           <label className="flex-1 text-xs text-muted">
-            Max
+            {t("max")}
             <input inputMode="numeric" value={max} onChange={(e) => setMax(e.target.value)} placeholder={facets.max_price ? String(Math.ceil(facets.max_price / 100)) : ""} className="field mt-1 !py-2" />
           </label>
           <button type="submit" className="h-[2.4rem] rounded-full bg-plum px-4 text-[0.65rem] font-bold uppercase tracking-[0.15em] text-white hover:bg-rose-deep">
-            Go
+            {t("go")}
           </button>
         </form>
       </Section>
@@ -177,7 +182,7 @@ function FilterControls({ filters, facets }: { filters: CatalogFilters; facets: 
           className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-rose-deep underline underline-offset-4"
           onClick={() => setParams((p) => ["size", "color", "min", "max", "availability", "sale"].forEach((k) => p.delete(k)))}
         >
-          Clear all filters
+          {t("clearAll")}
         </button>
       )}
     </div>
@@ -185,21 +190,23 @@ function FilterControls({ filters, facets }: { filters: CatalogFilters; facets: 
 }
 
 export function FilterSidebar({ filters, facets }: { filters: CatalogFilters; facets: Facets }) {
+  const t = useTranslations("catalog");
   return (
-    <aside className="hidden lg:block" aria-label="Filters">
+    <aside className="hidden lg:block" aria-label={t("filters")}>
       <FilterControls filters={filters} facets={facets} />
     </aside>
   );
 }
 
 export function MobileFilterButton({ filters, facets, activeCount }: { filters: CatalogFilters; facets: Facets; activeCount: number }) {
+  const t = useTranslations("catalog");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useDialog(open, () => setOpen(false), ref);
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className="flex items-center gap-2 rounded-full border border-line px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] lg:hidden" aria-expanded={open}>
-        <SlidersHorizontal className="size-3.5" /> Filter {activeCount > 0 && <span className="rounded-full bg-rose-deep px-1.5 text-[0.6rem] text-white">{activeCount}</span>}
+        <SlidersHorizontal className="size-3.5" /> {t("filter")} {activeCount > 0 && <span className="rounded-full bg-rose-deep px-1.5 text-[0.6rem] text-white">{activeCount}</span>}
       </button>
       <AnimatePresence>
         {open && (
@@ -209,7 +216,7 @@ export function MobileFilterButton({ filters, facets, activeCount }: { filters: 
               ref={ref}
               role="dialog"
               aria-modal="true"
-              aria-label="Filters"
+              aria-label={t("filters")}
               tabIndex={-1}
               className="absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-2xl bg-white px-5 pb-8 pt-4 outline-none"
               initial={{ y: "100%" }}
@@ -219,14 +226,14 @@ export function MobileFilterButton({ filters, facets, activeCount }: { filters: 
             >
               <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line" aria-hidden />
               <div className="flex items-center justify-between">
-                <p className="font-display text-2xl">Filter</p>
-                <button type="button" onClick={() => setOpen(false)} className="p-2" aria-label="Close filters">
+                <p className="font-display text-2xl">{t("filter")}</p>
+                <button type="button" onClick={() => setOpen(false)} className="p-2" aria-label={t("closeFilters")}>
                   <X className="size-5" />
                 </button>
               </div>
               <FilterControls filters={filters} facets={facets} />
               <button type="button" onClick={() => setOpen(false)} className="mt-6 h-12 w-full rounded-full bg-plum text-xs font-bold uppercase tracking-[0.2em] text-white">
-                Show results
+                {t("showResults")}
               </button>
             </m.div>
           </div>

@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { parseFilters } from "@/lib/catalog/filters";
@@ -7,10 +8,11 @@ import { CatalogHeader, CatalogView } from "@/components/catalog/CatalogView";
 export async function generateMetadata({ params }: PageProps<"/shop/[category]/[subcategory]">): Promise<Metadata> {
   const { category, subcategory } = await params;
   const { top, sub } = await findCategory(category, subcategory);
-  if (!top || !sub) return { title: "Not found" };
+  const t = await getTranslations("pages");
+  if (!top || !sub) return { title: t("notFound") };
   return {
     title: `${sub.name} — ${top.name}`,
-    description: sub.description ?? `Shop ${sub.name.toLowerCase()} in ${top.name} at Attitude Collections.`,
+    description: sub.description ?? t("shopSubMeta", { name: sub.name, parent: top.name }),
     alternates: { canonical: sub.href },
   };
 }
@@ -20,14 +22,14 @@ export default async function SubcategoryPage({ params, searchParams }: PageProp
   const { top, sub } = await findCategory(category, subcategory);
   if (!top || !sub) notFound();
   const filters = parseFilters(await searchParams);
-  const [result, facets] = await Promise.all([searchCatalog(filters, { categoryId: sub.id }), getFacets(sub.id)]);
+  const [result, facets, t, tc] = await Promise.all([searchCatalog(filters, { categoryId: sub.id }), getFacets(sub.id), getTranslations("pages"), getTranslations("common")]);
   return (
     <>
       <CatalogHeader
         eyebrow={top.name}
         title={sub.name}
         description={sub.description}
-        breadcrumbs={[{ label: "Home", href: "/" }, { label: "Shop", href: "/shop" }, { label: top.name, href: top.href }, { label: sub.name }]}
+        breadcrumbs={[{ label: tc("home"), href: "/" }, { label: t("shop"), href: "/shop" }, { label: top.name, href: top.href }, { label: sub.name }]}
       />
       <CatalogView filters={filters} result={result} facets={facets} basePath={sub.href} chips={top.children} activeChip={sub.slug} />
     </>

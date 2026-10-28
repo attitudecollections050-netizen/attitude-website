@@ -17,8 +17,10 @@ export interface DiscountRecord {
 }
 
 export type DiscountEvaluation =
-  | { ok: true; code: string; amount: number; freeShipping: boolean; label: string; automatic?: boolean }
-  | { ok: false; code: string; reason: string };
+  | { ok: true; code: string; amount: number; freeShipping: boolean; label: string; automatic?: boolean; percent?: number; minSubtotal?: number }
+  | { ok: false; code: string; reason: string; reasonCode?: DiscountReason; minSubtotal?: number };
+
+export type DiscountReason = "invalid" | "not_started" | "expired" | "limit" | "empty" | "minimum";
 
 export interface TaxConfig {
   mode: "none" | "inclusive" | "exclusive";
@@ -37,26 +39,28 @@ export function evaluateDiscount(
   now: Date = new Date(),
 ): DiscountEvaluation {
   const normalized = normalizeDiscountCode(code);
-  if (!discount || !discount.is_active) return { ok: false, code: normalized, reason: "This discount code is not valid." };
+  if (!discount || !discount.is_active) return { ok: false, code: normalized, reason: "This discount code is not valid.", reasonCode: "invalid" };
   if (discount.starts_at && new Date(discount.starts_at) > now)
-    return { ok: false, code: normalized, reason: "This discount code is not active yet." };
+    return { ok: false, code: normalized, reason: "This discount code is not active yet.", reasonCode: "not_started" };
   if (discount.ends_at && new Date(discount.ends_at) <= now)
-    return { ok: false, code: normalized, reason: "This discount code has expired." };
+    return { ok: false, code: normalized, reason: "This discount code has expired.", reasonCode: "expired" };
   if (discount.usage_limit != null && discount.usage_count >= discount.usage_limit)
-    return { ok: false, code: normalized, reason: "This discount code has reached its usage limit." };
-  if (subtotal <= 0) return { ok: false, code: normalized, reason: "Add items to your bag to use a discount." };
+    return { ok: false, code: normalized, reason: "This discount code has reached its usage limit.", reasonCode: "limit" };
+  if (subtotal <= 0) return { ok: false, code: normalized, reason: "Add items to your bag to use a discount.", reasonCode: "empty" };
   if (subtotal < discount.min_subtotal)
     return {
       ok: false,
       code: normalized,
       reason: `This code requires a minimum order of ${(discount.min_subtotal / 100).toLocaleString("en-NG")} NGN.`,
+      reasonCode: "minimum",
+      minSubtotal: discount.min_subtotal,
     };
 
   switch (discount.type) {
     case "percentage": {
       const pct = Math.min(Math.max(discount.value, 0), 100);
       const amount = Math.min(subtotal, Math.round((subtotal * pct) / 100));
-      return { ok: true, code: discount.code, amount, freeShipping: false, label: `${pct}% off` };
+      return { ok: true, code: discount.code, amount, freeShipping: false, label: `${pct}% off`, percent: pct };
     }
     case "fixed": {
       const amount = Math.min(subtotal, discount.value);
@@ -92,7 +96,14 @@ export function applyPromotion(
   if (!promo?.enabled || !promo.code || subtotal < promo.min_subtotal) return entered;
   const ev = evaluateDiscount(record, promo.code, subtotal, now);
   if (!ev.ok) return entered;
-  const auto: DiscountEvaluation = { ...ev, freeShipping: ev.freeShipping || promo.free_delivery, label: promo.label || ev.label, automatic: true };
+  const auto: DiscountEvaluation = {
+    ...ev,
+    freeShipping: ev.freeShipping || promo.free_delivery,
+    label: promo.label || ev.label,
+    automatic: true,
+    percent: record?.type === "percentage" ? record.value : undefined,
+    minSubtotal: promo.min_subtotal,
+  };
   if (entered?.ok && entered.amount > auto.amount) return entered;
   return auto;
 }

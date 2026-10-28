@@ -14,6 +14,7 @@ export function ActionForm({
   confirm,
   variant = "primary",
   inline = false,
+  id,
 }: {
   action: (prev: AdminResult, formData: FormData) => Promise<AdminResult>;
   children?: React.ReactNode;
@@ -23,6 +24,8 @@ export function ActionForm({
   confirm?: string;
   variant?: "primary" | "outline" | "rose" | "ghost";
   inline?: boolean;
+  /** Lets inputs elsewhere (e.g. other table cells) join this form via their `form` attribute. */
+  id?: string;
 }) {
   const [state, formAction, pending] = useActionState<AdminResult, FormData>(action, null);
   const ref = useRef<HTMLFormElement>(null);
@@ -32,6 +35,7 @@ export function ActionForm({
   return (
     <form
       ref={ref}
+      id={id}
       action={formAction}
       className={className}
       onSubmit={keepValues(formAction, () => !confirm || window.confirm(confirm))}

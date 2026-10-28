@@ -1,4 +1,5 @@
 "use client";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Search } from "lucide-react";
@@ -6,6 +7,7 @@ import { Search } from "lucide-react";
 export function SearchBox({ initial }: { initial: string }) {
   const router = useRouter();
   const [q, setQ] = useState(initial);
+  const t = useTranslations("search");
   return (
     <form
       role="search"
@@ -17,11 +19,11 @@ export function SearchBox({ initial }: { initial: string }) {
     >
       <Search className="size-4 text-muted" aria-hidden />
       <label htmlFor="search-page-input" className="sr-only">
-        Search products
+        {t("inputLabel")}
       </label>
-      <input id="search-page-input" value={q} onChange={(e) => setQ(e.target.value)} maxLength={100} placeholder="Search products" className="flex-1 bg-transparent py-2 outline-none" />
+      <input id="search-page-input" value={q} onChange={(e) => setQ(e.target.value)} maxLength={100} placeholder={t("inputLabel")} className="flex-1 bg-transparent py-2 outline-none" />
       <button type="submit" className="eyebrow hover:text-rose-deep">
-        Search
+        {t("submit")}
       </button>
     </form>
   );

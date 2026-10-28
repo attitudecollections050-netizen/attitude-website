@@ -95,6 +95,16 @@ export function buildOrderPayload(input: BuildOrderInput) {
 }
 
 /** Maps create_order() exceptions to customer-friendly messages. */
+/** Translation key (namespace "checkoutErrors") for a create_order failure. */
+export function orderErrorKey(message: string): string {
+  if (message.includes("insufficient_stock")) return "stock";
+  if (message.includes("variant_unavailable")) return "itemUnavailable";
+  if (message.includes("price_changed") || message.includes("subtotal_mismatch")) return "pricesChanged";
+  if (message.includes("discount_invalid")) return "discountInvalid";
+  if (message.includes("empty_cart")) return "emptyBag";
+  return "orderFailed";
+}
+
 export function describeOrderError(message: string): string {
   if (message.includes("insufficient_stock")) return "Some items in your bag no longer have enough stock. Please review your bag.";
   if (message.includes("variant_unavailable")) return "An item in your bag is no longer available. Please review your bag.";

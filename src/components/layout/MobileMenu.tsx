@@ -6,7 +6,9 @@ import { ArrowUpRight, ChevronDown, Sparkles, X } from "lucide-react";
 import type { CategoryNode } from "@/lib/catalog/types";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { useDialog } from "@/components/ui/useDialog";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/cn";
+import { PreferencesSwitcher } from "@/components/intl/PreferencesSwitcher";
 
 // The panel "blooms" open from the menu button (top-left) as a growing circle,
 // inside a petal shape: soft corners with a long sweeping curve on the right.
@@ -25,6 +27,8 @@ const item: Variants = {
 export function MobileMenu({ open, onClose, categories, signedIn }: { open: boolean; onClose: () => void; categories: CategoryNode[]; signedIn: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();
+  const t = useTranslations("menu");
+  const tc = useTranslations("common");
   const [expanded, setExpanded] = useState<string | null>(null);
   useDialog(open, onClose, ref);
 
@@ -37,7 +41,7 @@ export function MobileMenu({ open, onClose, categories, signedIn }: { open: bool
             ref={ref}
             role="dialog"
             aria-modal="true"
-            aria-label="Menu"
+            aria-label={t("label")}
             tabIndex={-1}
             className={cn(
               "absolute bottom-3 left-3 top-3 flex w-[86%] max-w-sm flex-col overflow-hidden bg-white shadow-[0_40px_90px_-30px_rgba(37,25,35,0.6)] outline-none",
@@ -64,7 +68,7 @@ export function MobileMenu({ open, onClose, categories, signedIn }: { open: bool
                 type="button"
                 onClick={onClose}
                 className="grid size-10 place-items-center rounded-full bg-plum text-white shadow-md"
-                aria-label="Close menu"
+                aria-label={t("closeMenu")}
                 initial={reduce ? undefined : { rotate: -90, scale: 0.5 }}
                 animate={{ rotate: 0, scale: 1 }}
                 transition={{ delay: 0.25, type: "spring", stiffness: 300, damping: 18 }}
@@ -74,7 +78,10 @@ export function MobileMenu({ open, onClose, categories, signedIn }: { open: bool
               </m.button>
             </div>
 
-            <nav aria-label="Mobile" className="relative flex-1 overflow-y-auto px-5 pb-4">
+            <div className="relative px-6 pb-3">
+              <PreferencesSwitcher className="bg-white/80" />
+            </div>
+            <nav aria-label={t("mobileNav")} className="relative flex-1 overflow-y-auto px-5 pb-4">
               <m.ul variants={list} initial="hidden" animate="show" className="space-y-1.5">
                 <m.li variants={item} className="pb-2 pt-1">
                   <Link
@@ -83,7 +90,7 @@ export function MobileMenu({ open, onClose, categories, signedIn }: { open: bool
                     className="group flex items-center justify-between rounded-full rounded-tl-lg bg-gradient-to-r from-rose-deep via-rose to-[#F283B8] py-3.5 pl-6 pr-3 text-white shadow-[0_14px_30px_-14px_rgba(217,79,145,0.9)]"
                   >
                     <span className="flex items-center gap-2 font-display text-[1.7rem] leading-none">
-                      <Sparkles className="size-4" aria-hidden /> Shop all
+                      <Sparkles className="size-4" aria-hidden /> {tc("shopAll")}
                     </span>
                     <span className="grid size-9 place-items-center rounded-full bg-white/20 transition-transform duration-300 group-hover:rotate-45">
                       <ArrowUpRight className="size-4" aria-hidden />
@@ -101,7 +108,7 @@ export function MobileMenu({ open, onClose, categories, signedIn }: { open: bool
                         <button
                           type="button"
                           className="mr-1.5 grid size-10 place-items-center rounded-full transition hover:bg-white"
-                          aria-label={`Show ${cat.name} categories`}
+                          aria-label={t("showSub", { name: cat.name })}
                           aria-expanded={expanded === cat.slug}
                           onClick={() => setExpanded(expanded === cat.slug ? null : cat.slug)}
                         >
@@ -140,9 +147,9 @@ export function MobileMenu({ open, onClose, categories, signedIn }: { open: bool
               transition={{ delay: 0.45, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             >
               {[
-                { href: signedIn ? "/account" : "/account/login", label: signedIn ? "My account" : "Sign in" },
-                { href: "/track-order", label: "Track order" },
-                { href: "/contact", label: "Contact" },
+                { href: signedIn ? "/account" : "/account/login", label: signedIn ? t("account") : t("signIn") },
+                { href: "/track-order", label: t("track") },
+                { href: "/contact", label: t("contact") },
               ].map((l) => (
                 <Link key={l.href} href={l.href} onClick={onClose} className="rounded-full px-2 py-2.5 transition hover:bg-white/10">
                   {l.label}

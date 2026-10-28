@@ -65,6 +65,8 @@ export async function searchProducts(input: { query?: string | null; maxPriceNai
     href: `/products/${p.slug}`,
     price: formatMoney(p.sale_price ?? p.price, currency),
     wasPrice: p.sale_price ? formatMoney(p.price, currency) : null,
+    priceMinor: p.sale_price ?? p.price,
+    wasPriceMinor: p.sale_price ? p.price : null,
     image: p.image_url,
     inStock: p.in_stock,
   }));

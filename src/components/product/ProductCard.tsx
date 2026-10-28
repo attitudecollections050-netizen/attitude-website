@@ -1,4 +1,6 @@
 "use client";
+import { useTranslations } from "next-intl";
+import { useColorName } from "@/components/intl/useColorName";
 import Link from "next/link";
 import { useState } from "react";
 import { AnimatePresence, m } from "motion/react";
@@ -10,6 +12,8 @@ import { cn } from "@/lib/cn";
 import { QuickAdd } from "./QuickAdd";
 
 export function ProductCard({ product, priority = false, sizes = "(min-width:1024px) 25vw, (min-width:768px) 33vw, 50vw" }: { product: ProductCardData; priority?: boolean; sizes?: string }) {
+  const t = useTranslations("product");
+  const colorName = useColorName();
   const [quickOpen, setQuickOpen] = useState(false);
   const onSale = product.sale_price != null;
   const href = `/products/${product.slug}`;
@@ -42,8 +46,8 @@ export function ProductCard({ product, priority = false, sizes = "(min-width:102
         </Link>
 
         <div className="pointer-events-none absolute left-3 top-3 flex flex-col gap-1.5">
-          {onSale && <span className="rounded-full bg-rose-deep px-2.5 py-1 text-[0.6rem] font-bold uppercase tracking-[0.18em] text-white">Sale</span>}
-          {!product.in_stock && <span className="rounded-full bg-white/90 px-2.5 py-1 text-[0.6rem] font-bold uppercase tracking-[0.18em] text-plum">Sold out</span>}
+          {onSale && <span className="rounded-full bg-rose-deep px-2.5 py-1 text-[0.6rem] font-bold uppercase tracking-[0.18em] text-white">{t("sale")}</span>}
+          {!product.in_stock && <span className="rounded-full bg-white/90 px-2.5 py-1 text-[0.6rem] font-bold uppercase tracking-[0.18em] text-plum">{t("soldOut")}</span>}
         </div>
 
         {product.in_stock && (
@@ -52,7 +56,7 @@ export function ProductCard({ product, priority = false, sizes = "(min-width:102
               type="button"
               onClick={() => setQuickOpen((v) => !v)}
               className="absolute bottom-3 right-3 grid size-10 place-items-center rounded-full bg-white text-plum shadow-md transition duration-300 hover:bg-plum hover:text-white focus-visible:opacity-100 lg:translate-y-2 lg:opacity-0 lg:group-hover:translate-y-0 lg:group-hover:opacity-100"
-              aria-label={`Quick add ${product.name}`}
+              aria-label={t("quickAddNamed", { name: product.name })}
               aria-expanded={quickOpen}
             >
               <Plus className={cn("size-4 transition-transform duration-300", quickOpen && "rotate-45")} />
@@ -81,17 +85,17 @@ export function ProductCard({ product, priority = false, sizes = "(min-width:102
         </h3>
         <Price price={product.price} salePrice={product.sale_price} />
         {product.colors.length > 0 && (
-          <ul className="mt-1 flex items-center gap-1.5" aria-label="Available colours">
+          <ul className="mt-1 flex items-center gap-1.5" aria-label={t("availableColours")}>
             {product.colors.slice(0, 5).map((c) => (
-              <li key={c.name} title={c.name}>
+              <li key={c.name} title={colorName(c.name)}>
                 <span className="block size-3 rounded-full border border-plum/15" style={{ backgroundColor: c.hex ?? "#ccc" }} />
-                <span className="sr-only">{c.name}</span>
+                <span className="sr-only">{colorName(c.name)}</span>
               </li>
             ))}
             {product.colors.length > 5 && <li className="text-[0.7rem] text-muted">+{product.colors.length - 5}</li>}
           </ul>
         )}
-        {!product.in_stock && <p className="text-xs text-muted">Currently unavailable</p>}
+        {!product.in_stock && <p className="text-xs text-muted">{t("unavailable")}</p>}
       </div>
     </article>
   );

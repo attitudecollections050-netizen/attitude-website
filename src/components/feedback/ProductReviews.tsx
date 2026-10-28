@@ -2,7 +2,7 @@ import Link from "next/link";
 import { BadgeCheck, MessageSquareReply } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { createPublicClient } from "@/lib/supabase/public";
-import { HEART_LABELS } from "@/lib/feedback/shared";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Hearts } from "./HeartRating";
 import { FeedbackForm } from "./FeedbackForm";
 
@@ -29,37 +29,38 @@ export async function ProductReviews({ productId, slug }: { productId: string; s
     getReviewSummary(productId),
     getCurrentUser(),
   ]);
+  const [t, locale] = await Promise.all([getTranslations("feedback"), getLocale()]);
   const reviews = (data ?? []) as PublicReview[];
 
   return (
     <section className="mt-16 grid gap-12 border-t border-line pt-14 lg:grid-cols-[1fr_24rem]" aria-labelledby="reviews-heading">
       <div>
-        <p className="eyebrow text-rose-deep">Customer reviews</p>
-        <h2 id="reviews-heading" className="display mt-3 text-4xl">What customers say</h2>
+        <p className="eyebrow text-rose-deep">{t("reviews.eyebrow")}</p>
+        <h2 id="reviews-heading" className="display mt-3 text-4xl">{t("reviews.title")}</h2>
         {summary.count > 0 && summary.average != null ? (
           <p className="mt-4 flex items-center gap-3 text-sm">
-            <Hearts value={summary.average} label={`Average ${summary.average} out of 5 hearts`} />
+            <Hearts value={summary.average} label={t("reviews.averageAria", { value: summary.average })} />
             <span className="font-semibold">{summary.average.toFixed(1)}</span>
-            <span className="text-muted">from {summary.count} {summary.count === 1 ? "review" : "reviews"}</span>
+            <span className="text-muted">{t("reviews.from", { count: summary.count })}</span>
           </p>
         ) : (
-          <p className="mt-4 text-sm text-muted">No reviews yet.</p>
+          <p className="mt-4 text-sm text-muted">{t("reviews.none")}</p>
         )}
         <ul className="mt-8 divide-y divide-line">
           {reviews.map((r) => (
             <li key={r.id} className="py-6">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <Hearts value={r.rating} label={`${r.rating} out of 5 hearts: ${HEART_LABELS[r.rating - 1]}`} />
-                <span className="text-sm font-semibold">{r.display_name ?? "Anonymous customer"}</span>
+                <Hearts value={r.rating} label={`${t("outOf5", { value: r.rating })}: ${t(`hearts.${r.rating}`)}`} />
+                <span className="text-sm font-semibold">{r.display_name ?? t("reviews.anonymous")}</span>
                 {r.is_verified_purchase && (
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-success"><BadgeCheck className="size-3.5" aria-hidden /> Verified Purchase</span>
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-success"><BadgeCheck className="size-3.5" aria-hidden /> {t("reviews.verified")}</span>
                 )}
-                <time dateTime={r.created_at} className="text-xs text-muted">{new Date(r.created_at).toLocaleDateString("en-NG", { dateStyle: "medium" })}</time>
+                <time dateTime={r.created_at} className="text-xs text-muted">{new Date(r.created_at).toLocaleDateString(locale, { dateStyle: "medium", timeZone: "Africa/Lagos" })}</time>
               </div>
-              {r.comment && <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-plum-soft">{r.comment}</p>}
+              {r.comment && <p lang="und" className="mt-3 whitespace-pre-line text-sm leading-relaxed text-plum-soft">{r.comment}</p>}
               {r.response && (
                 <div className="mt-4 border-l-2 border-rose bg-blush px-4 py-3 text-sm">
-                  <p className="flex items-center gap-1.5 text-xs font-semibold text-rose-deep"><MessageSquareReply className="size-3.5" aria-hidden /> Response from Attitude Collections</p>
+                  <p className="flex items-center gap-1.5 text-xs font-semibold text-rose-deep"><MessageSquareReply className="size-3.5" aria-hidden /> {t("reviews.response")}</p>
                   <p className="mt-1 whitespace-pre-line text-plum-soft">{r.response}</p>
                 </div>
               )}
@@ -68,15 +69,15 @@ export async function ProductReviews({ productId, slug }: { productId: string; s
         </ul>
       </div>
       <aside className="h-fit rounded-3xl border border-line bg-white p-6">
-        <h3 className="font-display text-2xl">Write a review</h3>
+        <h3 className="font-display text-2xl">{t("reviews.write")}</h3>
         {user ? (
           <div className="mt-4">
-            <p className="mb-4 text-xs text-muted">If you bought this item with this account, your review is marked “Verified Purchase”.</p>
+            <p className="mb-4 text-xs text-muted">{t("reviews.verifiedNote")}</p>
             <FeedbackForm kind="product" productId={productId} source="product_page" compact />
           </div>
         ) : (
           <p className="mt-3 text-sm text-plum-soft">
-            <Link href={`/account/login?next=${encodeURIComponent(`/products/${slug}`)}`} className="underline underline-offset-4">Sign in</Link> to review this product. Reviews from customers who bought it are marked “Verified Purchase”.
+            {t.rich("reviews.signIn", { link: (c) => <Link href={`/account/login?next=${encodeURIComponent(`/products/${slug}`)}`} className="underline underline-offset-4">{c}</Link> })}
           </p>
         )}
       </aside>

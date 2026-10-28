@@ -8,9 +8,13 @@ import { DiscountForm } from "@/components/cart/DiscountForm";
 import { quoteCartShipping } from "@/app/actions/shipping";
 import { placeOrder } from "@/app/actions/checkout";
 import { computeTotals, type TaxConfig } from "@/lib/pricing";
-import { formatMoney } from "@/lib/money";
-import { formatDeliveryWindow, type ShippingQuote } from "@/lib/shipping/calculator";
-import { variantLabel } from "@/lib/cart/assess";
+import type { ShippingQuote } from "@/lib/shipping/calculator";
+import { useLocale, useTranslations } from "next-intl";
+import { useMoney } from "@/components/intl/PreferencesProvider";
+import { useShippingText } from "@/components/intl/useShippingText";
+import { useCartText } from "@/components/intl/useCartText";
+import { useDiscountLabel } from "@/components/intl/useDiscountLabel";
+import { regionName } from "@/components/intl/PreferencesDialog";
 import { SmartImage } from "@/components/ui/SmartImage";
 import { Button } from "@/components/ui/Button";
 import { Notice } from "@/components/ui/Notice";
@@ -54,6 +58,7 @@ export function CheckoutForm({
   tax,
   dutiesNotice,
   storeCountry = "NG",
+  preferredCountry,
 }: {
   countries: CountryOption[];
   regions: Record<string, { code: string; name: string }[]>;
@@ -63,15 +68,26 @@ export function CheckoutForm({
   tax: TaxConfig;
   dutiesNotice: string;
   storeCountry?: string;
+  /** The country the shopper chose in their preferences (used as the default when we deliver there). */
+  preferredCountry?: string;
 }) {
   const { cart } = useCart();
+  const t = useTranslations("checkout");
+  const tc = useTranslations("cart");
+  const locale = useLocale();
+  const money = useMoney();
+  const formatMoney = money.format;
+  const st = useShippingText();
+  const ct = useCartText();
+  const discountLabel = useDiscountLabel();
+  const countryLabel = (code: string) => regionName(code, locale);
   const [nonce] = useState(() => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : String(Math.random()).slice(2).padEnd(20, "0")));
   const first = savedAddresses.find((a) => countries.some((c) => c.code === a.country_code));
   const [email, setEmail] = useState(defaultEmail);
   const [address, setAddress] = useState<Address>(() =>
     first
       ? { full_name: first.full_name, phone: first.phone, country_code: first.country_code, region: first.region, city: first.city, line1: first.line1, line2: first.line2 ?? "", postal_code: first.postal_code ?? "" }
-      : { full_name: "", phone: "", country_code: countries.find((c) => c.code === storeCountry)?.code ?? countries[0]?.code ?? "", region: "", city: "", line1: "", line2: "", postal_code: "" },
+      : { full_name: "", phone: "", country_code: countries.find((c) => c.code === preferredCountry)?.code ?? countries.find((c) => c.code === storeCountry)?.code ?? countries[0]?.code ?? "", region: "", city: "", line1: "", line2: "", postal_code: "" },
   );
   const [instructions, setInstructions] = useState("");
   const [saveAddress, setSaveAddress] = useState(false);
@@ -123,9 +139,9 @@ export function CheckoutForm({
   if (cart.lines.length === 0) {
     return (
       <div className="py-20 text-center">
-        <p className="display text-4xl">Your bag is empty</p>
+        <p className="display text-4xl">{tc("empty")}</p>
         <Link href="/shop" className="mt-6 inline-block underline underline-offset-4">
-          Continue shopping
+          {tc("continueShopping")}
         </Link>
       </div>
     );
@@ -140,7 +156,7 @@ export function CheckoutForm({
     setError(null);
     setErrors({});
     if (!selected) {
-      setError(activeQuote && !activeQuote.ok ? activeQuote.message : "Please complete your address to see delivery options.");
+      setError(activeQuote && !activeQuote.ok ? st.error(activeQuote) : t("completeAddress"));
       return;
     }
     setPlacing(true);
@@ -162,19 +178,19 @@ export function CheckoutForm({
       <form id="checkout-form" onSubmit={submit} className="space-y-10" noValidate>
         <section aria-labelledby="contact-h">
           <h2 id="contact-h" className="font-display text-3xl">
-            Contact
+            {t("contact")}
           </h2>
           {!signedIn && (
             <p className="mt-2 text-sm text-muted">
-              Have an account?{" "}
+              {t("haveAccount")}{" "}
               <Link href="/account/login?next=/checkout" className="underline underline-offset-4">
-                Sign in
+                {t("signIn")}
               </Link>
             </p>
           )}
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <label className="text-sm sm:col-span-2">
-              Email
+              {t("email")}
               <input className="field mt-1.5" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} {...field("email")} />
               <FieldError errors={errors} name="email" />
             </label>
@@ -183,11 +199,11 @@ export function CheckoutForm({
 
         <section aria-labelledby="delivery-h">
           <h2 id="delivery-h" className="font-display text-3xl">
-            Delivery address
+            {t("deliveryAddress")}
           </h2>
           {savedAddresses.length > 0 && (
             <label className="mt-5 block text-sm">
-              Saved addresses
+              {t("savedAddresses")}
               <select
                 className="field mt-1.5"
                 defaultValue={first?.id}
@@ -207,7 +223,7 @@ export function CheckoutForm({
           )}
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <label className="text-sm sm:col-span-2">
-              Country
+              {t("country")}
               <select
                 className="field mt-1.5"
                 value={address.country_code}
@@ -217,41 +233,41 @@ export function CheckoutForm({
               >
                 {countries.map((c) => (
                   <option key={c.code} value={c.code}>
-                    {c.name}
+                    {countryLabel(c.code)}
                   </option>
                 ))}
               </select>
-              <span className="mt-1 block text-xs text-muted">Only countries we currently deliver to are listed.</span>
+              <span className="mt-1 block text-xs text-muted">{t("countriesNote")}</span>
             </label>
             <label className="text-sm">
-              Full name
+              {t("fullName")}
               <input className="field mt-1.5" autoComplete="name" value={address.full_name} onChange={(e) => set("full_name", e.target.value)} required {...field("address.full_name")} />
               <FieldError errors={errors} name="address.full_name" />
             </label>
             <label className="text-sm">
-              Phone number
+              {t("phone")}
               <input className="field mt-1.5" type="tel" autoComplete="tel" placeholder={address.country_code === "NG" ? "+234 801 234 5678" : "+44 20 7946 0000"} value={address.phone} onChange={(e) => set("phone", e.target.value)} required {...field("address.phone")} />
               <FieldError errors={errors} name="address.phone" />
             </label>
             <label className="text-sm sm:col-span-2">
-              Street address
+              {t("street")}
               <input className="field mt-1.5" autoComplete="address-line1" value={address.line1} onChange={(e) => set("line1", e.target.value)} required {...field("address.line1")} />
               <FieldError errors={errors} name="address.line1" />
             </label>
             <label className="text-sm sm:col-span-2">
-              Apartment, suite, landmark <span className="text-muted">(optional)</span>
+              {t("line2")} <span className="text-muted">({t("optional")})</span>
               <input className="field mt-1.5" autoComplete="address-line2" value={address.line2} onChange={(e) => set("line2", e.target.value)} />
             </label>
             <label className="text-sm">
-              City / town
+              {t("city")}
               <input className="field mt-1.5" autoComplete="address-level2" value={address.city} onChange={(e) => set("city", e.target.value)} required {...field("address.city")} />
               <FieldError errors={errors} name="address.city" />
             </label>
             <label className="text-sm">
-              {country?.region_label ?? "Region"} {!(country?.region_required || countryRegions.length) && <span className="text-muted">(optional)</span>}
+              {st.label(country?.region_label ?? "Region")} {!(country?.region_required || countryRegions.length) && <span className="text-muted">({t("optional")})</span>}
               {countryRegions.length > 0 ? (
                 <select className="field mt-1.5" autoComplete="address-level1" value={address.region} onChange={(e) => set("region", e.target.value)} required {...field("address.region")}>
-                  <option value="">Select…</option>
+                  <option value="">{t("select")}</option>
                   {countryRegions.map((r) => (
                     <option key={r.code} value={r.code}>
                       {r.name}
@@ -264,18 +280,18 @@ export function CheckoutForm({
               <FieldError errors={errors} name="address.region" />
             </label>
             <label className="text-sm">
-              {country?.postal_label ?? "Postal code"} {!country?.postal_required && <span className="text-muted">(optional)</span>}
+              {st.label(country?.postal_label ?? "Postal code")} {!country?.postal_required && <span className="text-muted">({t("optional")})</span>}
               <input className="field mt-1.5" autoComplete="postal-code" value={address.postal_code} onChange={(e) => set("postal_code", e.target.value)} required={country?.postal_required} {...field("address.postal_code")} />
               <FieldError errors={errors} name="address.postal_code" />
             </label>
             <label className="text-sm sm:col-span-2">
-              Delivery instructions <span className="text-muted">(optional)</span>
-              <textarea className="field mt-1.5 min-h-20" maxLength={500} value={instructions} onChange={(e) => setInstructions(e.target.value)} placeholder="Gate code, landmark, best time to call…" />
+              {t("instructions")} <span className="text-muted">({t("optional")})</span>
+              <textarea className="field mt-1.5 min-h-20" maxLength={500} value={instructions} onChange={(e) => setInstructions(e.target.value)} placeholder={t("instructionsPlaceholder")} />
             </label>
             {signedIn && (
               <label className="flex items-center gap-3 text-sm sm:col-span-2">
                 <input type="checkbox" className="size-4 accent-[#d94f91]" checked={saveAddress} onChange={(e) => setSaveAddress(e.target.checked)} />
-                Save this address to my account
+                {t("saveAddress")}
               </label>
             )}
           </div>
@@ -283,10 +299,10 @@ export function CheckoutForm({
 
         <section aria-labelledby="shipping-h" aria-busy={quoting}>
           <h2 id="shipping-h" className="font-display text-3xl">
-            Delivery method
+            {t("deliveryMethod")}
           </h2>
           <div className="mt-5" aria-live="polite">
-            {!addressReady && <p className="text-sm text-muted">Enter your city{countryRegions.length ? ` and ${country?.region_label.toLowerCase()}` : ""} to see delivery options.</p>}
+            {!addressReady && <p className="text-sm text-muted">{countryRegions.length ? t("enterCityRegion", { region: st.label(country?.region_label ?? "Region").toLowerCase() }) : t("enterCity")}</p>}
             {addressReady && quoting && (
               <div className="space-y-2">
                 <div className="skeleton h-16 w-full" />
@@ -294,28 +310,28 @@ export function CheckoutForm({
               </div>
             )}
             {addressReady && !quoting && activeQuote && !activeQuote.ok && (
-              <Notice tone="error" title="Delivery unavailable">
-                {activeQuote.message}
+              <Notice tone="error" title={t("deliveryUnavailable")}>
+                {st.error(activeQuote)}
               </Notice>
             )}
             {addressReady && !quoting && activeQuote?.ok && (
               <fieldset className="space-y-2">
-                <legend className="sr-only">Choose a delivery method</legend>
+                <legend className="sr-only">{t("chooseMethod")}</legend>
                 {activeQuote.options.map((o) => {
-                  const window = formatDeliveryWindow(o.minDays, o.maxDays);
+                  const window = st.window(o.minDays, o.maxDays);
                   return (
                     <label key={o.rateId} className={cn("flex cursor-pointer items-center gap-4 rounded-2xl border px-4 py-4 transition", rateId === o.rateId ? "border-plum bg-blush" : "border-line hover:border-plum/40")}>
                       <input type="radio" name="shipping" className="size-4 accent-[#d94f91]" checked={rateId === o.rateId} onChange={() => setRateId(o.rateId)} />
                       <Truck className="size-4 text-rose" aria-hidden />
                       <span className="flex-1 text-sm">
-                        <span className="font-semibold">{o.methodName}</span>
+                        <span className="font-semibold">{st.method(o.methodName)}</span>
                         <span className="block text-xs text-muted">
-                          {window ? `Estimated ${window}` : "Delivery estimate confirmed after dispatch"}
-                          {o.isManual && " · Rate set by Attitude Collections"}
+                          {window ? t("estimated", { window }) : t("estimateAfterDispatch")}
+                          {o.isManual && ` · ${t("manualRate")}`}
                         </span>
                       </span>
                       <span className="text-sm font-semibold tabular-nums">
-                        {o.fee === 0 ? "Free" : formatMoney(o.fee)}
+                        {o.fee === 0 ? tc("free") : formatMoney(o.fee)}
                         {o.freeShippingApplied && <s className="ml-2 text-xs font-normal text-muted">{formatMoney(o.originalFee)}</s>}
                       </span>
                     </label>
@@ -332,19 +348,19 @@ export function CheckoutForm({
         </section>
       </form>
 
-      <aside className="h-fit rounded-[1.75rem] bg-neutral p-6 lg:sticky lg:top-28" aria-label="Order summary">
-        <h2 className="font-display text-2xl">Order summary</h2>
+      <aside className="h-fit rounded-[1.75rem] bg-neutral p-6 lg:sticky lg:top-28" aria-label={t("summary")}>
+        <h2 className="font-display text-2xl">{t("summary")}</h2>
         <ul className="mt-5 max-h-80 space-y-4 overflow-y-auto pr-1">
           {cart.lines.map((l) => (
             <li key={l.itemId} className="flex gap-3">
               <span className="relative h-20 w-15 shrink-0 overflow-hidden bg-white">
-                <SmartImage src={l.imageUrl} alt={l.imageAlt || l.name} fill sizes="60px" className="object-cover" />
+                <SmartImage src={l.imageUrl} alt={l.imageAlt || ct.name(l)} fill sizes="60px" className="object-cover" />
                 <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-plum text-[0.6rem] font-bold text-white">{l.quantity}</span>
               </span>
               <span className="flex-1 text-sm">
-                <span className="block font-semibold leading-snug">{l.name}</span>
-                <span className="block text-xs text-muted">{variantLabel(l.size, l.color)}</span>
-                {l.warning && !l.purchasable && <span className="block text-xs font-semibold text-danger">{l.warning}</span>}
+                <span className="block font-semibold leading-snug">{ct.name(l)}</span>
+                <span className="block text-xs text-muted">{ct.variant(l.size, l.color)}</span>
+                {l.warning && !l.purchasable && <span className="block text-xs font-semibold text-danger">{ct.warning(l)}</span>}
               </span>
               <span className="text-sm tabular-nums">{formatMoney(l.lineTotal)}</span>
             </li>
@@ -355,25 +371,25 @@ export function CheckoutForm({
         </div>
         <dl className="mt-6 space-y-2 border-t border-line pt-5 text-sm">
           <div className="flex justify-between">
-            <dt>Subtotal</dt>
+            <dt>{tc("subtotal")}</dt>
             <dd className="tabular-nums">{formatMoney(totals.subtotal)}</dd>
           </div>
           {(totals.discountTotal > 0 || cart.discount?.freeShipping) && (
             <div className="flex justify-between text-rose-deep">
-              <dt>{cart.discount?.automatic ? cart.discount.label : `Discount${cart.discount ? ` (${cart.discount.code})` : ""}`}</dt>
-              <dd className="tabular-nums">{totals.discountTotal > 0 ? `−${formatMoney(totals.discountTotal)}` : "Free delivery"}</dd>
+              <dt>{cart.discount ? discountLabel(cart.discount) : tc("discount")}</dt>
+              <dd className="tabular-nums">{totals.discountTotal > 0 ? `−${formatMoney(totals.discountTotal)}` : tc("freeDelivery")}</dd>
             </div>
           )}
           <div className="flex justify-between">
-            <dt>Delivery{selected ? ` · ${selected.methodName}` : ""}</dt>
-            <dd className="tabular-nums">{selected ? (totals.shippingFee === 0 ? "Free" : formatMoney(totals.shippingFee)) : "—"}</dd>
+            <dt>{tc("delivery")}{selected ? ` · ${st.method(selected.methodName)}` : ""}</dt>
+            <dd className="tabular-nums">{selected ? (totals.shippingFee === 0 ? tc("free") : formatMoney(totals.shippingFee)) : "—"}</dd>
           </div>
           {address.city && (
             <div className="flex justify-between text-xs text-muted">
-              <dt>Delivering to</dt>
+              <dt>{t("deliveringTo")}</dt>
               <dd className="text-right">
                 {address.city}
-                {address.region ? `, ${countryRegions.find((r) => r.code === address.region)?.name ?? address.region}` : ""}, {country?.name}
+                {address.region ? `, ${countryRegions.find((r) => r.code === address.region)?.name ?? address.region}` : ""}, {country ? countryLabel(country.code) : ""}
               </dd>
             </div>
           )}
@@ -384,12 +400,21 @@ export function CheckoutForm({
             </div>
           )}
           <div className="flex justify-between border-t border-line pt-3 text-lg font-semibold">
-            <dt>Total</dt>
-            <dd className="tabular-nums">{selected ? formatMoney(totals.total) : "—"}</dd>
+            <dt>{t("total")}</dt>
+            <dd className="tabular-nums">{selected ? `${money.isEstimate ? "≈ " : ""}${formatMoney(totals.total)}` : "—"}</dd>
           </div>
+          {selected && money.isEstimate && (
+            <div className="rounded-2xl border border-rose/40 bg-white px-3 py-2.5 text-xs leading-relaxed" role="note">
+              <p className="flex justify-between gap-3 text-sm font-semibold text-plum">
+                <span>{t("chargedLabel")}</span>
+                <span className="tabular-nums">{money.formatCharge(totals.total)}</span>
+              </p>
+              <p className="mt-1 text-muted">{t("chargedNote", { display: money.currency, charge: money.chargeCurrency })}</p>
+            </div>
+          )}
           {tax.mode === "inclusive" && totals.taxIncluded > 0 && (
             <p className="text-xs text-muted">
-              Includes {tax.label} of {formatMoney(totals.taxIncluded)}
+              {t("taxIncluded", { label: tax.label, amount: formatMoney(totals.taxIncluded) })}
             </p>
           )}
         </dl>
@@ -403,10 +428,10 @@ export function CheckoutForm({
         </AnimatePresence>
 
         <Button type="submit" form="checkout-form" size="lg" className="mt-6 w-full" disabled={!canPay} loading={placing}>
-          <Lock className="size-3.5" aria-hidden /> {placing ? "Redirecting to payment…" : selected ? `Pay ${formatMoney(totals.total)}` : "Pay securely"}
+          <Lock className="size-3.5" aria-hidden /> {placing ? t("redirecting") : selected ? t("pay", { amount: money.formatCharge(totals.total) }) : t("paySecurely")}
         </Button>
         <p className="mt-3 text-center text-xs text-muted">
-          You&apos;ll complete payment on Paystack&apos;s secure page. Your final total is confirmed by our server before payment.
+          {t("paystackNote", { charge: money.chargeCurrency })}
         </p>
       </aside>
     </div>

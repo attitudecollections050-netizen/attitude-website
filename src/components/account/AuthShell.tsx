@@ -1,6 +1,8 @@
+import { getTranslations } from "next-intl/server";
 import { Monogram } from "@/components/brand/Wordmark";
 
-export function AuthShell({ eyebrow, title, children, footer }: { eyebrow: string; title: string; children: React.ReactNode; footer?: React.ReactNode }) {
+export async function AuthShell({ eyebrow, title, children, footer }: { eyebrow: string; title: string; children: React.ReactNode; footer?: React.ReactNode }) {
+  const t = await getTranslations("account");
   return (
     <div className="grid min-h-[70vh] lg:grid-cols-2">
       <div className="relative hidden overflow-hidden bg-plum lg:block">
@@ -8,7 +10,7 @@ export function AuthShell({ eyebrow, title, children, footer }: { eyebrow: strin
         <div className="relative flex h-full flex-col justify-between p-14 text-white">
           <Monogram className="size-20" />
           <p className="display max-w-md text-6xl">
-            Wear your <span className="italic text-pale">attitude.</span>
+            {t.rich("tagline", { em: (c) => <span className="italic text-pale">{c}</span> })}
           </p>
         </div>
       </div>

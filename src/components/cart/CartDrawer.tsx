@@ -1,9 +1,11 @@
 "use client";
+import { useTranslations } from "next-intl";
+import { useMoney } from "@/components/intl/PreferencesProvider";
+import { useDiscountLabel } from "@/components/intl/useDiscountLabel";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { AnimatePresence, m } from "motion/react";
 import { ShoppingBag, X } from "lucide-react";
-import { formatMoney } from "@/lib/money";
 import { buttonClasses } from "@/components/ui/Button";
 import { useCart } from "./CartProvider";
 import { CartLineItem } from "./CartLineItem";
@@ -12,6 +14,9 @@ import { useDialog } from "@/components/ui/useDialog";
 export function CartDrawer() {
   const { cart, open, setOpen } = useCart();
   const panelRef = useRef<HTMLDivElement>(null);
+  const t = useTranslations("cart");
+  const { format: formatMoney, isEstimate } = useMoney();
+  const discountLabel = useDiscountLabel();
   useDialog(open, () => setOpen(false), panelRef);
 
   useEffect(() => {
@@ -36,7 +41,7 @@ export function CartDrawer() {
             ref={panelRef}
             role="dialog"
             aria-modal="true"
-            aria-label="Shopping bag"
+            aria-label={t("bag")}
             tabIndex={-1}
             className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-white shadow-2xl outline-none"
             initial={{ x: "100%" }}
@@ -46,9 +51,9 @@ export function CartDrawer() {
           >
             <div className="flex items-center justify-between border-b border-line px-6 py-5">
               <h2 className="font-display text-2xl">
-                Your bag <span className="font-sans text-sm text-muted">({cart.itemCount})</span>
+                {t("yourBag")} <span className="font-sans text-sm text-muted">({cart.itemCount})</span>
               </h2>
-              <button type="button" onClick={() => setOpen(false)} className="-m-2 p-2 transition hover:text-rose-deep" aria-label="Close bag">
+              <button type="button" onClick={() => setOpen(false)} className="-m-2 p-2 transition hover:text-rose-deep" aria-label={t("closeBag")}>
                 <X className="size-5" />
               </button>
             </div>
@@ -58,10 +63,10 @@ export function CartDrawer() {
                 <span className="grid size-16 place-items-center rounded-full bg-blush text-rose">
                   <ShoppingBag className="size-6" />
                 </span>
-                <p className="font-display text-2xl">Your bag is empty</p>
-                <p className="text-sm text-muted">Discover new arrivals and pieces with presence.</p>
+                <p className="font-display text-2xl">{t("empty")}</p>
+                <p className="text-sm text-muted">{t("emptyDrawer")}</p>
                 <Link href="/shop" onClick={() => setOpen(false)} className={buttonClasses("primary")}>
-                  Start shopping
+                  {t("startShopping")}
                 </Link>
               </div>
             ) : (
@@ -76,22 +81,22 @@ export function CartDrawer() {
                 <div className="border-t border-line bg-neutral px-6 py-5">
                   <dl className="space-y-1.5 text-sm">
                     <div className="flex justify-between">
-                      <dt>Subtotal</dt>
+                      <dt>{t("subtotal")}</dt>
                       <dd className="tabular-nums">{formatMoney(cart.subtotal)}</dd>
                     </div>
                     {cart.discount && (
                       <div className="flex justify-between text-rose-deep">
-                        <dt>{cart.discount.automatic ? cart.discount.label : `Discount (${cart.discount.code})`}</dt>
-                        <dd className="tabular-nums">{cart.discount.amount > 0 ? `−${formatMoney(cart.discount.amount)}` : "Free delivery"}</dd>
+                        <dt>{discountLabel(cart.discount)}</dt>
+                        <dd className="tabular-nums">{cart.discount.amount > 0 ? `−${formatMoney(cart.discount.amount)}` : t("freeDelivery")}</dd>
                       </div>
                     )}
                     <div className="flex justify-between text-muted">
-                      <dt>Delivery</dt>
-                      <dd>{cart.discount?.freeShipping ? <span className="font-semibold text-rose-deep">Free</span> : "Calculated at checkout"}</dd>
+                      <dt>{t("delivery")}</dt>
+                      <dd>{cart.discount?.freeShipping ? <span className="font-semibold text-rose-deep">{t("free")}</span> : t("atCheckout")}</dd>
                     </div>
                   </dl>
                   {!cart.purchasable && (
-                    <p className="mt-3 text-xs font-semibold text-danger">Please resolve the stock issues above before checkout.</p>
+                    <p className="mt-3 text-xs font-semibold text-danger">{t("resolveStock")}</p>
                   )}
                   <div className="mt-4 grid gap-2">
                     <Link
@@ -100,10 +105,10 @@ export function CartDrawer() {
                       aria-disabled={!cart.purchasable}
                       className={buttonClasses("primary", "lg", !cart.purchasable ? "pointer-events-none opacity-50" : "")}
                     >
-                      Checkout · {formatMoney(cart.totalBeforeShipping)}
+                      {t("checkoutTotal", { total: `${isEstimate ? "≈ " : ""}${formatMoney(cart.totalBeforeShipping)}` })}
                     </Link>
                     <Link href="/cart" onClick={() => setOpen(false)} className={buttonClasses("outline", "md")}>
-                      View bag
+                      {t("viewBag")}
                     </Link>
                   </div>
                 </div>

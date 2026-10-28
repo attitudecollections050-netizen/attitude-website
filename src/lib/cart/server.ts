@@ -46,6 +46,7 @@ interface CartItemRow {
     is_active: boolean;
     inventory: { on_hand: number } | { on_hand: number }[] | null;
     product: {
+      translations?: Record<string, { name?: string } | undefined> | null;
       id: string;
       slug: string;
       name: string;
@@ -75,7 +76,7 @@ export async function loadRawLines(cartId: string): Promise<{ lines: RawCartLine
          variant:product_variants (
            id, sku, size, color, is_active,
            inventory ( on_hand ),
-           product:products ( id, slug, name, price, sale_price, status, allow_backorder, weight_grams,
+           product:products ( id, slug, name, price, sale_price, status, allow_backorder, weight_grams, translations,
              product_images ( url, alt, sort_order, color ) )
          )`,
       )
@@ -108,6 +109,7 @@ export async function loadRawLines(cartId: string): Promise<{ lines: RawCartLine
       variantActive: v.is_active,
       productStatus: v.product.status,
       weightGrams: v.product.weight_grams,
+      translations: v.product.translations ?? undefined,
     });
   }
   return { lines, discountCode: cart?.discount_code ?? null };
@@ -155,9 +157,10 @@ export function toCartView(priced: PricedCart | null): CartView {
     itemCount: priced.lines.reduce((n, l) => n + l.quantity, 0),
     subtotal: priced.subtotal,
     discount: discountOk
-      ? { code: discountOk.code, label: discountOk.label, amount: discountOk.amount, freeShipping: discountOk.freeShipping, automatic: Boolean(discountOk.automatic) }
+      ? { code: discountOk.code, label: discountOk.label, amount: discountOk.amount, freeShipping: discountOk.freeShipping, automatic: Boolean(discountOk.automatic), percent: discountOk.percent, minSubtotal: discountOk.minSubtotal }
       : null,
     discountError: priced.discount && !priced.discount.ok ? priced.discount.reason : null,
+    discountErrorCode: priced.discount && !priced.discount.ok && priced.discount.reasonCode ? { reason: priced.discount.reasonCode, minSubtotal: priced.discount.minSubtotal } : null,
     totalBeforeShipping: priced.subtotal - discountAmount,
     purchasable: cartIsPurchasable(priced.lines),
     currency: "NGN",

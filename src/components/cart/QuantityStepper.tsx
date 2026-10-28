@@ -1,5 +1,6 @@
 "use client";
 import { Minus, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/cn";
 
 export function QuantityStepper({
@@ -8,7 +9,7 @@ export function QuantityStepper({
   min = 1,
   max = 10,
   disabled,
-  label = "Quantity",
+  label,
   size = "md",
 }: {
   value: number;
@@ -19,6 +20,8 @@ export function QuantityStepper({
   label?: string;
   size?: "sm" | "md";
 }) {
+  const t = useTranslations("product");
+  label ??= t("quantity");
   const h = size === "sm" ? "h-9" : "h-12";
   return (
     <div className={cn("inline-flex items-center rounded-full border border-line bg-white px-0.5", h)} role="group" aria-label={label}>
@@ -27,7 +30,7 @@ export function QuantityStepper({
         className={cn("grid place-items-center text-plum transition hover:bg-blush disabled:opacity-30", size === "sm" ? "w-8" : "w-11", "h-full")}
         onClick={() => onChange(Math.max(min, value - 1))}
         disabled={disabled || value <= min}
-        aria-label={`Decrease ${label.toLowerCase()}`}
+        aria-label={t("decrease")}
       >
         <Minus className="size-3.5" />
       </button>
@@ -39,7 +42,7 @@ export function QuantityStepper({
         className={cn("grid place-items-center text-plum transition hover:bg-blush disabled:opacity-30", size === "sm" ? "w-8" : "w-11", "h-full")}
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={disabled || value >= max}
-        aria-label={`Increase ${label.toLowerCase()}`}
+        aria-label={t("increase")}
       >
         <Plus className="size-3.5" />
       </button>

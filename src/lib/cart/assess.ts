@@ -19,6 +19,8 @@ export interface RawCartLine {
   variantActive: boolean;
   productStatus: string;
   weightGrams: number;
+  /** Per-language product text, e.g. { fr: { name: "…" } } (display only). */
+  translations?: Record<string, { name?: string } | undefined>;
 }
 
 export interface CartLine extends Omit<RawCartLine, "onHand" | "variantActive" | "productStatus"> {
@@ -29,6 +31,8 @@ export interface CartLine extends Omit<RawCartLine, "onHand" | "variantActive" |
   maxQuantity: number;
   stockLeft: number | null;
   warning: string | null;
+  /** Machine-readable warning so the storefront can show it in the shopper's language. */
+  warningCode: "unavailable" | "backorder" | "sold_out" | "reduce" | "low_stock" | null;
 }
 
 export function variantLabel(size: string | null, color: string | null): string {
@@ -56,17 +60,18 @@ export function assessLine(line: RawCartLine, maxPerItem: number): CartLine {
     unitPrice,
     compareAtPrice: line.salePrice != null ? line.price : null,
     lineTotal: unitPrice * line.quantity,
+    translations: line.translations,
   };
 
   if (line.productStatus !== "published" || !line.variantActive) {
-    return { ...base, purchasable: false, maxQuantity: 0, stockLeft: 0, warning: "This item is no longer available. Please remove it." };
+    return { ...base, purchasable: false, maxQuantity: 0, stockLeft: 0, warning: "This item is no longer available. Please remove it.", warningCode: "unavailable" as const };
   }
   if (line.allowBackorder) {
     const warning = line.onHand < line.quantity ? "Available on backorder — dispatch may take longer." : null;
-    return { ...base, purchasable: true, maxQuantity: maxPerItem, stockLeft: null, warning };
+    return { ...base, purchasable: true, maxQuantity: maxPerItem, stockLeft: null, warning, warningCode: warning ? ("backorder" as const) : null };
   }
   if (line.onHand <= 0) {
-    return { ...base, purchasable: false, maxQuantity: 0, stockLeft: 0, warning: "Sold out. Please remove this item to continue." };
+    return { ...base, purchasable: false, maxQuantity: 0, stockLeft: 0, warning: "Sold out. Please remove this item to continue.", warningCode: "sold_out" as const };
   }
   const maxQuantity = Math.min(maxPerItem, line.onHand);
   if (line.quantity > line.onHand) {
@@ -76,10 +81,11 @@ export function assessLine(line: RawCartLine, maxPerItem: number): CartLine {
       maxQuantity,
       stockLeft: line.onHand,
       warning: `Only ${line.onHand} left in stock. Please reduce the quantity.`,
+      warningCode: "reduce" as const,
     };
   }
   const warning = line.onHand <= 3 ? `Only ${line.onHand} left` : null;
-  return { ...base, purchasable: true, maxQuantity, stockLeft: line.onHand, warning };
+  return { ...base, purchasable: true, maxQuantity, stockLeft: line.onHand, warning, warningCode: warning ? ("low_stock" as const) : null };
 }
 
 export function cartIsPurchasable(lines: CartLine[]): boolean {

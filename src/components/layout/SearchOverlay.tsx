@@ -4,14 +4,16 @@ import { useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 import { Search, X } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useDialog } from "@/components/ui/useDialog";
 
-const SUGGESTIONS = ["Dresses", "Sneakers", "Handbags", "Heels", "Hoodies", "Matching sets"];
+const SUGGESTIONS = ["dresses", "sneakers", "handbags", "heels", "hoodies", "sets"] as const;
 
 export function SearchOverlay({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
   const ref = useRef<HTMLDivElement>(null);
   const [q, setQ] = useState("");
+  const t = useTranslations("search");
   useDialog(open, onClose, ref);
 
   return (
@@ -23,7 +25,7 @@ export function SearchOverlay({ open, onClose }: { open: boolean; onClose: () =>
             ref={ref}
             role="dialog"
             aria-modal="true"
-            aria-label="Search"
+            aria-label={t("label")}
             tabIndex={-1}
             className="absolute inset-x-0 top-0 bg-white outline-none"
             initial={{ y: "-100%" }}
@@ -43,27 +45,27 @@ export function SearchOverlay({ open, onClose }: { open: boolean; onClose: () =>
               >
                 <Search className="size-6 shrink-0 text-muted" aria-hidden />
                 <label htmlFor="site-search" className="sr-only">
-                  Search products
+                  {t("inputLabel")}
                 </label>
                 <input
                   id="site-search"
                   autoFocus
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
-                  placeholder="Search for dresses, sneakers, bags…"
+                  placeholder={t("placeholder")}
                   className="min-w-0 flex-1 bg-transparent font-display text-2xl outline-none placeholder:text-muted/60 sm:text-4xl"
                   maxLength={100}
                   enterKeyHint="search"
                 />
-                <button type="button" onClick={onClose} className="p-2" aria-label="Close search">
+                <button type="button" onClick={onClose} className="p-2" aria-label={t("close")}>
                   <X className="size-5" />
                 </button>
               </form>
               <div className="mt-6 flex flex-wrap items-center gap-2">
-                <span className="eyebrow mr-2 text-muted">Try searching</span>
-                {SUGGESTIONS.map((s) => (
-                  <Link key={s} href={`/search?q=${encodeURIComponent(s)}`} className="rounded-full border border-line px-4 py-1.5 text-sm transition hover:border-rose hover:text-rose-deep">
-                    {s}
+                <span className="eyebrow mr-2 text-muted">{t("try")}</span>
+                {SUGGESTIONS.map((key) => (
+                  <Link key={key} href={`/search?q=${encodeURIComponent(t(`suggestions.${key}`))}`} className="rounded-full border border-line px-4 py-1.5 text-sm transition hover:border-rose hover:text-rose-deep">
+                    {t(`suggestions.${key}`)}
                   </Link>
                 ))}
               </div>

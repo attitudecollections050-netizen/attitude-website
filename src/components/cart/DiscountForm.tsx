@@ -1,18 +1,24 @@
 "use client";
 import { useState } from "react";
 import { X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useCart } from "./CartProvider";
+import { useDiscountDescription, useDiscountError, useDiscountLabel } from "@/components/intl/useDiscountLabel";
 
 export function DiscountForm() {
   const { cart, applyCode, removeCode, pending } = useCart();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const t = useTranslations("cart");
+  const label = useDiscountLabel();
+  const describe = useDiscountDescription();
+  const discountError = useDiscountError();
 
   if (cart.discount?.automatic) {
     return (
       <p className="rounded-2xl bg-pale px-4 py-2.5 text-sm" role="status">
-        <span className="font-semibold">🎉 {cart.discount.label}</span>
-        <span className="block text-xs text-muted">Applied automatically to your order.</span>
+        <span className="font-semibold">🎉 {label(cart.discount)}</span>
+        <span className="block text-xs text-muted">{t("autoApplied")}</span>
       </p>
     );
   }
@@ -20,9 +26,9 @@ export function DiscountForm() {
     return (
       <div className="flex items-center justify-between rounded-full bg-pale px-4 py-2 text-sm">
         <span>
-          <span className="font-semibold">{cart.discount.code}</span> · {cart.discount.label}
+          <span className="font-semibold">{cart.discount.code}</span> · {describe(cart.discount)}
         </span>
-        <button type="button" onClick={() => removeCode()} disabled={pending} className="p-1 hover:text-rose-deep" aria-label="Remove discount code">
+        <button type="button" onClick={() => removeCode()} disabled={pending} className="p-1 hover:text-rose-deep" aria-label={t("removeCode")}>
           <X className="size-4" />
         </button>
       </div>
@@ -39,7 +45,7 @@ export function DiscountForm() {
       }}
     >
       <label htmlFor="discount-code" className="text-xs text-muted">
-        Discount code
+        {t("codeLabel")}
       </label>
       <div className="mt-1 flex gap-2">
         <input
@@ -53,12 +59,12 @@ export function DiscountForm() {
           aria-describedby={error ? "discount-error" : undefined}
         />
         <button type="submit" disabled={pending || code.trim().length < 3} className="shrink-0 rounded-full border border-plum px-5 text-[0.68rem] font-bold uppercase tracking-[0.18em] transition hover:bg-plum hover:text-white disabled:opacity-40">
-          Apply
+          {t("apply")}
         </button>
       </div>
       {(error || cart.discountError) && (
         <p id="discount-error" className="mt-1.5 text-xs text-danger" role="alert">
-          {error ?? cart.discountError}
+          {error ?? discountError(cart.discountErrorCode, cart.discountError)}
         </p>
       )}
     </form>

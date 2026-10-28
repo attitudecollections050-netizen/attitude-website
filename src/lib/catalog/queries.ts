@@ -4,12 +4,39 @@ import { createPublicClient } from "@/lib/supabase/public";
 import { isSupabaseConfigured } from "@/lib/env";
 import { PAGE_SIZE, sortSizes, type CatalogFilters } from "./filters";
 import type { CategoryNode, ProductCardData, ProductDetail } from "./types";
+import { getLocale, getTranslations } from "next-intl/server";
+
+type Translations = Record<string, Record<string, string | undefined> | undefined> | null | undefined;
+
+/** Text in the shopper's language from a translations column, else the original. */
+function tr(translations: Translations, locale: string, field: string, original: string): string;
+function tr(translations: Translations, locale: string, field: string, original: string | null): string | null;
+function tr(translations: Translations, locale: string, field: string, original: string | null) {
+  const v = locale !== "en" ? translations?.[locale]?.[field] : undefined;
+  return typeof v === "string" && v.trim() ? v : original;
+}
+
+/** Applies collection name/description translations. */
+export async function localizeCollections<T extends { name: string; description: string | null; translations?: unknown }>(rows: T[]): Promise<T[]> {
+  const locale = await getLocale();
+  return rows.map((r) => ({ ...r, name: tr(r.translations as Translations, locale, "name", r.name), description: tr(r.translations as Translations, locale, "description", r.description) }));
+}
+
+/** Applies product-name translations to listing rows (catalog_search doesn't return them). */
+async function localizeCards<T extends { id: string; name: string }>(rows: T[]): Promise<T[]> {
+  const locale = await getLocale();
+  if (locale === "en" || rows.length === 0) return rows;
+  const { data } = await createPublicClient().from("products").select("id, translations").in("id", rows.map((r) => r.id));
+  const map = new Map((data ?? []).map((d) => [d.id as string, d.translations as Translations]));
+  return rows.map((r) => ({ ...r, name: tr(map.get(r.id), locale, "name", r.name) }));
+}
 
 export const getCategoryTree = cache(async (): Promise<CategoryNode[]> => {
   if (!isSupabaseConfigured()) return [];
+  const [locale, t] = await Promise.all([getLocale(), getTranslations("categories")]);
   const { data, error } = await createPublicClient()
     .from("categories")
-    .select("id, slug, name, description, image_url, parent_id, sort_order")
+    .select("id, slug, name, description, image_url, parent_id, sort_order, translations")
     .eq("is_active", true)
     .order("sort_order")
     .order("name");
@@ -17,14 +44,20 @@ export const getCategoryTree = cache(async (): Promise<CategoryNode[]> => {
     console.error("[catalog] categories:", error.message);
     return [];
   }
-  const rows = data ?? [];
+  // Admin translations win; then built-in names for the standard categories; then the English name.
+  const rows = (data ?? []).map(({ translations, ...c }) => {
+    const builtIn = (k: string) => (locale !== "en" && t.has(`${c.slug}.${k}`) ? t(`${c.slug}.${k}`) : null);
+    const name = tr(translations as Translations, locale, "name", builtIn("name") ?? c.name);
+    const short = tr(translations as Translations, locale, "short_name", builtIn("short") ?? (t.has(`${c.slug}.short`) && locale === "en" ? t(`${c.slug}.short`) : null));
+    return { ...c, name, description: tr(translations as Translations, locale, "description", c.description), shortName: short ?? undefined };
+  });
   const top = rows.filter((c) => !c.parent_id);
-  return top.map((t) => ({
-    ...t,
-    href: `/shop/${t.slug}`,
+  return top.map((p) => ({
+    ...p,
+    href: `/shop/${p.slug}`,
     children: rows
-      .filter((c) => c.parent_id === t.id)
-      .map((c) => ({ ...c, href: `/shop/${t.slug}/${c.slug}`, children: [] })),
+      .filter((c) => c.parent_id === p.id)
+      .map((c) => ({ ...c, href: `/shop/${p.slug}/${c.slug}`, children: [] })),
   }));
 });
 
@@ -68,7 +101,7 @@ export async function searchCatalog(
   const rows = (data ?? []) as (ProductCardData & { total_count: number })[];
   const total = rows[0]?.total_count ?? 0;
   return {
-    products: rows.map((r) => ({ ...r, sizes: sortSizes(r.sizes ?? []), units_sold: Number(r.units_sold ?? 0) })),
+    products: await localizeCards(rows.map((r) => ({ ...r, sizes: sortSizes(r.sizes ?? []), units_sold: Number(r.units_sold ?? 0) }))),
     total: Number(total),
     page: filters.page,
     pageCount: Math.ceil(Number(total) / limit),
@@ -89,7 +122,7 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
   const { data, error } = await createPublicClient()
     .from("products")
     .select(
-      `id, slug, name, description, details, price, sale_price, weight_grams, allow_backorder, is_featured, tags, published_at,
+      `id, slug, name, description, details, price, sale_price, weight_grams, allow_backorder, is_featured, tags, published_at, translations,
        category:categories!inner ( id, slug, name, parent:parent_id ( id, slug, name ) ),
        product_images ( id, url, alt, color, sort_order ),
        product_variants ( id, sku, size, color, color_hex, is_active, sort_order, inventory ( on_hand ) )`,
@@ -111,7 +144,24 @@ export const getProductBySlug = cache(async (slug: string): Promise<ProductDetai
     }))
     .sort((a, b) => a.sort_order - b.sort_order);
   const images = [...(data.product_images ?? [])].sort((a, b) => a.sort_order - b.sort_order);
-  return { ...(data as unknown as ProductDetail), images, variants };
+  const [locale, tree] = await Promise.all([getLocale(), getCategoryTree()]);
+  const { translations, ...rest } = data as unknown as ProductDetail & { translations: Translations };
+  const flat = tree.flatMap((c) => [c, ...c.children]);
+  const catName = (id: string, fallback: string) => flat.find((c) => c.id === id)?.name ?? fallback;
+  const category = {
+    ...rest.category,
+    name: catName(rest.category.id, rest.category.name),
+    parent: rest.category.parent ? { ...rest.category.parent, name: catName(rest.category.parent.id, rest.category.parent.name) } : null,
+  };
+  return {
+    ...rest,
+    name: tr(translations, locale, "name", rest.name),
+    description: tr(translations, locale, "description", rest.description),
+    details: tr(translations, locale, "details", rest.details),
+    category,
+    images,
+    variants,
+  };
 });
 
 export async function getRelatedProducts(product: ProductDetail, limit = 4): Promise<ProductCardData[]> {
@@ -153,7 +203,7 @@ export async function getHomeData() {
       .order("sort_order"),
     db
       .from("collections")
-      .select("id, slug, name, description, image_url, collection_products ( product_id )")
+      .select("id, slug, name, description, image_url, translations, collection_products ( product_id )")
       .eq("is_active", true)
       .eq("is_featured", true)
       .order("sort_order")
@@ -164,7 +214,7 @@ export async function getHomeData() {
   ]);
   return {
     banners: (bannersRes.data ?? []) as HomeBanner[],
-    collections: (collectionsRes.data ?? []).map((c) => ({ ...c, count: c.collection_products?.length ?? 0 })),
+    collections: (await localizeCollections(collectionsRes.data ?? [])).map((c) => ({ ...c, count: c.collection_products?.length ?? 0 })),
     newArrivals: newArrivals?.products ?? [],
     featured: featured?.products ?? [],
     // Only products with genuine paid sales qualify as best sellers.
@@ -176,13 +226,14 @@ export async function getCollection(slug: string, filters: CatalogFilters = BASE
   if (!isSupabaseConfigured() || !/^[a-z0-9-]{1,80}$/.test(slug)) return null;
   const { data } = await createPublicClient()
     .from("collections")
-    .select("id, slug, name, description, image_url")
+    .select("id, slug, name, description, image_url, translations")
     .eq("slug", slug)
     .eq("is_active", true)
     .maybeSingle();
   if (!data) return null;
+  const [localized] = await localizeCollections([data]);
   const result = await searchCatalog(filters, { collectionId: data.id });
-  return { ...data, result };
+  return { ...localized, result };
 }
 
 export async function getContentPage(slug: string) {

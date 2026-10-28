@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { SmartImage } from "@/components/ui/SmartImage";
 import { Reveal } from "@/components/ui/Reveal";
@@ -12,6 +13,7 @@ export interface CollectionCard {
 }
 
 export function CollectionCards({ collections }: { collections: CollectionCard[] }) {
+  const t = useTranslations("home");
   return (
     <ul className="grid gap-6 md:grid-cols-2">
       {collections.map((c, i) => (
@@ -27,7 +29,7 @@ export function CollectionCards({ collections }: { collections: CollectionCard[]
               <span className="display mt-3 block text-4xl transition-colors group-hover:text-rose-deep">{c.name}</span>
               {c.description && <span className="mt-3 block text-sm leading-relaxed text-plum-soft">{c.description}</span>}
               <span className="mt-5 inline-flex items-center gap-3 text-[0.68rem] font-bold uppercase tracking-[0.22em]">
-                Explore
+                {t("explore")}
                 <span className="h-px w-8 bg-plum transition-all duration-500 group-hover:w-14 group-hover:bg-rose-deep" />
               </span>
             </span>

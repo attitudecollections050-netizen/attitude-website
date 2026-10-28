@@ -4,7 +4,10 @@ import { env, isSupabaseConfigured } from "@/lib/env";
 
 /** Refreshes the Supabase auth session cookie on every matched request. */
 export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  // Tells server code which area is rendering (the admin always stays in English).
+  const forwarded = new Headers(request.headers);
+  forwarded.set("x-ac-area", request.nextUrl.pathname.startsWith("/admin") ? "admin" : "store");
+  let response = NextResponse.next({ request: { headers: forwarded } });
   if (!isSupabaseConfigured()) return response;
 
   const supabase = createServerClient(env.supabaseUrl, env.supabasePublicKey, {
@@ -14,7 +17,8 @@ export async function updateSession(request: NextRequest) {
       },
       setAll(cookiesToSet, headers) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
+        forwarded.set("cookie", request.cookies.toString());
+        response = NextResponse.next({ request: { headers: forwarded } });
         cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
         Object.entries(headers ?? {}).forEach(([key, value]) => response.headers.set(key, value));
       },

@@ -1,9 +1,11 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { retryPayment } from "@/app/actions/checkout";
 import { Button } from "@/components/ui/Button";
 
 export function RetryPaymentButton({ orderNumber, token }: { orderNumber: string; token: string }) {
+  const t = useTranslations("order");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   return (
@@ -22,7 +24,7 @@ export function RetryPaymentButton({ orderNumber, token }: { orderNumber: string
           }
         }}
       >
-        Try payment again
+        {t("retry")}
       </Button>
       {error && <p className="text-xs text-danger" role="alert">{error}</p>}
     </div>

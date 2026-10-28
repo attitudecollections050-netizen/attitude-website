@@ -7,13 +7,17 @@ import { ArrowRight, Menu, Search, ShoppingBag, User } from "lucide-react";
 import type { CategoryNode } from "@/lib/catalog/types";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { useCart } from "@/components/cart/CartProvider";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/cn";
 import { MobileMenu } from "./MobileMenu";
 import { SearchOverlay } from "./SearchOverlay";
 import { SmartImage } from "@/components/ui/SmartImage";
+import { PreferencesSwitcher } from "@/components/intl/PreferencesSwitcher";
 
 export function Header({ categories, signedIn }: { categories: CategoryNode[]; signedIn: boolean }) {
   const { cart, setOpen } = useCart();
+  const t = useTranslations("header");
+  const tc = useTranslations("common");
   const pathname = usePathname();
   const [active, setActive] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
@@ -64,24 +68,24 @@ export function Header({ categories, signedIn }: { categories: CategoryNode[]; s
               type="button"
               className="-ml-2 grid size-10 place-items-center rounded-full transition hover:bg-blush lg:hidden"
               onClick={() => setMobileOpen(true)}
-              aria-label="Open menu"
+              aria-label={t("openMenu")}
               aria-expanded={mobileOpen}
             >
               <Menu className="size-5" />
             </button>
-            <Link href="/" className="hidden lg:block" aria-label="Attitude Collections — home">
+            <Link href="/" className="hidden lg:block" aria-label={tc("brandHome")}>
               <Wordmark inline />
             </Link>
           </div>
 
-          <Link href="/" className="justify-self-center lg:hidden" aria-label="Attitude Collections — home">
+          <Link href="/" className="justify-self-center lg:hidden" aria-label={tc("brandHome")}>
             <Wordmark inline />
           </Link>
 
-          <nav aria-label="Main" className="hidden justify-self-center lg:block">
+          <nav aria-label={t("mainNav")} className="hidden justify-self-center lg:block">
             <ul className="flex items-center gap-1 xl:gap-2">
               <li onMouseEnter={scheduleClose}>
-                <NavLink href="/" active={pathname === "/"}>Home</NavLink>
+                <NavLink href="/" active={pathname === "/"}>{tc("home")}</NavLink>
               </li>
               {categories.map((cat) => (
                 <li key={cat.id} onMouseEnter={() => openMenu(cat.slug)}>
@@ -92,7 +96,7 @@ export function Header({ categories, signedIn }: { categories: CategoryNode[]; s
                     expanded={active === cat.slug}
                     onFocus={() => openMenu(cat.slug)}
                   >
-                    {cat.name.replace("Clothing", "").trim()}
+                    {cat.shortName ?? cat.name}
                   </NavLink>
                 </li>
               ))}
@@ -100,17 +104,20 @@ export function Header({ categories, signedIn }: { categories: CategoryNode[]; s
           </nav>
 
           <div className="flex items-center justify-end gap-0.5 sm:gap-1.5">
-            <button type="button" className="grid size-10 place-items-center rounded-full transition hover:bg-blush" onClick={() => setSearchOpen(true)} aria-label="Search products">
+            {/* Phones get the switcher inside the menu; the header only has room for it from md up. */}
+            <span className="mr-1 hidden md:inline-flex 2xl:hidden"><PreferencesSwitcher compact /></span>
+            <span className="mr-1 hidden 2xl:inline-flex"><PreferencesSwitcher /></span>
+            <button type="button" className="grid size-10 place-items-center rounded-full transition hover:bg-blush" onClick={() => setSearchOpen(true)} aria-label={t("search")}>
               <Search className="size-[1.15rem]" />
             </button>
-            <Link href={signedIn ? "/account" : "/account/login"} className="hidden size-10 place-items-center rounded-full transition hover:bg-blush sm:grid" aria-label={signedIn ? "My account" : "Sign in"}>
+            <Link href={signedIn ? "/account" : "/account/login"} className="hidden size-10 place-items-center rounded-full transition hover:bg-blush sm:grid" aria-label={signedIn ? t("account") : t("signIn")}>
               <User className="size-[1.15rem]" />
             </Link>
             <button
               type="button"
               className="relative grid size-10 place-items-center rounded-full transition hover:bg-blush"
               onClick={() => setOpen(true)}
-              aria-label={`Shopping bag, ${cart.itemCount} item${cart.itemCount === 1 ? "" : "s"}`}
+              aria-label={t("bag", { count: cart.itemCount })}
             >
               <ShoppingBag className="size-[1.15rem]" />
               <AnimatePresence>
@@ -132,7 +139,7 @@ export function Header({ categories, signedIn }: { categories: CategoryNode[]; s
               href="/shop"
               className="group ml-2 hidden h-11 items-center gap-2 rounded-full bg-plum pl-5 pr-4 text-[0.8rem] font-semibold text-white shadow-[0_10px_25px_-12px_rgba(37,25,35,0.7)] transition hover:bg-rose-deep xl:inline-flex"
             >
-              Shop the collection
+              {t("shopCollection")}
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
             </Link>
           </div>
@@ -164,7 +171,7 @@ export function Header({ categories, signedIn }: { categories: CategoryNode[]; s
                   <ul className="mt-5 grid grid-cols-2 gap-x-10 gap-y-3">
                     <li>
                       <Link href={activeCat.href} className="inline-flex items-center gap-2 rounded-full rounded-tl-md bg-gradient-to-r from-rose-deep to-rose px-4 py-1.5 font-display text-xl text-white shadow-[0_10px_24px_-12px_rgba(217,79,145,0.9)] transition hover:brightness-110">
-                        Shop all <ArrowRight className="size-4" aria-hidden />
+                        {tc("shopAll")} <ArrowRight className="size-4" aria-hidden />
                       </Link>
                     </li>
                     {activeCat.children.map((child, i) => (
@@ -187,7 +194,7 @@ export function Header({ categories, signedIn }: { categories: CategoryNode[]; s
                   />
                   <span className="absolute inset-0 bg-gradient-to-t from-plum/60 to-transparent" />
                   <span className="absolute bottom-6 left-6 text-white">
-                    <span className="eyebrow">Explore</span>
+                    <span className="eyebrow">{t("explore")}</span>
                     <span className="mt-1 block font-display text-3xl">{activeCat.name}</span>
                   </span>
                 </Link>

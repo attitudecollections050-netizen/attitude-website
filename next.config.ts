@@ -1,4 +1,8 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
+
+// Translations: cookie-based locale (URLs stay the same in every language).
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const supabaseHost = (() => {
   try {
@@ -51,4 +55,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);
