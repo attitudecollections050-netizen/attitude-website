@@ -3,6 +3,7 @@ import { m } from "motion/react";
 import { ArrowRight } from "lucide-react";
 import { SmartImage } from "@/components/ui/SmartImage";
 import { ButtonLink } from "@/components/ui/Button";
+import { useTranslations } from "next-intl";
 
 export function Hero({
   eyebrow,
@@ -19,6 +20,7 @@ export function Hero({
   ctaLabel: string | null;
   ctaHref: string | null;
 }) {
+  const t = useTranslations("home");
   const words = title.split(" ");
   return (
     <section className="relative isolate overflow-hidden bg-plum text-white" aria-labelledby="hero-heading">
@@ -54,10 +56,10 @@ export function Hero({
         )}
         <m.div className="mt-9 flex flex-wrap gap-3" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}>
           <ButtonLink href={ctaHref ?? "/shop"} variant="rose" size="lg">
-            {ctaLabel ?? "Shop Now"} <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+            {ctaLabel ?? t("shopNow")} <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
           </ButtonLink>
           <ButtonLink href="/collections" variant="light" size="lg" className="!bg-white/10 !text-white backdrop-blur hover:!bg-white hover:!text-plum">
-            Explore Collections
+            {t("exploreCollections")}
           </ButtonLink>
         </m.div>
       </div>
