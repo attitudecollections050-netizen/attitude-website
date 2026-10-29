@@ -96,14 +96,17 @@ Public (anon) users can read only **published** products and their images/varian
 | --- | --- | --- |
 | `staff_members` | One row per invited helper: email, name, role (never `admin`), status `invited`/`active`/`disabled`, `can_delete_products` (default off), `created_by_invite`, invite/accept/disable times | Admin reads all; a staff member reads their own row. **No API writes**: the owner's server actions use the service role after checking `staff:manage` |
 | `products`, `product_images`, `product_variants`, `inventory` | Writable by `can_manage_products()` (admin, or active/invited Product Staff); product delete needs `can_delete_products()` | As before for customers |
-| Storage `product-images` | Insert/update/delete only for `can_manage_products()`; bucket limited to 5 MB JPEG/PNG/WebP/AVIF. Other buckets are unchanged and closed to Product Staff | Public read |
+| `products.added_by` / `added_by_email` / `added_by_name` (migration 13) | Who added the product. Stamped by a trigger from the signed-in account; can't be set or changed through the API | Product Staff read and edit only rows where `added_by` is them (published products stay public) |
+| Storage `product-images` | Insert/update/delete only for `can_edit_product_file(name)` (owner, or Product Staff inside the folder of a product they added); bucket limited to 5 MB JPEG/PNG/WebP/AVIF. Other buckets are unchanged and closed to Product Staff | Public read |
 
 ## Key functions
 
 | Function | Caller | What it does |
 | --- | --- | --- |
 | `can_manage_products()` / `can_delete_products()` | RLS (security definer) | True for the owner, or for Product Staff with a non-disabled staff record (and the delete flag) |
-| `admin_set_stock(variant, on_hand, note)` | owner or Product Staff | Sets stock and logs a `manual_adjustment` movement |
+| `can_edit_product(product)` | RLS / app | Owner: any product. Product Staff: only products they added |
+| `staff_product_stats(user)` | Product Staff (themselves) or owner | Products added and live per person. With no argument, everyone (owner only) |
+| `admin_set_stock(variant, on_hand, note)` | owner, or Product Staff for their own products | Sets stock and logs a `manual_adjustment` movement |
 | `catalog_search(...)` | anon (security invoker) | Search + category/size/colour/price/availability/sale filters, sort by newest/price/popularity, pagination with total count |
 | `catalog_facets(category)` | anon | Sizes, colours, price range, and whether genuine sales data exists |
 | `product_sales_counts()` | anon | Units sold per product from **paid, non-cancelled** orders only (aggregate, no personal data) |

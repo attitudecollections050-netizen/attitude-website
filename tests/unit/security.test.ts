@@ -46,7 +46,7 @@ describe("staff roles", async () => {
 
   it("Product Staff can manage products and nothing else", () => {
     const p = permissionsFor(["product_staff"]);
-    expect(p).toEqual(["products:write"]);
+    expect(p).toEqual(["products:write", "earnings:self"]);
     for (const perm of ownerOnly) expect(p, perm).not.toContain(perm);
     expect(p).not.toContain("products:delete");
   });
@@ -68,8 +68,19 @@ describe("staff roles", async () => {
   it("Product Staff land on Products; customers get no admin home", () => {
     expect(isStaffRole(["product_staff"])).toBe(true);
     expect(isStaffRole([])).toBe(false);
-    expect(adminHome(permissionsFor(["product_staff"]))).toBe("/admin/products");
+    expect(adminHome(permissionsFor(["product_staff"]))).toBe("/staff/dashboard");
     expect(adminHome(permissionsFor(["admin"]))).toBe("/admin");
     expect(adminHome([])).toBe("/admin/login?error=forbidden");
+  });
+});
+
+describe("staff earnings", () => {
+  it("pays ₦1,000 per 10 live products and shows progress", async () => {
+    const { earningsFor } = await import("@/lib/staff-earnings");
+    expect(earningsFor(0)).toEqual({ earnedKobo: 0, progress: 0, remaining: 10, percent: 0 });
+    expect(earningsFor(3)).toEqual({ earnedKobo: 0, progress: 3, remaining: 7, percent: 30 });
+    expect(earningsFor(23)).toEqual({ earnedKobo: 200_000, progress: 3, remaining: 7, percent: 30 });
+    expect(earningsFor(30).earnedKobo).toBe(300_000);
+    expect(earningsFor(-5).earnedKobo).toBe(0);
   });
 });

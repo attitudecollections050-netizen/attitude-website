@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { assertPermission, AuthorizationError } from "@/lib/auth";
+import { assertPermission, AuthorizationError, getCurrentRoles } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { Permission } from "@/lib/permissions";
 import type { AdminResult } from "./types";
@@ -26,6 +26,14 @@ export async function guarded(
     console.error("[admin]", e);
     return { ok: false, message: (e as Error).message || "Something went wrong." };
   }
+}
+
+/** Product Staff may only change products they added (the database enforces this too). */
+export async function productAccess(db: Awaited<ReturnType<typeof createClient>>, productId: string): Promise<AdminResult | null> {
+  if ((await getCurrentRoles()).includes("admin")) return null; // the owner may edit every product
+  const { data, error } = await db.rpc("can_edit_product", { p_product_id: productId });
+  if (error) return dbError(error);
+  return data === true ? null : { ok: false, message: "You can only change products you added." };
 }
 
 export function dbError(error: { message: string; code?: string } | null): AdminResult | null {

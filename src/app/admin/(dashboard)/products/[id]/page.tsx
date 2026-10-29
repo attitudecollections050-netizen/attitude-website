@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireStaffPage } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { categoryOptions } from "@/lib/admin/categories";
@@ -16,13 +16,18 @@ import { Notice } from "@/components/ui/Notice";
 export const metadata = { title: "Edit product" };
 
 export default async function EditProductPage({ params, searchParams }: PageProps<"/admin/products/[id]">) {
-  const { permissions } = await requireStaffPage("products:write");
+  const { permissions, roles } = await requireStaffPage("products:write");
   // Supplier details are owner-only; Product Staff never load them.
   const showSuppliers = permissions.includes("suppliers:write");
   const { id } = await params;
   const sp = await searchParams;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const db = await createClient();
+  // Product Staff can only open products they added.
+  if (!roles.includes("admin")) {
+    const { data: allowed } = await db.rpc("can_edit_product", { p_product_id: id });
+    if (allowed !== true) redirect("/admin/products");
+  }
   const [{ data: product }, categories, { data: suppliers }, { data: supplierInfo }] = await Promise.all([
     db
       .from("products")

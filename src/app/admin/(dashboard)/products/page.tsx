@@ -17,7 +17,9 @@ type Row = {
 };
 
 export default async function AdminProductsPage({ searchParams }: PageProps<"/admin/products">) {
-  await requireStaffPage("products:write");
+  const { user, roles } = await requireStaffPage("products:write");
+  // Product Staff work on the products they added; the owner sees the whole catalogue.
+  const ownOnly = !roles.includes("admin");
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q.trim().slice(0, 100) : "";
   const status = typeof sp.status === "string" ? sp.status : "";
@@ -28,6 +30,7 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
     .select("id, name, slug, status, price, sale_price, is_featured, allow_backorder, updated_at, category:categories ( name ), product_images ( url, sort_order ), product_variants ( is_active, inventory ( on_hand, low_stock_threshold ) )")
     .order("updated_at", { ascending: false })
     .limit(300);
+  if (ownOnly) query = query.eq("added_by", user.id);
   if (q) query = query.ilike("name", `%${q.replace(/[%,]/g, "")}%`);
   if (status) query = query.eq("status", status);
   const { data } = await query;
@@ -42,7 +45,7 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
 
   return (
     <div>
-      <PageHeader title="Products" description={`${filtered.length} product(s)`} actions={<Link href="/admin/products/new" className={buttonClasses("primary", "sm")}>Add product</Link>} />
+      <PageHeader title={ownOnly ? "My products" : "Products"} description={`${filtered.length} product(s)`} actions={<Link href="/admin/products/new" className={buttonClasses("primary", "sm")}>Add product</Link>} />
       {sp.deleted && <Notice tone="success" className="mb-4">Product deleted.</Notice>}
       <form className="mb-5 grid gap-3 sm:grid-cols-[1fr_11rem_11rem_auto]" role="search">
         <input name="q" defaultValue={q} placeholder="Search by name" className={inputCls} aria-label="Search products" />

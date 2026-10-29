@@ -121,16 +121,69 @@ run("database: staff roles (owner vs Product Staff)", () => {
   });
 
   it("product image storage: owner and Product Staff only, and only the product-images bucket", async () => {
-    const put = (who: string, bucket: string) =>
-      as(db, user(who), () => db.query(`insert into storage.objects (bucket_id, name) values ($1, 'p/x.jpg') returning id`, [bucket]));
+    const mine = (await newProduct(staffer, "img-folder")).rows[0].id;
+    const ownerProduct = (await newProduct(owner, "owner-img-folder")).rows[0].id;
+    const put = (who: string, bucket: string, folder: string = mine) =>
+      as(db, user(who), () => db.query(`insert into storage.objects (bucket_id, name) values ($1, $2) returning id`, [bucket, `${folder}/${Math.random()}.jpg`]));
     expect((await put(staffer, "product-images")).rowCount).toBe(1);
     expect((await put(owner, "product-images")).rowCount).toBe(1);
+    await expect(put(staffer, "product-images", ownerProduct)).rejects.toThrow();
+    await expect(put(staffer, "product-images", "not-a-product")).rejects.toThrow();
     await expect(put(customer, "product-images")).rejects.toThrow();
     await expect(put(disabled, "product-images")).rejects.toThrow();
     await expect(put(staffer, "banners")).rejects.toThrow();
     const bucket = (await db.query(`select file_size_limit, allowed_mime_types from storage.buckets where id = 'product-images'`)).rows[0];
     expect(Number(bucket.file_size_limit)).toBe(5242880);
     expect(bucket.allowed_mime_types).toEqual(["image/jpeg", "image/png", "image/webp", "image/avif"]);
+  });
+
+  it("products remember who added them, and nobody can rewrite that", async () => {
+    const id = (await newProduct(staffer, "stamped")).rows[0].id;
+    const row = (await db.query(`select added_by, added_by_email from products where id = $1`, [id])).rows[0];
+    expect(row).toEqual({ added_by: staffer, added_by_email: "staff@example.com" });
+    // Even a forged value on insert is replaced by the signed-in account.
+    const forged = await as(db, user(staffer), () =>
+      db.query(`insert into products (name, slug, description, category_id, price, added_by, added_by_email) values ('Forged', 'forged', '', $1, 1000, $2, 'x@example.com') returning added_by, added_by_email`, [categoryId, owner]),
+    );
+    expect(forged.rows[0]).toEqual({ added_by: staffer, added_by_email: "staff@example.com" });
+    await as(db, user(owner), () => db.query(`update products set added_by = $1, added_by_email = 'owner@example.com' where id = $2`, [owner, id]));
+    expect((await db.query(`select added_by from products where id = $1`, [id])).rows[0].added_by).toBe(staffer);
+  });
+
+  it("Product Staff can only see and change the products they added", async () => {
+    const theirs = (await newProduct(deleter, "deleters-draft")).rows[0].id;
+    const ownerDraft = (await newProduct(owner, "owners-draft")).rows[0].id;
+    for (const id of [theirs, ownerDraft]) {
+      expect((await as(db, user(staffer), () => db.query(`select 1 from products where id = $1`, [id]))).rowCount).toBe(0);
+      expect((await as(db, user(staffer), () => db.query(`update products set name = 'Hijacked' where id = $1 returning id`, [id]))).rowCount).toBe(0);
+      await expect(as(db, user(staffer), () => db.query(`insert into product_images (product_id, url, alt) values ($1, 'https://example.com/x.jpg', 'x')`, [id]))).rejects.toThrow();
+      await expect(as(db, user(staffer), () => db.query(`insert into product_variants (product_id, sku) values ($1, $2)`, [id, `SKU-${id.slice(0, 6)}`]))).rejects.toThrow();
+    }
+    // Published products made by others are public, but still not editable.
+    await db.query(`update products set status = 'published' where id = $1`, [ownerDraft]);
+    expect((await as(db, user(staffer), () => db.query(`select 1 from products where id = $1`, [ownerDraft]))).rowCount).toBe(1);
+    expect((await as(db, user(staffer), () => db.query(`update products set price = 1 where id = $1 returning id`, [ownerDraft]))).rowCount).toBe(0);
+    const v = (await db.query(`insert into product_variants (product_id, sku) values ($1, 'SKU-OWNER-V') returning id`, [ownerDraft])).rows[0].id;
+    await expect(as(db, user(staffer), () => db.query(`select public.admin_set_stock($1, 99, null)`, [v]))).rejects.toThrow(/forbidden/);
+    // Deleting is limited to their own products too, even with the delete permission.
+    expect((await as(db, user(deleter), () => db.query(`delete from products where id = $1 returning id`, [ownerDraft]))).rowCount).toBe(0);
+    expect((await as(db, user(staffer), () => db.query(`select public.can_edit_product($1) as ok`, [ownerDraft]))).rows[0].ok).toBe(false);
+    expect((await as(db, user(owner), () => db.query(`select public.can_edit_product($1) as ok`, [theirs]))).rows[0].ok).toBe(true);
+  });
+
+  it("earnings counts: staff see only their own, the owner sees everyone", async () => {
+    for (let i = 0; i < 3; i++) {
+      const id = (await newProduct(deleter, `live-${i}`)).rows[0].id;
+      await as(db, user(deleter), () => db.query(`update products set status = 'published' where id = $1`, [id]));
+    }
+    const own = await as(db, user(deleter), () => db.query(`select * from public.staff_product_stats($1)`, [deleter]));
+    expect(own.rows).toHaveLength(1);
+    expect(own.rows[0].live_products).toBe(3);
+    await expect(as(db, user(staffer), () => db.query(`select * from public.staff_product_stats($1)`, [deleter]))).rejects.toThrow(/forbidden/);
+    await expect(as(db, user(staffer), () => db.query(`select * from public.staff_product_stats()`))).rejects.toThrow(/forbidden/);
+    await expect(as(db, user(customer), () => db.query(`select * from public.staff_product_stats($1)`, [customer]))).rejects.toThrow(/forbidden/);
+    const all = await as(db, user(owner), () => db.query(`select * from public.staff_product_stats()`));
+    expect(all.rows.map((r) => r.user_id)).toEqual(expect.arrayContaining([staffer, deleter, owner]));
   });
 
   it("the owner keeps full access and can't be removed or turned into staff", async () => {

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { MAX_IMAGE_BYTES, sniffImageType } from "@/lib/images";
-import { bool, dbError, guarded, intStr, money, optMoney, optStr, slug, slugify, str, uuid } from "./helpers";
+import { bool, dbError, guarded, productAccess, intStr, money, optMoney, optStr, slug, slugify, str, uuid } from "./helpers";
 import type { AdminResult } from "./types";
 
 const productSchema = z
@@ -53,6 +53,8 @@ export async function createProduct(_prev: AdminResult, formData: FormData): Pro
 export async function updateProduct(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
   return guarded("products:write", async ({ db }) => {
     const id = uuid.parse(formData.get("id"));
+    const denied = await productAccess(db, id);
+    if (denied) return denied;
     const p = productSchema.parse(Object.fromEntries(formData));
     const finalSlug = slug.parse(p.slug || slugify(p.name));
     const { error } = await db.from("products").update({ ...p, slug: finalSlug }).eq("id", id);
@@ -67,6 +69,8 @@ export async function setProductStatus(_prev: AdminResult, formData: FormData): 
   return guarded("products:write", async ({ db }) => {
     const id = uuid.parse(formData.get("id"));
     const status = z.enum(["draft", "published", "archived"]).parse(formData.get("status"));
+    const denied = await productAccess(db, id);
+    if (denied) return denied;
     const { data, error } = await db.from("products").update({ status }).eq("id", id).select("slug").single();
     if (error) return dbError(error);
     revalidateProduct(data.slug);
@@ -80,6 +84,8 @@ export async function deleteProduct(_prev: AdminResult, formData: FormData): Pro
   // Deleting needs its own permission: owner, or Product Staff the owner has allowed to delete.
   const result = await guarded("products:delete", async ({ db }) => {
     const id = uuid.parse(formData.get("id"));
+    const denied = await productAccess(db, id);
+    if (denied) return denied;
     const { data: imgs } = await db.from("product_images").select("storage_path").eq("product_id", id);
     const { error } = await db.from("products").delete().eq("id", id);
     if (error) return dbError(error);
@@ -97,6 +103,8 @@ export async function deleteProduct(_prev: AdminResult, formData: FormData): Pro
 export async function uploadProductImages(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
   return guarded("products:write", async ({ db }) => {
     const productId = uuid.parse(formData.get("product_id"));
+    const denied = await productAccess(db, productId);
+    if (denied) return denied;
     const alt = optStr(200).parse(formData.get("alt") ?? "") ?? "";
     const color = optStr(40).parse(formData.get("color") ?? "");
     const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
@@ -132,6 +140,8 @@ export async function addImageUrl(_prev: AdminResult, formData: FormData): Promi
     const input = z
       .object({ product_id: uuid, url: z.string().trim().url().regex(/^https:\/\//, "Use an https:// URL"), alt: optStr(200), color: optStr(40) })
       .parse(Object.fromEntries(formData));
+    const denied = await productAccess(db, input.product_id);
+    if (denied) return denied;
     const { data: last } = await db.from("product_images").select("sort_order").eq("product_id", input.product_id).order("sort_order", { ascending: false }).limit(1).maybeSingle();
     const { error } = await db.from("product_images").insert({ ...input, alt: input.alt ?? "", sort_order: (last?.sort_order ?? -1) + 1 });
     if (error) return dbError(error);
@@ -145,6 +155,8 @@ export async function updateImage(_prev: AdminResult, formData: FormData): Promi
   return guarded("products:write", async ({ db }) => {
     const input = z.object({ id: uuid, product_id: uuid, alt: str(200), color: optStr(40), sort_order: intStr(0, 1000) }).parse(Object.fromEntries(formData));
     const { id, product_id, ...row } = input;
+    const denied = await productAccess(db, product_id);
+    if (denied) return denied;
     const { error } = await db.from("product_images").update(row).eq("id", id).eq("product_id", product_id);
     if (error) return dbError(error);
     revalidatePath(`/admin/products/${product_id}`);
@@ -157,6 +169,8 @@ export async function deleteImage(_prev: AdminResult, formData: FormData): Promi
   return guarded("products:write", async ({ db }) => {
     const id = uuid.parse(formData.get("id"));
     const productId = uuid.parse(formData.get("product_id"));
+    const denied = await productAccess(db, productId);
+    if (denied) return denied;
     const { data, error } = await db.from("product_images").delete().eq("id", id).eq("product_id", productId).select("storage_path").maybeSingle();
     if (error) return dbError(error);
     if (data?.storage_path) await createServiceClient().storage.from("product-images").remove([data.storage_path]);
@@ -185,6 +199,8 @@ export async function saveVariant(_prev: AdminResult, formData: FormData): Promi
       })
       .parse(Object.fromEntries(formData));
     const { id, on_hand, low_stock_threshold, ...row } = input;
+    const denied = await productAccess(db, input.product_id);
+    if (denied) return denied;
     let variantId = id || null;
     if (variantId) {
       const { error } = await db.from("product_variants").update(row).eq("id", variantId).eq("product_id", input.product_id);
@@ -218,6 +234,8 @@ export async function generateVariants(_prev: AdminResult, formData: FormData): 
         return { name, hex: h && /^#[0-9A-Fa-f]{6}$/.test(h) ? h : null };
       });
     if (sizes.length === 0 && colors.length === 0) return { ok: false, message: "Enter sizes and/or colours." };
+    const denied = await productAccess(db, input.product_id);
+    if (denied) return denied;
     const { data: product } = await db.from("products").select("slug").eq("id", input.product_id).single();
     const base = (product?.slug ?? "SKU").replace(/-/g, "").slice(0, 14).toUpperCase();
     const combos = (colors.length ? colors : [{ name: null as string | null, hex: null as string | null }]).flatMap((c) =>
@@ -249,6 +267,8 @@ export async function deleteVariant(_prev: AdminResult, formData: FormData): Pro
   return guarded("products:write", async ({ db }) => {
     const id = uuid.parse(formData.get("id"));
     const productId = uuid.parse(formData.get("product_id"));
+    const denied = await productAccess(db, productId);
+    if (denied) return denied;
     const { error } = await db.from("product_variants").delete().eq("id", id).eq("product_id", productId);
     if (error) return dbError(error);
     revalidatePath(`/admin/products/${productId}`);

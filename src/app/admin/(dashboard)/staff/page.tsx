@@ -1,5 +1,9 @@
 import { requireStaffPage } from "@/lib/auth";
+import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { formatMoney } from "@/lib/money";
+import { earningsFor } from "@/lib/staff-earnings";
 import { serverSecrets } from "@/lib/env";
 import { ROLE_LABELS, type AppRole } from "@/lib/permissions";
 import { removeStaff, setDeletePermission, setStaffDisabled } from "@/app/admin/actions/staff";
@@ -43,6 +47,9 @@ export default async function StaffPage() {
     svc.from("user_roles").select("user_id").eq("role", "admin"),
   ]);
   const staff = (staffRows ?? []) as StaffRow[];
+  // Counts come from the owner's own session: the database only gives everyone's numbers to the owner.
+  const { data: statRows } = await (await createClient()).rpc("staff_product_stats");
+  const stats = new Map(((statRows ?? []) as { user_id: string; products_added: number; live_products: number }[]).map((r) => [r.user_id, r]));
   // Last sign-in comes from Supabase Auth (server only).
   const authInfo = new Map(
     await Promise.all(
@@ -100,8 +107,13 @@ export default async function StaffPage() {
                     {s.status === "invited" ? "Invited" : s.status === "active" ? "Active" : "Disabled"}
                   </Badge>
                   <span className="text-xs text-muted">Delete products: {s.can_delete_products ? "allowed" : "not allowed"}</span>
+                  <p className="w-full text-xs text-muted">
+                    Products added: <strong className="text-plum">{stats.get(s.user_id)?.products_added ?? 0}</strong>
+                    {" · "}Earned: <strong className="text-base font-extrabold text-success">{formatMoney(earningsFor(stats.get(s.user_id)?.live_products ?? 0).earnedKobo)}</strong>
+                  </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <Link href={`/staff/dashboard?as=${s.user_id}`} className="text-xs font-semibold underline underline-offset-4 hover:text-rose-deep">View as staff</Link>
                   <ActionForm action={setDeletePermission} submitLabel={s.can_delete_products ? "Stop deleting" : "Allow deleting"} variant="ghost" inline>
                     <input type="hidden" name="user_id" value={s.user_id} />
                     <input type="hidden" name="allow" value={s.can_delete_products ? "0" : "1"} />
@@ -134,7 +146,8 @@ export default async function StaffPage() {
 
       <Card title="What Product Staff can do">
         <ul className="grid gap-2 text-sm sm:grid-cols-2">
-          <li>✓ Add products and edit names, descriptions, prices, categories, sizes, colours and stock</li>
+          <li>✓ Add products, and edit the ones they added: names, descriptions, prices, categories, sizes, colours and stock</li>
+          <li>✓ See their own products and earnings (₦1,000 per 10 live products) on their dashboard</li>
           <li>✓ Upload, edit and remove product images</li>
           <li>✓ Publish, unpublish and archive products</li>
           <li>✓ Delete products — only if you switch it on for them</li>

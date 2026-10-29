@@ -227,5 +227,5 @@ export async function acceptInvite(_prev: AdminResult, formData: FormData): Prom
     .eq("user_id", user.id)
     .eq("status", "invited");
   if (name) await svc.from("profiles").update({ full_name: name }).eq("id", user.id);
-  redirect("/admin");
+  redirect("/staff/dashboard");
 }
