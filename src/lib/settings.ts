@@ -23,6 +23,8 @@ export interface StoreSettings {
     x: string | null;
   };
   checkout: { guest_checkout_enabled: boolean; max_quantity_per_item: number };
+  /** Manual bank transfer (shown at checkout instead of card payment while enabled). */
+  bank_transfer: { enabled: boolean; bank_name: string; account_name: string; account_number: string; note: string };
   promotion: PromotionConfig;
   intl: IntlSettings;
   tax: TaxConfig & { duties_notice: string };
@@ -67,6 +69,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
     x: null,
   },
   checkout: { guest_checkout_enabled: true, max_quantity_per_item: 10 },
+  bank_transfer: { enabled: false, bank_name: "", account_name: "", account_number: "", note: "" },
   promotion: { enabled: false, code: "", min_subtotal: 0, free_delivery: false, label: "" },
   intl: {
     default_locale: "en",

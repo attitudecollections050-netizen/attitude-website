@@ -76,7 +76,8 @@
     "rights": "© {year} {name}. Tous droits réservés.",
     "securePayments": "Paiements sécurisés par Paystack",
     "cookieSettings": "Paramètres des cookies",
-    "preferences": "Langue et devise"
+    "preferences": "Langue et devise",
+    "securePaymentsTransfer": "Paiements sécurisés par virement bancaire"
   },
   "newsletter": {
     "email": "Adresse e-mail",
@@ -606,7 +607,9 @@
     "noDeliveryCountry": "Nous ne livrons pas encore en {country}. Vous pouvez tout de même commander pour une livraison dans l’un des pays ci-dessous.",
     "signInTitle": "Connectez-vous pour payer",
     "signInBody": "Veuillez vous connecter ou créer un compte pour finaliser votre commande.",
-    "createAccount": "Créer un compte"
+    "createAccount": "Créer un compte",
+    "continueTransfer": "Continuer vers le virement bancaire · {amount}",
+    "transferNote": "Vous verrez ensuite nos coordonnées bancaires. Effectuez le virement, indiquez votre référence et nous confirmerons votre commande sur WhatsApp."
   },
   "order": {
     "metaTitle": "Votre commande",
@@ -645,7 +648,13 @@
     "courier": "Transporteur",
     "trackingNumber": "Numéro de suivi :",
     "dispatched": "Expédiée le {date}",
-    "trackWithCourier": "Suivre chez le transporteur"
+    "trackWithCourier": "Suivre chez le transporteur",
+    "completeTransfer": "Finaliser votre virement bancaire",
+    "verifyingTitle": "Nous vérifions votre paiement",
+    "verifyingBody": "Merci d'avoir envoyé les détails de votre virement. Nous confirmerons sur WhatsApp très bientôt, généralement en quelques minutes pendant nos heures d'ouverture.",
+    "chatWhatsApp": "Discuter avec nous sur WhatsApp",
+    "transferNotYet": "Votre commande est enregistrée. Virez le total sur notre compte bancaire et indiquez votre référence pour la confirmer.",
+    "verifiedProcessing": "Paiement vérifié — votre commande est en préparation"
   },
   "callback": {
     "metaTitle": "Confirmation du paiement",

@@ -193,6 +193,22 @@ A floating pink DJ-girl avatar (bottom-right on every store page except checkout
 
 **Payment methods by country** (Paystack channels such as card, bank transfer and USSD) are set in Admin → International. Paystack only shows the methods your account supports. **Preview the store** on that page opens the storefront in any language/country/currency in your own browser. The admin dashboard itself stays in English.
 
+## 7c-2. Bank transfer payments (manual)
+
+While **Store Settings → Bank transfer payments** is on, checkout uses bank transfer instead of Paystack:
+
+1. The customer places the order and sees your bank details on a card (bank, account name, account number and the exact amount, each with a copy button).
+2. They transfer the money, then fill in the form: full name, amount paid, transaction reference / session ID (required), WhatsApp number and an optional receipt screenshot (JPG, PNG, WebP or PDF, up to 5 MB). Then they tap **I Have Paid**.
+3. They see "Thank you! We're verifying your payment", and WhatsApp opens with their details already typed in (order, name, amount, reference, WhatsApp). You and the customer are both emailed.
+4. You open **Bank Transfers** in the dashboard, check your bank app, then tap **Verified — confirm payment** or **Not found — decline**.
+   - **Confirm:** the order becomes Paid, stock is updated, the customer gets their receipt by email, and their order page says "Payment verified — your order is being processed".
+   - **Decline:** the order goes back to unpaid, the customer is emailed and can submit the correct details again.
+   - Either way, a **Send on WhatsApp** button opens WhatsApp to the customer's number with the right message ready to send.
+
+WhatsApp can't send messages automatically without a paid WhatsApp Business API account, so sending is one tap from the dashboard. Only the owner can see or review transfers. Receipt screenshots are stored in a private bucket and shown to you through short-lived links. A bank reference can't be reused for two orders.
+
+Your WhatsApp number (Store Settings → WhatsApp number) powers every pink "Chat on WhatsApp" link: the contact page, the footer, the order and payment pages, and any time the number or the word "WhatsApp" appears in your policy pages. Until you add it, those links are simply hidden.
+
 ## 7d. Email (Groundmail)
 
 All transactional email goes through one function, `sendEmail()` in `src/lib/groundmail.ts`, with ready-made templates in `src/lib/emails/templates.ts`: invitation, email verification, password reset, receipt/invoice and general notification. Each template returns `{ subject, html, text }`.
@@ -264,4 +280,4 @@ docs/DATABASE.md          schema documentation
 - `CRON_SECRET` on Vercel for the daily exchange-rate update (and optionally `EXCHANGE_RATE_API_KEY`). Review the AI-prepared translations, especially checkout and policy text.
 - Optional: Anthropic API key for the Dj Attitude Mini chat (basic mode works without it).
 - Groundmail API key (`GROUNDMAIL_API_KEY`) and a sender on a verified domain (`EMAIL_FROM`) for order receipts, staff invitations and notifications; optionally Groundmail SMTP for Supabase Auth emails.
-- Staff Management: `SUPABASE_SECRET_KEY` and the production `NEXT_PUBLIC_SITE_URL` on Vercel; apply migrations 11, 12 and 13.
+- Staff Management and bank transfers: `SUPABASE_SECRET_KEY` and the production `NEXT_PUBLIC_SITE_URL` on Vercel; apply migrations 11–14.

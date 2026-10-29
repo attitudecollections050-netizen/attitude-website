@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { getContentPage } from "@/lib/catalog/queries";
 import { Markdown } from "@/components/ui/Markdown";
+import { WhatsAppLink } from "@/components/ui/WhatsAppLink";
+import { getSettings } from "@/lib/settings";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { Reveal } from "@/components/ui/Reveal";
 import { isSupabaseConfigured } from "@/lib/env";
@@ -19,7 +21,8 @@ export async function ContentPage({ slug, eyebrow, children }: { slug: string; e
   }
   const page = await getContentPage(slug);
   if (!page) notFound();
-  const [t, tc, locale] = await Promise.all([getTranslations("content"), getTranslations("common"), getLocale()]);
+  const [t, tc, locale, settings] = await Promise.all([getTranslations("content"), getTranslations("common"), getLocale(), getSettings()]);
+  const whatsapp = settings.store.whatsapp;
   return (
     <article>
       <header className="bg-blush">
@@ -38,9 +41,15 @@ export async function ContentPage({ slug, eyebrow, children }: { slug: string; e
       <div className="container-luxe max-w-3xl py-14">
         <Reveal>
           <div lang="en" dir="ltr">
-            <Markdown source={page.body} />
+            <Markdown source={page.body} whatsapp={whatsapp} />
           </div>
         </Reveal>
+        {whatsapp && (
+          <div className="mt-12 flex flex-wrap items-center gap-4 rounded-[3px] border border-rose/20 bg-blush px-5 py-4">
+            <p className="text-sm text-plum-soft">Still have a question? We&apos;re happy to help.</p>
+            <WhatsAppLink number={whatsapp} message={`Hello ${settings.store.name}! I have a question about your ${page.title.toLowerCase()}.`} />
+          </div>
+        )}
         {children}
         <p className="mt-14 text-xs text-muted">{t("updated", { date: new Date(page.updated_at).toLocaleDateString(locale, { dateStyle: "long", timeZone: "Africa/Lagos" }) })}</p>
       </div>

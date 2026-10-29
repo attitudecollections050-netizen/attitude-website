@@ -76,7 +76,8 @@
     "rights": "© {year} {name}. Todos os direitos reservados.",
     "securePayments": "Pagamentos seguros via Paystack",
     "cookieSettings": "Configurações de cookies",
-    "preferences": "Idioma e moeda"
+    "preferences": "Idioma e moeda",
+    "securePaymentsTransfer": "Pagamentos seguros por transferência bancária"
   },
   "newsletter": {
     "email": "E-mail",
@@ -606,7 +607,9 @@
     "noDeliveryCountry": "Ainda não entregamos em {country}. Você ainda pode fazer um pedido para entrega em um dos países listados abaixo.",
     "signInTitle": "Entre para pagar",
     "signInBody": "Entre ou crie uma conta para concluir seu pedido.",
-    "createAccount": "Criar conta"
+    "createAccount": "Criar conta",
+    "continueTransfer": "Continuar para transferência bancária · {amount}",
+    "transferNote": "A seguir verá os nossos dados bancários. Faça a transferência, partilhe a sua referência e confirmaremos a sua encomenda no WhatsApp."
   },
   "order": {
     "metaTitle": "Seu pedido",
@@ -645,7 +648,13 @@
     "courier": "Transportadora",
     "trackingNumber": "Código de rastreio:",
     "dispatched": "Enviado em {date}",
-    "trackWithCourier": "Rastrear na transportadora"
+    "trackWithCourier": "Rastrear na transportadora",
+    "completeTransfer": "Concluir a sua transferência bancária",
+    "verifyingTitle": "Estamos a verificar o seu pagamento",
+    "verifyingBody": "Obrigado por enviar os dados da sua transferência. Confirmaremos no WhatsApp em breve — normalmente em poucos minutos durante o horário de funcionamento.",
+    "chatWhatsApp": "Fale connosco no WhatsApp",
+    "transferNotYet": "A sua encomenda está guardada. Transfira o total para a nossa conta bancária e partilhe a sua referência para a confirmar.",
+    "verifiedProcessing": "Pagamento verificado — a sua encomenda está a ser processada"
   },
   "callback": {
     "metaTitle": "Confirmando o pagamento",

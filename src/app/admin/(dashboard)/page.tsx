@@ -1,3 +1,5 @@
+import { getSettings } from "@/lib/settings";
+import { bankTransferActive } from "@/lib/payments/bank-transfer";
 import { isEmailConfigured } from "@/lib/groundmail";
 import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
@@ -25,9 +27,14 @@ interface Stats {
 }
 
 export default async function AdminOverview({ searchParams }: PageProps<"/admin">) {
-  await requireStaffPage();
+  const { permissions } = await requireStaffPage();
   const sp = await searchParams;
   const db = await createClient();
+  const canVerify = permissions.includes("payments:verify");
+  const [settings, pendingTransfers] = await Promise.all([
+    getSettings(),
+    canVerify ? db.from("payment_claims").select("id", { count: "exact", head: true }).eq("status", "pending").then((r) => r.count ?? 0) : Promise.resolve(0),
+  ]);
   const [{ data: stats }, { data: recent }, { data: low }] = await Promise.all([
     db.rpc("admin_dashboard_stats"),
     db.from("orders").select("id, order_number, customer_name, total, currency, status, payment_status, created_at").order("created_at", { ascending: false }).limit(8),
@@ -58,8 +65,21 @@ export default async function AdminOverview({ searchParams }: PageProps<"/admin"
       {sp.error === "forbidden" && <Notice tone="error">You don&apos;t have permission to open that section.</Notice>}
 
       <div className="space-y-3">
-        {!isPaystackConfigured() && <Notice tone="warning" title="Payments not configured">Add PAYSTACK_SECRET_KEY and NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY. Customers cannot pay until this is done.</Notice>}
-        {paystackMode() === "test" && <Notice tone="info" title="Paystack test mode">Payments use test keys. Switch to live keys only after testing the full flow.</Notice>}
+        {pendingTransfers > 0 && (
+          <Link href="/admin/transfers" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose/30 bg-[linear-gradient(90deg,#fff0f5,#ffffff)] px-5 py-4 shadow-[0_16px_40px_-30px_rgba(184,53,122,0.7)] transition hover:border-rose">
+            <span>
+              <span className="block text-sm font-bold text-plum">{pendingTransfers} bank transfer{pendingTransfers === 1 ? "" : "s"} waiting for you</span>
+              <span className="block text-xs text-plum-soft">Check your bank app, then confirm or decline so customers hear back quickly.</span>
+            </span>
+            <span className="rounded-full bg-rose px-4 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-white">Review now</span>
+          </Link>
+        )}
+        {!isPaystackConfigured() && !bankTransferActive(settings.bank_transfer) && (
+          <Notice tone="warning" title="Payments not configured">
+            Customers can&apos;t pay yet. Turn on bank transfer in <Link href="/admin/settings#bank-transfer" className="underline">Store Settings</Link>, or add PAYSTACK_SECRET_KEY and NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY in Vercel → Settings → Environment Variables and redeploy.
+          </Notice>
+        )}
+        {!bankTransferActive(settings.bank_transfer) && paystackMode() === "test" && <Notice tone="info" title="Paystack test mode">Payments use test keys. Switch to live keys only after testing the full flow.</Notice>}
         {!isEmailConfigured() && <Notice tone="info" title="Email not configured">Order receipts and staff invitations aren&apos;t emailed until GROUNDMAIL_API_KEY and EMAIL_FROM are set in Vercel → Settings → Environment Variables.</Notice>}
         {(s.unreviewed_shipping_rates ?? 0) > 0 && (
           <Notice tone="warning" title={`${s.unreviewed_shipping_rates} shipping rate(s) not yet confirmed`}>

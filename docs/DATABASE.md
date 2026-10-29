@@ -99,6 +99,14 @@ Public (anon) users can read only **published** products and their images/varian
 | `products.added_by` / `added_by_email` / `added_by_name` (migration 13) | Who added the product. Stamped by a trigger from the signed-in account; can't be set or changed through the API | Product Staff read and edit only rows where `added_by` is them (published products stay public) |
 | Storage `product-images` | Insert/update/delete only for `can_edit_product_file(name)` (owner, or Product Staff inside the folder of a product they added); bucket limited to 5 MB JPEG/PNG/WebP/AVIF. Other buckets are unchanged and closed to Product Staff | Public read |
 
+### Bank transfer (migration 14)
+| Table / column | Purpose | Access |
+| --- | --- | --- |
+| `orders.payment_method` | `paystack` or `bank_transfer` | Same as the order |
+| `payment_claims` | A customer's "I have paid" submission: name, amount paid, bank reference (unique among non-declined claims), WhatsApp, optional receipt file, status `pending`/`verified`/`declined`, review note | Owner read only. Inserted by the server after checking the order's access token |
+| Storage `payment-proofs` | Receipt screenshots (private, 5 MB, JPEG/PNG/WebP/PDF) | Server only. The owner sees them through signed links |
+| `store_settings` key `bank_transfer` | On/off, bank name, account name, account number, note | Public read, admin write |
+
 ## Key functions
 
 | Function | Caller | What it does |
@@ -107,6 +115,7 @@ Public (anon) users can read only **published** products and their images/varian
 | `can_edit_product(product)` | RLS / app | Owner: any product. Product Staff: only products they added |
 | `staff_product_stats(user)` | Product Staff (themselves) or owner | Products added and live per person. With no argument, everyone (owner only) |
 | `admin_set_stock(variant, on_hand, note)` | owner, or Product Staff for their own products | Sets stock and logs a `manual_adjustment` movement |
+| `admin_review_payment_claim(claim, decision, note)` | owner | Confirm: runs `finalize_payment` (order Paid, stock committed). Decline: order back to unpaid, customer note. One review per claim |
 | `catalog_search(...)` | anon (security invoker) | Search + category/size/colour/price/availability/sale filters, sort by newest/price/popularity, pagination with total count |
 | `catalog_facets(category)` | anon | Sizes, colours, price range, and whether genuine sales data exists |
 | `product_sales_counts()` | anon | Units sold per product from **paid, non-cancelled** orders only (aggregate, no personal data) |

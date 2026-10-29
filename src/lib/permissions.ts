@@ -13,6 +13,7 @@ export type Permission =
   | "products:delete"
   | "staff:manage"
   | "earnings:self"
+  | "payments:verify"
   | "shipping:write"
   | "discounts:write"
   | "settings:write"
@@ -30,6 +31,7 @@ const MATRIX: Record<AppRole, Permission[]> = {
     "products:write",
     "products:delete",
     "staff:manage",
+    "payments:verify",
     "shipping:write",
     "discounts:write",
     "settings:write",

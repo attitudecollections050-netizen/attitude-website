@@ -17,6 +17,7 @@ import { getDisplayRates } from "@/lib/currency/rates";
 import { convertFromNgn } from "@/lib/currency/convert";
 import { generatePaymentReference, initializeTransaction, PaystackError } from "@/lib/payments/paystack";
 import { consentedVisitorId } from "@/lib/analytics/server";
+import { bankTransferActive } from "@/lib/payments/bank-transfer";
 
 export type PlaceOrderResult =
   | { ok: true; redirectUrl: string }
@@ -31,7 +32,10 @@ const PAYMENT_LINK_REUSE_MS = 25 * 60 * 1000;
 export async function placeOrder(input: unknown): Promise<PlaceOrderResult> {
   const t = await getTranslations("checkoutErrors");
   if (!isSupabaseConfigured()) return { ok: false, error: t("unavailable") };
-  if (!isPaystackConfigured()) {
+  const [settings, user] = await Promise.all([getSettings(), getCurrentUser()]);
+  // Bank transfer (when switched on in Store Settings) replaces card payment.
+  const paymentMethod = bankTransferActive(settings.bank_transfer) ? "bank_transfer" : "paystack";
+  if (paymentMethod === "paystack" && !isPaystackConfigured()) {
     return { ok: false, error: t("paymentsOff") };
   }
   if (!(await rateLimit("place-order", 10, 600))) return { ok: false, error: t("tooMany") };
@@ -40,7 +44,6 @@ export async function placeOrder(input: unknown): Promise<PlaceOrderResult> {
   if (!parsed.success) return { ok: false, error: t("checkFields"), fieldErrors: await localizeFieldErrors(fieldErrors(parsed.error)) };
   const data = parsed.data;
 
-  const [settings, user] = await Promise.all([getSettings(), getCurrentUser()]);
   if (!user && !settings.checkout.guest_checkout_enabled) return { ok: false, error: t("signIn") };
 
   const cartId = await getCartId();
@@ -128,7 +131,26 @@ export async function placeOrder(input: unknown): Promise<PlaceOrderResult> {
     }
   }
 
+  if (paymentMethod === "bank_transfer") return startBankTransfer(order);
   return startPayment(order, channelsFor(settings.intl.payment_channels, data.address.country_code));
+}
+
+/** Bank transfer: one payment record per order, then the page with our bank details. */
+async function startBankTransfer(order: { order_id: string; order_number: string; access_token: string; total: number; currency: string }): Promise<PlaceOrderResult> {
+  const t = await getTranslations("checkoutErrors");
+  const db = createServiceClient();
+  await db.from("orders").update({ payment_method: "bank_transfer" }).eq("id", order.order_id);
+  const { data: existing } = await db.from("payments").select("id").eq("order_id", order.order_id).eq("provider", "bank_transfer").maybeSingle();
+  if (!existing) {
+    const { error } = await db
+      .from("payments")
+      .insert({ order_id: order.order_id, provider: "bank_transfer", channel: "bank_transfer", reference: `${order.order_number}-TRANSFER`, amount: order.total, currency: order.currency });
+    if (error && error.code !== "23505") {
+      console.error("[checkout] bank transfer:", error.message);
+      return { ok: false, error: t("startFailed") };
+    }
+  }
+  return { ok: true, redirectUrl: `/checkout/transfer/${order.order_number}?token=${order.access_token}` };
 }
 
 /** Paystack channels configured for the delivery country (falls back to the "default" list). */
@@ -185,19 +207,21 @@ async function startPayment(order: { order_id: string; order_number: string; acc
 /** Retry payment for an unpaid order the visitor can prove access to. */
 export async function retryPayment(orderNumber: string, accessToken: string): Promise<PlaceOrderResult> {
   const t = await getTranslations("checkoutErrors");
-  if (!isSupabaseConfigured() || !isPaystackConfigured()) return { ok: false, error: t("paymentsUnavailable") };
+  if (!isSupabaseConfigured()) return { ok: false, error: t("paymentsUnavailable") };
   if (!/^AC\d{6,}$/.test(orderNumber) || !/^[a-f0-9]{48}$/.test(accessToken)) return { ok: false, error: t("notFound") };
   if (!(await rateLimit("retry-payment", 10, 600))) return { ok: false, error: t("tooMany") };
   const db = createServiceClient();
   const { data: order } = await db
     .from("orders")
-    .select("id, order_number, access_token, total, currency, status, payment_status, shipping_address")
+    .select("id, order_number, access_token, total, currency, status, payment_status, payment_method, shipping_address")
     .eq("order_number", orderNumber)
     .eq("access_token", accessToken)
     .maybeSingle();
   if (!order) return { ok: false, error: t("notFound") };
   if (order.payment_status === "paid") return { ok: true, redirectUrl: `/order/${order.order_number}?token=${order.access_token}` };
   if (order.status !== "pending_payment") return { ok: false, error: t("cannotPay") };
+  if (order.payment_method === "bank_transfer") return { ok: true, redirectUrl: `/checkout/transfer/${order.order_number}?token=${order.access_token}` };
+  if (!isPaystackConfigured()) return { ok: false, error: t("paymentsUnavailable") };
   const settings = await getSettings();
   const country = (order.shipping_address as { country_code?: string } | null)?.country_code ?? "";
   return startPayment({ order_id: order.id, order_number: order.order_number, access_token: order.access_token, total: order.total, currency: order.currency }, channelsFor(settings.intl.payment_channels, country));

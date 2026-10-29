@@ -76,7 +76,8 @@
     "rights": "© {year} {name}. جميع الحقوق محفوظة.",
     "securePayments": "مدفوعات آمنة عبر Paystack",
     "cookieSettings": "إعدادات ملفات تعريف الارتباط",
-    "preferences": "اللغة والعملة"
+    "preferences": "اللغة والعملة",
+    "securePaymentsTransfer": "مدفوعات آمنة عبر التحويل البنكي"
   },
   "newsletter": {
     "email": "البريد الإلكتروني",
@@ -606,7 +607,9 @@
     "noDeliveryCountry": "لا نوصّل إلى {country} بعد. لا يزال بإمكانك تقديم طلب للتوصيل إلى إحدى الدول المدرجة أدناه.",
     "signInTitle": "سجّل الدخول لإتمام الطلب",
     "signInBody": "يُرجى تسجيل الدخول أو إنشاء حساب لإكمال طلبك.",
-    "createAccount": "إنشاء حساب"
+    "createAccount": "إنشاء حساب",
+    "continueTransfer": "المتابعة إلى التحويل البنكي · {amount}",
+    "transferNote": "ستظهر لك بعد ذلك بياناتنا البنكية. حوّل المبلغ وشارك رقم المرجع، وسنؤكد طلبك عبر واتساب."
   },
   "order": {
     "metaTitle": "طلبك",
@@ -645,7 +648,13 @@
     "courier": "شركة الشحن",
     "trackingNumber": "رقم التتبّع:",
     "dispatched": "تم الشحن في {date}",
-    "trackWithCourier": "التتبّع لدى شركة الشحن"
+    "trackWithCourier": "التتبّع لدى شركة الشحن",
+    "completeTransfer": "أكمل التحويل البنكي",
+    "verifyingTitle": "نحن نتحقق من دفعتك",
+    "verifyingBody": "شكرًا لإرسال تفاصيل التحويل. سنؤكد عبر واتساب قريبًا، عادةً خلال دقائق قليلة في ساعات العمل.",
+    "chatWhatsApp": "تحدث معنا عبر واتساب",
+    "transferNotYet": "تم حفظ طلبك. حوّل المبلغ الإجمالي إلى حسابنا البنكي وشارك رقم المرجع لتأكيده.",
+    "verifiedProcessing": "تم التحقق من الدفع — جارٍ تجهيز طلبك"
   },
   "callback": {
     "metaTitle": "تأكيد الدفع",

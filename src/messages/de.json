@@ -76,7 +76,8 @@
     "rights": "© {year} {name}. Alle Rechte vorbehalten.",
     "securePayments": "Sichere Zahlungen über Paystack",
     "cookieSettings": "Cookie-Einstellungen",
-    "preferences": "Sprache & Währung"
+    "preferences": "Sprache & Währung",
+    "securePaymentsTransfer": "Sichere Zahlung per Banküberweisung"
   },
   "newsletter": {
     "email": "E-Mail-Adresse",
@@ -606,7 +607,9 @@
     "noDeliveryCountry": "Wir liefern noch nicht nach {country}. Du kannst trotzdem eine Bestellung mit Lieferung in eines der unten aufgeführten Länder aufgeben.",
     "signInTitle": "Zum Bezahlen anmelden",
     "signInBody": "Bitte melde dich an oder erstelle ein Konto, um deine Bestellung abzuschließen.",
-    "createAccount": "Konto erstellen"
+    "createAccount": "Konto erstellen",
+    "continueTransfer": "Weiter zur Banküberweisung · {amount}",
+    "transferNote": "Als Nächstes siehst du unsere Bankdaten. Überweise den Betrag, teile uns deine Referenz mit und wir bestätigen deine Bestellung per WhatsApp."
   },
   "order": {
     "metaTitle": "Deine Bestellung",
@@ -645,7 +648,13 @@
     "courier": "Versanddienstleister",
     "trackingNumber": "Sendungsnummer:",
     "dispatched": "Versandt am {date}",
-    "trackWithCourier": "Beim Versanddienstleister verfolgen"
+    "trackWithCourier": "Beim Versanddienstleister verfolgen",
+    "completeTransfer": "Banküberweisung abschließen",
+    "verifyingTitle": "Wir prüfen deine Zahlung",
+    "verifyingBody": "Danke für deine Überweisungsdetails. Wir bestätigen in Kürze per WhatsApp – meist innerhalb weniger Minuten während unserer Geschäftszeiten.",
+    "chatWhatsApp": "Schreib uns auf WhatsApp",
+    "transferNotYet": "Deine Bestellung ist gespeichert. Überweise den Gesamtbetrag auf unser Bankkonto und teile uns deine Referenz mit, um sie zu bestätigen.",
+    "verifiedProcessing": "Zahlung bestätigt – deine Bestellung wird bearbeitet"
   },
   "callback": {
     "metaTitle": "Zahlung wird bestätigt",

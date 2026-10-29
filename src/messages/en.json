@@ -76,7 +76,8 @@
     "rights": "© {year} {name}. All rights reserved.",
     "securePayments": "Secure payments by Paystack",
     "cookieSettings": "Cookie settings",
-    "preferences": "Language & currency"
+    "preferences": "Language & currency",
+    "securePaymentsTransfer": "Secure payments by bank transfer"
   },
   "newsletter": {
     "email": "Email address",
@@ -606,7 +607,9 @@
     "noDeliveryCountry": "We don't deliver to {country} yet. You can still place an order for delivery to one of the countries listed below.",
     "signInTitle": "Sign in to check out",
     "signInBody": "Please sign in or create an account to complete your order.",
-    "createAccount": "Create account"
+    "createAccount": "Create account",
+    "continueTransfer": "Continue to bank transfer · {amount}",
+    "transferNote": "Next, you'll see our bank details. Transfer the amount, share your reference and we'll confirm your order on WhatsApp."
   },
   "order": {
     "metaTitle": "Your order",
@@ -645,7 +648,13 @@
     "courier": "Courier",
     "trackingNumber": "Tracking number:",
     "dispatched": "Dispatched {date}",
-    "trackWithCourier": "Track with courier"
+    "trackWithCourier": "Track with courier",
+    "completeTransfer": "Complete your bank transfer",
+    "verifyingTitle": "We're verifying your payment",
+    "verifyingBody": "Thank you for sending your transfer details. We'll confirm on WhatsApp shortly — usually within a few minutes during business hours.",
+    "chatWhatsApp": "Chat with us on WhatsApp",
+    "transferNotYet": "Your order is saved. Transfer the total to our bank account and share your reference to confirm it.",
+    "verifiedProcessing": "Payment verified — your order is being processed"
   },
   "callback": {
     "metaTitle": "Confirming payment",

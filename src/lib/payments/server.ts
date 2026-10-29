@@ -28,7 +28,8 @@ async function recordFailure(reference: string, reason: string, raw: unknown): P
   return data as FinalizeResult;
 }
 
-async function onFirstPaid(result: FinalizeResult) {
+/** After an order's first confirmed payment (card or bank transfer): empty the bag and send the receipt. */
+export async function onFirstPaid(result: FinalizeResult) {
   if (!result.order_id) return;
   const db = createServiceClient();
   const { data: order } = await db

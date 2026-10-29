@@ -12,6 +12,7 @@ import { Notice } from "@/components/ui/Notice";
 import { SetupNotice } from "@/components/ui/SetupNotice";
 import { buttonClasses } from "@/components/ui/Button";
 import { TrackCheckoutStart } from "@/components/analytics/AnalyticsTracker";
+import { bankTransferActive } from "@/lib/payments/bank-transfer";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("checkout"))("title"), robots: { index: false } };
@@ -60,16 +61,18 @@ export default async function CheckoutPage() {
     saved = data ?? [];
   }
 
+  const paymentMethod = bankTransferActive(settings.bank_transfer) ? "bank_transfer" : "paystack";
+
   return (
     <div className="container-luxe pb-24 pt-12">
       <TrackCheckoutStart />
       <h1 className="display text-5xl sm:text-6xl">{t("title")}</h1>
-      {!isPaystackConfigured() && (
+      {paymentMethod === "paystack" && !isPaystackConfigured() && (
         <Notice tone="warning" title={t("notConfiguredTitle")} className="mt-6">
           {t("notConfigured")}
         </Notice>
       )}
-      {paystackMode() === "test" && (
+      {paymentMethod === "paystack" && paystackMode() === "test" && (
         <Notice tone="info" title={t("testMode")} className="mt-6">
           {t("testModeBody")}
         </Notice>
@@ -94,6 +97,7 @@ export default async function CheckoutPage() {
           tax={settings.tax}
           dutiesNotice={settings.tax.duties_notice}
           preferredCountry={prefs.country}
+          paymentMethod={paymentMethod}
         />
       </div>
     </div>

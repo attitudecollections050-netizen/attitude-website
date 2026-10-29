@@ -2,7 +2,8 @@ import { isEmailConfigured } from "@/lib/groundmail";
 import { requireStaffPage } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
 import { isPaystackConfigured, paystackMode, env } from "@/lib/env";
-import { saveCheckoutSettings, saveStoreSettings } from "@/app/admin/actions/store";
+import { saveBankTransferSettings, saveCheckoutSettings, saveStoreSettings } from "@/app/admin/actions/store";
+import { bankTransferActive } from "@/lib/payments/bank-transfer";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { Badge, Card, Field, PageHeader, inputCls } from "@/components/admin/ui";
 
@@ -24,7 +25,7 @@ export default async function SettingsPage() {
             <Field label="Currency" hint="Prices and payments are in Nigerian Naira."><input value="NGN (₦)" disabled className={inputCls} /></Field>
             <Field label="Support email"><input name="support_email" type="email" defaultValue={s.store.support_email ?? ""} className={inputCls} /></Field>
             <Field label="Support phone"><input name="support_phone" defaultValue={s.store.support_phone ?? ""} className={inputCls} /></Field>
-            <Field label="WhatsApp number"><input name="whatsapp" defaultValue={s.store.whatsapp ?? ""} className={inputCls} placeholder="+234…" /></Field>
+            <Field label="WhatsApp number" hint="Used for every “Chat on WhatsApp” button and for payment confirmations."><input name="whatsapp" defaultValue={s.store.whatsapp ?? ""} className={inputCls} placeholder="0803 123 4567" /></Field>
             <Field label="Business hours"><input name="business_hours" defaultValue={s.store.business_hours ?? ""} className={inputCls} /></Field>
             <Field label="Business address" className="sm:col-span-2"><textarea name="business_address" rows={2} defaultValue={s.store.business_address ?? ""} className={inputCls} /></Field>
             <Field label="Instagram URL"><input name="instagram" type="url" defaultValue={s.store.instagram ?? ""} className={inputCls} /></Field>
@@ -34,6 +35,23 @@ export default async function SettingsPage() {
           </div>
         </ActionForm>
       </Card>
+      <section id="bank-transfer" className="scroll-mt-6">
+        <Card
+          title="Bank transfer payments"
+          description="While this is on, customers pay by bank transfer at checkout: they see these details, transfer the money, and submit their reference. You confirm each one under Bank Transfers."
+          actions={<Badge tone={bankTransferActive(s.bank_transfer) ? "success" : "neutral"}>{bankTransferActive(s.bank_transfer) ? "On" : "Off"}</Badge>}
+        >
+          <ActionForm action={saveBankTransferSettings}>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <label className="flex items-center gap-2 text-sm sm:col-span-2 lg:col-span-3"><input type="checkbox" name="enabled" defaultChecked={s.bank_transfer.enabled} className="size-4 accent-[#d94f91]" /> Accept payment by bank transfer</label>
+              <Field label="Bank name"><input name="bank_name" defaultValue={s.bank_transfer.bank_name} maxLength={60} className={inputCls} placeholder="First Bank" /></Field>
+              <Field label="Account name"><input name="account_name" defaultValue={s.bank_transfer.account_name} maxLength={120} className={inputCls} /></Field>
+              <Field label="Account number" hint="10 digits (NUBAN)."><input name="account_number" defaultValue={s.bank_transfer.account_number} inputMode="numeric" maxLength={10} pattern="\d{10}" className={inputCls} /></Field>
+              <Field label="Extra note for customers (optional)" className="sm:col-span-2 lg:col-span-3"><input name="note" defaultValue={s.bank_transfer.note} maxLength={300} className={inputCls} placeholder="e.g. Transfers are confirmed between 8am and 9pm." /></Field>
+            </div>
+          </ActionForm>
+        </Card>
+      </section>
       <Card title="Checkout, tax & duties" description="Taxes are only charged if you configure them. Confirm your obligations with a qualified adviser.">
         <ActionForm action={saveCheckoutSettings}>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -58,7 +76,7 @@ export default async function SettingsPage() {
           <li className="flex items-center justify-between gap-3">Live courier quotes <Badge>Not connected — manual rates</Badge></li>
           <li className="flex items-center justify-between gap-3">Supplier API <Badge>Not connected — manual fulfilment</Badge></li>
         </ul>
-        {!isPaystackConfigured() && <p className="mt-4 text-xs text-danger">Set PAYSTACK_SECRET_KEY and NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY to accept payments.</p>}
+        {!isPaystackConfigured() && !bankTransferActive(s.bank_transfer) && <p className="mt-4 text-xs text-danger">Turn on bank transfer above, or set PAYSTACK_SECRET_KEY and NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY, to accept payments.</p>}
         <p className="mt-4 text-xs text-muted">Admin access is granted from the Supabase SQL editor (see README) — it can&apos;t be granted from this dashboard.</p>
       </Card>
     </div>

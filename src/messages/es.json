@@ -76,7 +76,8 @@
     "rights": "© {year} {name}. Todos los derechos reservados.",
     "securePayments": "Pagos seguros con Paystack",
     "cookieSettings": "Configuración de cookies",
-    "preferences": "Idioma y moneda"
+    "preferences": "Idioma y moneda",
+    "securePaymentsTransfer": "Pagos seguros por transferencia bancaria"
   },
   "newsletter": {
     "email": "Correo electrónico",
@@ -606,7 +607,9 @@
     "noDeliveryCountry": "Todavía no enviamos a {country}. Aun así, puedes hacer un pedido con entrega en uno de los países de la lista.",
     "signInTitle": "Inicia sesión para pagar",
     "signInBody": "Inicia sesión o crea una cuenta para completar tu pedido.",
-    "createAccount": "Crear cuenta"
+    "createAccount": "Crear cuenta",
+    "continueTransfer": "Continuar con la transferencia bancaria · {amount}",
+    "transferNote": "A continuación verás nuestros datos bancarios. Haz la transferencia, comparte tu referencia y confirmaremos tu pedido por WhatsApp."
   },
   "order": {
     "metaTitle": "Tu pedido",
@@ -645,7 +648,13 @@
     "courier": "Mensajería",
     "trackingNumber": "Número de seguimiento:",
     "dispatched": "Enviado el {date}",
-    "trackWithCourier": "Seguir con la mensajería"
+    "trackWithCourier": "Seguir con la mensajería",
+    "completeTransfer": "Completa tu transferencia bancaria",
+    "verifyingTitle": "Estamos verificando tu pago",
+    "verifyingBody": "Gracias por enviar los datos de tu transferencia. Te confirmaremos por WhatsApp en breve, normalmente en unos minutos en horario comercial.",
+    "chatWhatsApp": "Escríbenos por WhatsApp",
+    "transferNotYet": "Tu pedido está guardado. Transfiere el total a nuestra cuenta bancaria y comparte tu referencia para confirmarlo.",
+    "verifiedProcessing": "Pago verificado: estamos preparando tu pedido"
   },
   "callback": {
     "metaTitle": "Confirmando el pago",

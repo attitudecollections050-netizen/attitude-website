@@ -25,6 +25,7 @@ export interface CustomerOrderView {
   total: number;
   status: OrderStatus;
   payment_status: string;
+  payment_method: "paystack" | "bank_transfer";
   created_at: string;
   paid_at: string | null;
   /** What the shopper saw at order time (display only; the charge is `total` in `currency`). */
@@ -37,7 +38,7 @@ export interface CustomerOrderView {
 
 const SELECT = `id, order_number, access_token, user_id, email, customer_name, phone, shipping_address, delivery_instructions,
   shipping_method_name, shipping_is_manual, shipping_min_days, shipping_max_days, currency, subtotal, discount_total, discount_code,
-  shipping_fee, tax_total, total, status, payment_status, created_at, paid_at, display_currency, display_total,
+  shipping_fee, tax_total, total, status, payment_status, payment_method, created_at, paid_at, display_currency, display_total,
   order_items ( id, product_name, product_slug, variant_label, image_url, unit_price, quantity, line_total ),
   order_status_history ( status, public_note, created_at ),
   shipment_tracking ( carrier, tracking_number, tracking_url, dispatched_at )`;
@@ -49,7 +50,13 @@ const SELECT = `id, order_number, access_token, user_id, email, customer_name, p
  */
 export async function getOrderForCustomer(orderNumber: string, token: string | null): Promise<CustomerOrderView | null> {
   if (!/^AC\d{6,}$/.test(orderNumber)) return null;
-  const { data } = await createServiceClient().from("orders").select(SELECT).eq("order_number", orderNumber).maybeSingle();
+  const db = createServiceClient();
+  let { data, error } = await db.from("orders").select(SELECT).eq("order_number", orderNumber).maybeSingle();
+  // Until the bank-transfer migration is applied, orders have no payment_method column: they're all card payments.
+  if (error?.code === "42703" || error?.message?.includes("payment_method")) {
+    ({ data, error } = await db.from("orders").select(SELECT.replace(" payment_method,", "")).eq("order_number", orderNumber).maybeSingle());
+    if (data) (data as Record<string, unknown>).payment_method = "paystack";
+  }
   if (!data) return null;
   let allowed = Boolean(token && /^[a-f0-9]{48}$/.test(token) && token === data.access_token);
   if (!allowed && data.user_id) {

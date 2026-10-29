@@ -59,6 +59,7 @@ export function CheckoutForm({
   dutiesNotice,
   storeCountry = "NG",
   preferredCountry,
+  paymentMethod = "paystack",
 }: {
   countries: CountryOption[];
   regions: Record<string, { code: string; name: string }[]>;
@@ -70,6 +71,8 @@ export function CheckoutForm({
   storeCountry?: string;
   /** The country the shopper chose in their preferences (used as the default when we deliver there). */
   preferredCountry?: string;
+  /** "bank_transfer": the next step shows our bank details instead of Paystack. */
+  paymentMethod?: "paystack" | "bank_transfer";
 }) {
   const { cart } = useCart();
   const t = useTranslations("checkout");
@@ -428,10 +431,17 @@ export function CheckoutForm({
         </AnimatePresence>
 
         <Button type="submit" form="checkout-form" size="lg" className="mt-6 w-full" disabled={!canPay} loading={placing}>
-          <Lock className="size-3.5" aria-hidden /> {placing ? t("redirecting") : selected ? t("pay", { amount: money.formatCharge(totals.total) }) : t("paySecurely")}
+          <Lock className="size-3.5" aria-hidden />{" "}
+          {placing
+            ? t("redirecting")
+            : !selected
+              ? t("paySecurely")
+              : paymentMethod === "bank_transfer"
+                ? t("continueTransfer", { amount: money.formatCharge(totals.total) })
+                : t("pay", { amount: money.formatCharge(totals.total) })}
         </Button>
         <p className="mt-3 text-center text-xs text-muted">
-          {t("paystackNote", { charge: money.chargeCurrency })}
+          {paymentMethod === "bank_transfer" ? t("transferNote") : t("paystackNote", { charge: money.chargeCurrency })}
         </p>
       </aside>
     </div>

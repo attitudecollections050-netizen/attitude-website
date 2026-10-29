@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { WhatsAppLink } from "@/components/ui/WhatsAppLink";
+import { bankTransferActive } from "@/lib/payments/bank-transfer";
 import type { CategoryNode } from "@/lib/catalog/types";
 import type { StoreSettings } from "@/lib/settings";
 import { Wordmark } from "@/components/brand/Wordmark";
@@ -67,10 +69,8 @@ export function Footer({ categories, settings }: { categories: CategoryNode[]; s
                 </li>
               )}
               {s.whatsapp && (
-                <li>
-                  <a href={`https://wa.me/${s.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="link-underline hover:text-white">
-                    WhatsApp
-                  </a>
+                <li className="pt-2">
+                  <WhatsAppLink number={s.whatsapp} tone="light" label="Chat with us on WhatsApp" />
                 </li>
               )}
             </ul>
@@ -94,7 +94,7 @@ export function Footer({ categories, settings }: { categories: CategoryNode[]; s
           <div className="flex items-center gap-5">
             <PreferencesButton className="hover:text-white" />
             <CookieSettingsButton className="hover:text-white" />
-            <p>{t("securePayments")}</p>
+            <p>{bankTransferActive(settings.bank_transfer) ? t("securePaymentsTransfer") : t("securePayments")}</p>
           </div>
         </div>
       </div>

@@ -178,6 +178,27 @@ export async function saveStoreSettings(_prev: AdminResult, formData: FormData):
   });
 }
 
+export async function saveBankTransferSettings(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
+  return guarded("settings:write", async ({ db }) => {
+    const input = z
+      .object({
+        enabled: bool,
+        bank_name: str(60),
+        account_name: str(120),
+        account_number: z.string().trim().regex(/^\d{10}$|^$/, "Account number must be 10 digits."),
+        note: str(300),
+      })
+      .parse(Object.fromEntries(formData));
+    if (input.enabled && (!input.bank_name || !input.account_name || !input.account_number)) {
+      return { ok: false, message: "Add the bank name, account name and 10-digit account number before switching bank transfer on." };
+    }
+    const error = await putSetting(db, "bank_transfer", input);
+    if (error) return dbError(error);
+    revalidatePath("/", "layout");
+    return { ok: true, message: input.enabled ? "Bank transfer details saved. Customers will pay by transfer at checkout." : "Saved. Bank transfer is switched off." };
+  });
+}
+
 export async function saveCheckoutSettings(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
   return guarded("settings:write", async ({ db }) => {
     const checkout = z.object({ guest_checkout_enabled: bool, max_quantity_per_item: intStr(1, 20) }).parse(Object.fromEntries(formData));

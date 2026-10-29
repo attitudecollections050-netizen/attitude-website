@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { AnimatePresence, m } from "motion/react";
-import { LayoutDashboard, Package, ShoppingBag, Layers, Truck, Tag, Home, Settings, Boxes, Mail, Menu, X, Store, LogOut, FileText, CreditCard, Users, BarChart3, Heart, Globe2, UserCog, Wallet } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingBag, Layers, Truck, Tag, Home, Settings, Boxes, Mail, Menu, X, Store, LogOut, FileText, CreditCard, Users, BarChart3, Heart, Globe2, UserCog, Wallet, Landmark } from "lucide-react";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { signOut } from "@/app/actions/auth";
 import { cn } from "@/lib/cn";
@@ -16,6 +16,7 @@ const ITEMS = [
   { href: "/admin/collections", label: "Collections", icon: Boxes, perm: "catalog:write" },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag, perm: "orders:read" },
   { href: "/admin/payments", label: "Payments", icon: CreditCard, perm: "orders:read" },
+  { href: "/admin/transfers", label: "Bank Transfers", icon: Landmark, perm: "payments:verify" },
   { href: "/admin/customers", label: "Customers", icon: Users, perm: "customers:read" },
   { href: "/admin/analytics", label: "Analytics & Reports", icon: BarChart3, perm: "reports:read" },
   { href: "/admin/feedback", label: "Customer Reviews & Feedback", icon: Heart, perm: "feedback:manage" },

@@ -11,6 +11,8 @@ import { RetryPaymentButton } from "@/components/checkout/RetryPaymentButton";
 import { SmartImage } from "@/components/ui/SmartImage";
 import { buttonClasses } from "@/components/ui/Button";
 import { Reveal } from "@/components/ui/Reveal";
+import { WhatsAppLink } from "@/components/ui/WhatsAppLink";
+import { getSettings } from "@/lib/settings";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("order"))("metaTitle"), robots: { index: false } };
@@ -22,6 +24,9 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
   const order = await getOrderForCustomer(orderNumber, typeof token === "string" ? token : null);
   if (!order) notFound();
   const paid = order.payment_status === "paid";
+  const transfer = order.payment_method === "bank_transfer";
+  const verifying = transfer && !paid && order.payment_status === "pending";
+  const { store } = await getSettings();
   const a = order.shipping_address;
   const [t, ts, tc, locale] = await Promise.all([getTranslations("order"), getTranslations("shipping"), getTranslations("cart"), getLocale()]);
   const min = order.shipping_min_days;
@@ -48,13 +53,23 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
       <Reveal className="text-center">
         {paid ? <CheckCircle2 className="mx-auto size-10 text-rose" aria-hidden /> : <Clock className="mx-auto size-10 text-warning" aria-hidden />}
         <p className="eyebrow mt-5 text-rose-deep">{t("number", { number: order.order_number })}</p>
-        <h1 className="display mt-3 text-5xl sm:text-6xl">{paid ? t("thanks", { name: order.customer_name.split(" ")[0] }) : t("awaiting")}</h1>
+        <h1 className="display mt-3 text-5xl sm:text-6xl">{paid ? t("thanks", { name: order.customer_name.split(" ")[0] }) : verifying ? t("verifyingTitle") : t("awaiting")}</h1>
         <p className="mx-auto mt-4 max-w-lg text-sm text-plum-soft">
-          {paid ? t("confirmed", { email: order.email }) : t("notYetPaid")}
+          {paid ? t("confirmed", { email: order.email }) : verifying ? t("verifyingBody") : transfer ? t("transferNotYet") : t("notYetPaid")}
         </p>
         {!paid && order.status === "pending_payment" && (
-          <div className="mt-6 flex justify-center">
-            <RetryPaymentButton orderNumber={order.order_number} token={order.access_token} />
+          <div className="mt-6 flex flex-col items-center justify-center gap-3">
+            {transfer ? (
+              verifying ? (
+                <WhatsAppLink number={store.whatsapp} variant="button" label={t("chatWhatsApp")} message={`Hello ${store.name}! I've paid for order ${order.order_number} and I'm waiting for confirmation.`} />
+              ) : (
+                <Link href={`/checkout/transfer/${order.order_number}?token=${order.access_token}`} className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-rose to-rose-deep px-7 py-3.5 text-xs font-bold uppercase tracking-[0.16em] text-white shadow-[0_12px_28px_-12px_rgba(184,53,122,0.9)] transition hover:-translate-y-0.5">
+                  {t("completeTransfer")}
+                </Link>
+              )
+            ) : (
+              <RetryPaymentButton orderNumber={order.order_number} token={order.access_token} />
+            )}
           </div>
         )}
       </Reveal>
@@ -113,7 +128,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
         <aside className="space-y-6 text-sm">
           <div className="bg-neutral p-5">
             <h2 className="eyebrow">{t("payment")}</h2>
-            <p className="mt-2 font-semibold">{t.has(`paymentStatus.${order.payment_status}`) ? t(`paymentStatus.${order.payment_status}`) : order.payment_status}</p>
+            <p className="mt-2 font-semibold">{paid && transfer ? t("verifiedProcessing") : t.has(`paymentStatus.${order.payment_status}`) ? t(`paymentStatus.${order.payment_status}`) : order.payment_status}</p>
           </div>
           <div className="bg-neutral p-5">
             <h2 className="eyebrow">{t("address")}</h2>
@@ -130,6 +145,11 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
               <li>{t.rich("next3", { contact: (c) => <Link href="/contact" className="underline">{c}</Link> })}</li>
             </ol>
           </div>
+          {store.whatsapp && (
+            <div className="flex flex-wrap items-center gap-3">
+              <WhatsAppLink number={store.whatsapp} label={t("chatWhatsApp")} message={`Hello ${store.name}! I have a question about order ${order.order_number}.`} />
+            </div>
+          )}
           <div className="flex flex-col gap-2">
             <Link href={`/track-order?order=${order.order_number}`} className={buttonClasses("outline")}>{t("track")}</Link>
             <Link href="/shop" className={buttonClasses("ghost")}>{tc("continueShopping")}</Link>
