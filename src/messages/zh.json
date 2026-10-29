@@ -612,7 +612,11 @@
     "signInBody": "请登录或创建账户以完成订单。",
     "createAccount": "创建账户",
     "continueTransfer": "继续银行转账 · {amount}",
-    "transferNote": "接下来您将看到我们的银行信息。完成转账并提供参考号，我们会通过 WhatsApp 确认您的订单。"
+    "transferNote": "接下来您将看到我们的银行信息。完成转账并提供参考号，我们会通过 WhatsApp 确认您的订单。",
+    "transferEyebrow": "安全银行转账",
+    "transferTitle": "通过银行转账完成付款",
+    "transferIntro": "这是您的付款账户。请先填写下方信息并继续：下一步您将提供转账参考号，我们会通过 WhatsApp 确认。",
+    "transferIntroNoShipping": "这是您的付款账户。选择下方配送方式后，金额将包含运费。"
   },
   "order": {
     "metaTitle": "您的订单",

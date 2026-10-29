@@ -612,7 +612,11 @@
     "signInBody": "Please sign in or create an account to complete your order.",
     "createAccount": "Create account",
     "continueTransfer": "Continue to bank transfer · {amount}",
-    "transferNote": "Next, you'll see our bank details. Transfer the amount, share your reference and we'll confirm your order on WhatsApp."
+    "transferNote": "Next, you'll see our bank details. Transfer the amount, share your reference and we'll confirm your order on WhatsApp.",
+    "transferEyebrow": "Secure bank transfer",
+    "transferTitle": "Complete your payment by bank transfer",
+    "transferIntro": "Here's where you'll pay. Fill in your details below, then continue: on the next step you'll share your transfer reference and we'll confirm on WhatsApp.",
+    "transferIntroNoShipping": "Here's where you'll pay. The amount includes delivery once you've chosen an option below."
   },
   "order": {
     "metaTitle": "Your order",

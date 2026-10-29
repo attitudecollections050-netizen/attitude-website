@@ -612,7 +612,11 @@
     "signInBody": "Veuillez vous connecter ou créer un compte pour finaliser votre commande.",
     "createAccount": "Créer un compte",
     "continueTransfer": "Continuer vers le virement bancaire · {amount}",
-    "transferNote": "Vous verrez ensuite nos coordonnées bancaires. Effectuez le virement, indiquez votre référence et nous confirmerons votre commande sur WhatsApp."
+    "transferNote": "Vous verrez ensuite nos coordonnées bancaires. Effectuez le virement, indiquez votre référence et nous confirmerons votre commande sur WhatsApp.",
+    "transferEyebrow": "Virement bancaire sécurisé",
+    "transferTitle": "Réglez votre commande par virement bancaire",
+    "transferIntro": "Voici où payer. Remplissez vos informations ci-dessous puis continuez : à l'étape suivante, vous indiquerez votre référence de virement et nous confirmerons sur WhatsApp.",
+    "transferIntroNoShipping": "Voici où payer. Le montant inclura la livraison dès que vous aurez choisi une option ci-dessous."
   },
   "order": {
     "metaTitle": "Votre commande",

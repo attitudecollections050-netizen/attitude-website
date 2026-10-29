@@ -612,7 +612,11 @@
     "signInBody": "Inicia sesión o crea una cuenta para completar tu pedido.",
     "createAccount": "Crear cuenta",
     "continueTransfer": "Continuar con la transferencia bancaria · {amount}",
-    "transferNote": "A continuación verás nuestros datos bancarios. Haz la transferencia, comparte tu referencia y confirmaremos tu pedido por WhatsApp."
+    "transferNote": "A continuación verás nuestros datos bancarios. Haz la transferencia, comparte tu referencia y confirmaremos tu pedido por WhatsApp.",
+    "transferEyebrow": "Transferencia bancaria segura",
+    "transferTitle": "Completa tu pago por transferencia bancaria",
+    "transferIntro": "Aquí es donde pagarás. Completa tus datos abajo y continúa: en el siguiente paso compartirás tu referencia y te confirmaremos por WhatsApp.",
+    "transferIntroNoShipping": "Aquí es donde pagarás. El importe incluirá el envío cuando elijas una opción abajo."
   },
   "order": {
     "metaTitle": "Tu pedido",

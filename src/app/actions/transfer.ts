@@ -32,6 +32,7 @@ const schema = z.object({
     .transform((v) => v.replace(/\s+/g, " "))
     .pipe(z.string().min(4, "Please enter the reference from your bank receipt.").max(64, "That reference is too long.").regex(/^[A-Za-z0-9/_.: -]+$/, "Use only letters, numbers and - / _ .")),
   whatsapp: z.string().trim().refine((v) => normalizeWhatsApp(v) != null, "Enter a WhatsApp number we can reach you on, e.g. 0803 123 4567."),
+  confirmed: z.literal("on", { error: "Please tick this box once you've completed the transfer." }),
 });
 
 const isPdf = (b: Uint8Array) => b.length > 4 && b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46; // %PDF
@@ -41,9 +42,9 @@ export async function submitTransferClaim(_prev: TransferClaimState, formData: F
   if (!isSupabaseConfigured()) return { ok: false, message: "Payments aren't available right now. Please contact us." };
   if (!(await rateLimit("transfer-claim", 8, 3600))) return { ok: false, message: "Too many attempts. Please wait a little and try again, or chat with us on WhatsApp." };
 
-  const raw = Object.fromEntries(["order_number", "token", "customer_name", "amount_paid", "transfer_reference", "whatsapp"].map((k) => [k, String(formData.get(k) ?? "").slice(0, 200)]));
+  const raw = Object.fromEntries(["order_number", "token", "customer_name", "amount_paid", "transfer_reference", "whatsapp", "confirmed"].map((k) => [k, String(formData.get(k) ?? "").slice(0, 200)]));
   // Sent back on errors so the form keeps what the customer typed.
-  const values = { customer_name: raw.customer_name, amount_paid: raw.amount_paid, transfer_reference: raw.transfer_reference, whatsapp: raw.whatsapp };
+  const values = { customer_name: raw.customer_name, amount_paid: raw.amount_paid, transfer_reference: raw.transfer_reference, whatsapp: raw.whatsapp, confirmed: raw.confirmed };
   const fail = (message: string, errors?: Record<string, string>): TransferClaimState => ({ ok: false, message, errors, values });
   const parsed = schema.safeParse(raw);
   if (!parsed.success) {

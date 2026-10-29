@@ -110,6 +110,14 @@ export function TransferForm({ orderNumber, token, defaultName, defaultAmount, d
         {fileLost && !errors.proof && <p className="mt-1.5 text-xs text-muted">Please choose your screenshot again.</p>}
       </Field>
 
+      <div>
+        <label className={cn("flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3.5 text-sm transition", errors.confirmed ? "border-danger bg-danger/5" : "border-rose/25 bg-blush/40 hover:border-rose")}>
+          <input type="checkbox" name="confirmed" required defaultChecked={v.confirmed === "on"} className="mt-0.5 size-5 shrink-0 accent-[#d94f91]" aria-invalid={Boolean(errors.confirmed)} aria-describedby={errors.confirmed ? "confirmed-error" : undefined} />
+          <span className="font-semibold text-plum">I have completed the transfer</span>
+        </label>
+        {errors.confirmed && <p id="confirmed-error" className="mt-1.5 text-xs font-medium text-danger" role="alert">{errors.confirmed}</p>}
+      </div>
+
       {state && !state.ok && <p className="rounded-xl border border-danger/25 bg-danger/5 px-4 py-3 text-sm text-danger" role="alert">{state.message}</p>}
 
       <button
@@ -118,7 +126,7 @@ export function TransferForm({ orderNumber, token, defaultName, defaultAmount, d
         className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-rose to-rose-deep px-6 py-4 text-xs font-bold uppercase tracking-[0.18em] text-white shadow-[0_14px_30px_-14px_rgba(184,53,122,0.95)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_34px_-14px_rgba(184,53,122,1)] disabled:pointer-events-none disabled:opacity-60"
       >
         {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Lock className="size-3.5" aria-hidden />}
-        {pending ? "Sending your details…" : "I Have Paid"}
+        {pending ? "Sending your details…" : "I Have Paid — Submit Order"}
       </button>
       <p className="text-center text-xs leading-relaxed text-muted">Only tap this after you&apos;ve completed the transfer. We confirm every payment personally, usually within 2–5 minutes during business hours.</p>
     </form>

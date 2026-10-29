@@ -22,7 +22,7 @@ function CopyButton({ value, label }: { value: string; label: string }) {
 }
 
 /** The store's bank details as a raised, tilting card (like a payment provider's checkout). */
-export function BankCard({ bankName, accountName, accountNumber, amount, amountPlain, orderNumber }: { bankName: string; accountName: string; accountNumber: string; amount: string; amountPlain: string; orderNumber: string }) {
+export function BankCard({ bankName, accountName, accountNumber, amount, amountPlain, orderNumber }: { bankName: string; accountName: string; accountNumber: string; amount: string; amountPlain: string; orderNumber?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const grouped = accountNumber.replace(/(\d{4})(\d{3})(\d{3})/, "$1 $2 $3");
@@ -82,10 +82,15 @@ export function BankCard({ bankName, accountName, accountNumber, amount, amountP
           </div>
         </div>
 
-        <p className="relative mt-6 flex items-center gap-2 border-t border-white/20 pt-4 text-xs text-white/85">
-          <ShieldCheck className="size-4 shrink-0" aria-hidden />
-          <span>Add <strong className="font-bold">{orderNumber}</strong> as the transfer narration so we can match your payment quickly.</span>
-        </p>
+        <div className="relative mt-6 space-y-1.5 border-t border-white/20 pt-4 text-xs text-white/85">
+          <p className="flex items-center gap-2">
+            <ShieldCheck className="size-4 shrink-0" aria-hidden />
+            <span>Please check the account name in your bank app before you transfer.</span>
+          </p>
+          {orderNumber && (
+            <p className="pl-6">Add <strong className="font-bold">{orderNumber}</strong> as the transfer narration so we can match your payment quickly.</p>
+          )}
+        </div>
       </div>
     </div>
   );

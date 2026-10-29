@@ -7,6 +7,7 @@ import { useCart } from "@/components/cart/CartProvider";
 import { DiscountForm } from "@/components/cart/DiscountForm";
 import { quoteCartShipping } from "@/app/actions/shipping";
 import { placeOrder } from "@/app/actions/checkout";
+import { BankCard } from "./BankCard";
 import { computeTotals, type TaxConfig } from "@/lib/pricing";
 import type { ShippingQuote } from "@/lib/shipping/calculator";
 import { useLocale, useTranslations } from "next-intl";
@@ -60,6 +61,7 @@ export function CheckoutForm({
   storeCountry = "NG",
   preferredCountry,
   paymentMethod = "paystack",
+  bank,
 }: {
   countries: CountryOption[];
   regions: Record<string, { code: string; name: string }[]>;
@@ -73,6 +75,8 @@ export function CheckoutForm({
   preferredCountry?: string;
   /** "bank_transfer": the next step shows our bank details instead of Paystack. */
   paymentMethod?: "paystack" | "bank_transfer";
+  /** Shown at the top of the form while bank transfer is on. */
+  bank?: { bankName: string; accountName: string; accountNumber: string };
 }) {
   const { cart } = useCart();
   const t = useTranslations("checkout");
@@ -179,6 +183,16 @@ export function CheckoutForm({
     <div className="grid gap-12 lg:grid-cols-[1fr_26rem]">
       {/* The discount code has its own form in the summary, so the two forms are siblings, not nested. */}
       <form id="checkout-form" onSubmit={submit} className="space-y-10" noValidate>
+        {paymentMethod === "bank_transfer" && bank && (
+          <section aria-labelledby="pay-h" data-testid="checkout-bank">
+            <p className="eyebrow text-rose-deep">{t("transferEyebrow")}</p>
+            <h2 id="pay-h" className="mt-1 font-display text-3xl">{t("transferTitle")}</h2>
+            <p className="mt-2 text-sm text-plum-soft">{selected ? t("transferIntro") : t("transferIntroNoShipping")}</p>
+            <div className="mt-5 max-w-xl">
+              <BankCard bankName={bank.bankName} accountName={bank.accountName} accountNumber={bank.accountNumber} amount={money.formatCharge(totals.total)} amountPlain={(totals.total / 100).toFixed(2).replace(/\.00$/, "")} />
+            </div>
+          </section>
+        )}
         <section aria-labelledby="contact-h">
           <h2 id="contact-h" className="font-display text-3xl">
             {t("contact")}

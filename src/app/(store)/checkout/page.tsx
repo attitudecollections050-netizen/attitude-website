@@ -98,6 +98,7 @@ export default async function CheckoutPage() {
           dutiesNotice={settings.tax.duties_notice}
           preferredCountry={prefs.country}
           paymentMethod={paymentMethod}
+          bank={paymentMethod === "bank_transfer" ? { bankName: settings.bank_transfer.bank_name, accountName: settings.bank_transfer.account_name, accountNumber: settings.bank_transfer.account_number } : undefined}
         />
       </div>
     </div>
