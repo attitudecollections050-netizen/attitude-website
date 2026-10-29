@@ -20,10 +20,18 @@ export default async function HomePage() {
   const hero = home.banners.find((b) => b.placement === "hero");
   const promos = home.banners.filter((b) => b.placement === "promo");
   const strip = home.banners.find((b) => b.placement === "strip");
+  // The hero film features one edition per loop, pictured with its category photo (no product cards).
+  const allCategories = categories.flatMap((c) => [c, ...c.children]);
+  const top = (re: RegExp) => allCategories.find((c) => re.test(`${c.slug} ${c.name}`) && c.image_url);
+  const editions = [
+    { label: "Clothing Edition", image: hero?.image_url ?? top(/women|men|cloth/i)?.image_url ?? null },
+    { label: "Sneaker Edition", image: top(/sneaker/i)?.image_url ?? null },
+    { label: "Bag Edition", image: top(/bag/i)?.image_url ?? null },
+  ].filter((e) => e.image);
 
   return (
     <>
-      {/* Hero banner (image and wording from Admin → Homepage → Hero) */}
+      {/* Hero banner film (image and wording from Admin → Homepage → Hero; promo photos join the "choose" scene) */}
       <Hero
         eyebrow={hero?.eyebrow ?? "Attitude Collections"}
         title={hero?.title ?? t("tagline")}
@@ -31,6 +39,7 @@ export default async function HomePage() {
         imageUrl={hero?.image_url ?? null}
         ctaLabel={hero?.cta_label ?? t("shopNow")}
         ctaHref={hero?.cta_href ?? "/shop"}
+        editions={editions}
       />
 
       {!isSupabaseConfigured() && (

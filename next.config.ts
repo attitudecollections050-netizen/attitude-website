@@ -4,11 +4,9 @@ import createNextIntlPlugin from "next-intl/plugin";
 // Translations: cookie-based locale (URLs stay the same in every language).
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
-const supabaseHost = (() => {
+const supabaseUrl = (() => {
   try {
-    return process.env.NEXT_PUBLIC_SUPABASE_URL
-      ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
-      : undefined;
+    return process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL) : undefined;
   } catch {
     return undefined;
   }
@@ -26,10 +24,19 @@ const nextConfig: NextConfig = {
   },
   images: {
     formats: ["image/avif", "image/webp"],
+    // Only for running the store against a Supabase on this machine (never set in production).
+    ...(process.env.ALLOW_LOCAL_IMAGES === "1" ? { dangerouslyAllowLocalIP: true } : {}),
     remotePatterns: [
       // Supabase Storage (product uploads)
-      ...(supabaseHost
-        ? [{ protocol: "https" as const, hostname: supabaseHost, pathname: "/storage/v1/object/public/**" }]
+      ...(supabaseUrl
+        ? [
+            {
+              protocol: supabaseUrl.protocol === "http:" ? ("http" as const) : ("https" as const),
+              hostname: supabaseUrl.hostname,
+              ...(supabaseUrl.port ? { port: supabaseUrl.port } : {}),
+              pathname: "/storage/v1/object/public/**",
+            },
+          ]
         : []),
       { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" },
       // Demo seed imagery only — replace with your own product photography.

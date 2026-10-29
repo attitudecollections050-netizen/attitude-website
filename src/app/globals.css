@@ -23,6 +23,34 @@
 
   --animate-marquee: marquee 32s linear infinite;
 
+  --animate-kenburns: kenburns 18s ease-in-out infinite alternate;
+  --animate-sweep: sweep 6.5s ease-in-out infinite;
+  --animate-blob: blob 14s ease-in-out infinite alternate;
+  --animate-pinkshift: pinkshift 12s ease-in-out infinite alternate;
+  --animate-floaty: floaty 6s ease-in-out infinite;
+
+  @keyframes kenburns {
+    from { transform: scale(1.04) translate3d(0, 0, 0); }
+    to { transform: scale(1.16) translate3d(-2%, -2%, 0); }
+  }
+  @keyframes sweep {
+    0%, 55% { transform: translateX(-120%) skewX(-18deg); }
+    100% { transform: translateX(260%) skewX(-18deg); }
+  }
+  @keyframes blob {
+    0% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(8%, -6%, 0) scale(1.15); }
+    100% { transform: translate3d(-6%, 5%, 0) scale(0.95); }
+  }
+  @keyframes pinkshift {
+    from { background-position: 0% 50%; }
+    to { background-position: 100% 50%; }
+  }
+  @keyframes floaty {
+    0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+    50% { transform: translateY(-14px) rotate(1.5deg); }
+  }
+
   @keyframes marquee {
     from { transform: translateX(0); }
     to { transform: translateX(-50%); }

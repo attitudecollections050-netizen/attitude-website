@@ -193,6 +193,19 @@ A floating pink DJ-girl avatar (bottom-right on every store page except checkout
 
 **Payment methods by country** (Paystack channels such as card, bank transfer and USSD) are set in Admin → International. Paystack only shows the methods your account supports. **Preview the store** on that page opens the storefront in any language/country/currency in your own browser. The admin dashboard itself stays in English.
 
+## 7c-1. Homepage banners
+
+- **Hero (top of the homepage)** is a short film of about 19 seconds that loops:
+  1. "attitude" handwritten intro
+  2. the giant **ATTITUDE** headline sharpening into focus
+  3. the photo floating with call-out labels
+  4. "Choose your attitude"
+  5. your title and Shop button
+
+  Each loop features the next edition: Clothing (your hero photo), Sneaker (Sneakers category photo) and Bag (Bags category photo). The title, subtitle, button and photo come from **Admin → Homepage → Hero**, and category photos come from **Admin → Categories**. No product cards appear in any banner.
+- **Sound (hero only):** an original soundtrack made in the browser (no audio files or licensing), with a whoosh between scenes and a chime on the last one. Browsers don't let websites play sound by themselves, so it starts when a visitor taps **Tap for sound**. Visitors can pause the film, and it pauses when scrolled away. If someone has asked their phone or computer to reduce motion, they see the still title card instead.
+- **Promo and strip banners** move silently: a slow zoom, a pink light sweep and glow, a shifting pink gradient and a scrolling word ribbon.
+
 ## 7c-2. Bank transfer payments (manual)
 
 While **Store Settings → Bank transfer payments** is on, checkout uses bank transfer instead of Paystack:
