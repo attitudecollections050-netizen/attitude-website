@@ -1,15 +1,12 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
 import { sendEmail } from "@/lib/groundmail";
 import { inviteEmail, notificationEmail } from "@/lib/emails/templates";
-import { getCurrentUser } from "@/lib/auth";
 import { INVITABLE_ROLES, ROLE_LABELS } from "@/lib/permissions";
-import { emailSchema, passwordSchema } from "@/lib/validation";
+import { emailSchema } from "@/lib/validation";
 import { rateLimit } from "@/lib/rate-limit";
 import { bool, dbError, guarded, optStr, uuid } from "./helpers";
 import type { AdminResult } from "./types";
@@ -22,7 +19,7 @@ const likeEmail = (email: string) => email.replace(/[\\%_]/g, (c) => `\\${c}`);
 
 /** A one-time, expiring sign-in link that lands on "choose your password". */
 async function inviteLink(svc: Svc, email: string, fullName: string | null): Promise<{ link: string; userId: string } | { error: string; exists?: boolean }> {
-  const redirectTo = `${env.siteUrl}/admin/accept-invite`;
+  const redirectTo = `${env.siteUrl}/auth/set-password`;
   let res = await svc.auth.admin.generateLink({ type: "invite", email, options: { data: fullName ? { full_name: fullName } : undefined, redirectTo } });
   if (res.error && /already|registered|exists/i.test(res.error.message)) {
     // Already has an account: if it was never confirmed (an earlier invite), send a fresh sign-in link instead.
@@ -33,7 +30,7 @@ async function inviteLink(svc: Svc, email: string, fullName: string | null): Pro
   }
   if (res.error || !res.data?.properties?.hashed_token || !res.data.user) return { error: res.error?.message ?? "Could not create the invitation." };
   const type = res.data.properties.verification_type ?? "invite";
-  const link = `${env.siteUrl}/auth/confirm?token_hash=${encodeURIComponent(res.data.properties.hashed_token)}&type=${encodeURIComponent(type)}&next=/admin/accept-invite`;
+  const link = `${env.siteUrl}/auth/confirm?token_hash=${encodeURIComponent(res.data.properties.hashed_token)}&type=${encodeURIComponent(type)}&next=/auth/set-password`;
   return { link, userId: res.data.user.id };
 }
 
@@ -207,24 +204,3 @@ export async function setDeletePermission(_prev: AdminResult, formData: FormData
 
 // ------------------------------------------------------------- accepting
 /** Called from the invitation link: the invited person chooses their own password. */
-export async function acceptInvite(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
-  const user = await getCurrentUser();
-  if (!user) return { ok: false, message: "Your invitation link has expired. Ask the store owner to send a new one." };
-  const svc = createServiceClient();
-  const { data: staff } = await svc.from("staff_members").select("status").eq("user_id", user.id).maybeSingle();
-  if (!staff || staff.status === "disabled") return { ok: false, message: "This invitation is no longer valid." };
-  const parsed = passwordSchema.safeParse(formData.get("password"));
-  if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message };
-  if (formData.get("password") !== formData.get("confirm")) return { ok: false, message: "Passwords do not match." };
-  const name = optStr(120).parse(formData.get("full_name") ?? "");
-  const supabase = await createClient();
-  const { error } = await supabase.auth.updateUser({ password: parsed.data, ...(name ? { data: { full_name: name } } : {}) });
-  if (error) return { ok: false, message: error.code === "weak_password" ? "Please choose a stronger password." : "Could not save your password. Please try again." };
-  await svc
-    .from("staff_members")
-    .update({ status: "active", accepted_at: new Date().toISOString(), ...(name ? { full_name: name } : {}) })
-    .eq("user_id", user.id)
-    .eq("status", "invited");
-  if (name) await svc.from("profiles").update({ full_name: name }).eq("id", user.id);
-  redirect("/staff/dashboard");
-}

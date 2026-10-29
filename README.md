@@ -68,6 +68,22 @@ Email confirmation is controlled under Authentication → Providers → Email. I
 
 Nobody can give themselves admin access from the website. The `user_roles` table has no write policy, and the grant function can only run from the SQL editor (service role).
 
+### Supabase Auth links (invitations and password resets)
+
+All Supabase Auth emails link to **`/auth/confirm`**. It signs the person in, then sends:
+- invitations to **`/auth/set-password`** (New password + Confirm password; staff then land in the dashboard)
+- password resets to the shop's reset page (or `/auth/set-password`)
+- expired or used links to **`/auth/auth-code-error`**
+
+In the Supabase dashboard:
+1. **Authentication → URL Configuration**: set **Site URL** to `https://attitude-website-iota.vercel.app` (or your custom domain), and add these **Redirect URLs**: `https://attitude-website-iota.vercel.app/auth/confirm` and `https://attitude-website-iota.vercel.app/**`. Also add your custom domain (e.g. `https://attitudecollection.ng/**`) once it's connected.
+2. **Authentication → Emails → Templates**, in each template's link:
+   - **Invite user**: `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite`
+   - **Reset password**: `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/account/reset-password`
+   - **Confirm signup**: `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/account`
+
+Invitations sent from Staff Management already use these links, whether they're emailed through Groundmail or copied by the owner.
+
 ### Staff Management (Product Staff)
 
 The owner (admin) opens **Staff Management** in the dashboard to invite helpers by email. Each person gets their own account: the invite contains a private, single-use link (it expires after the Supabase *Email OTP expiration* time, about an hour by default) where they choose their own password. Never share the owner login.
@@ -293,4 +309,4 @@ docs/DATABASE.md          schema documentation
 - `CRON_SECRET` on Vercel for the daily exchange-rate update (and optionally `EXCHANGE_RATE_API_KEY`). Review the AI-prepared translations, especially checkout and policy text.
 - Optional: Anthropic API key for the Dj Attitude Mini chat (basic mode works without it).
 - Groundmail API key (`GROUNDMAIL_API_KEY`) and a sender on a verified domain (`EMAIL_FROM`) for order receipts, staff invitations and notifications; optionally Groundmail SMTP for Supabase Auth emails.
-- Staff Management and bank transfers: `SUPABASE_SECRET_KEY` and the production `NEXT_PUBLIC_SITE_URL` on Vercel; apply migrations 11–14.
+- Staff Management and bank transfers: `SUPABASE_SECRET_KEY` and the production `NEXT_PUBLIC_SITE_URL` on Vercel; apply migrations 11–14 (12–14 in one go: paste `supabase/manual/live-update-12-13-14.sql` into the Supabase SQL Editor and run it once).

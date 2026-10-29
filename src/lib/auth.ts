@@ -70,7 +70,7 @@ export async function requireStaffPage(permission: Permission | null = "orders:r
   const [roles, permissions] = await Promise.all([getCurrentRoles(), getCurrentPermissions()]);
   if (permissions.length === 0) redirect("/admin/login?error=forbidden");
   // Invited staff choose their own password before using the dashboard.
-  if (roles.includes("product_staff") && (await getStaffRecord())?.status === "invited") redirect("/admin/accept-invite");
+  if (roles.includes("product_staff") && (await getStaffRecord())?.status === "invited") redirect("/auth/set-password");
   if (permission && !permissions.includes(permission)) {
     const home = adminHome(permissions);
     redirect(home === "/admin" ? "/admin?error=forbidden" : home);
