@@ -163,7 +163,16 @@
     "deliveryNote": "تُحسب رسوم ومدة التوصيل لعنوانك عند إتمام الطلب.",
     "policies": "اطّلع على <returns>سياسة الإرجاع</returns> و<shipping>سياسة الشحن</shipping>.",
     "completeLook": "أكمل الإطلالة",
-    "youMayLike": "قد يعجبك أيضًا"
+    "youMayLike": "قد يعجبك أيضًا",
+    "openGallery": "عرض الصور بملء الشاشة",
+    "galleryLabel": "معرض الصور: {name}",
+    "photoOf": "الصورة {current} من {total}",
+    "zoomIn": "تكبير",
+    "zoomOut": "تصغير",
+    "closeGallery": "إغلاق المعرض",
+    "thumbnails": "صور مصغّرة",
+    "showPhoto": "عرض الصورة {n}",
+    "galleryHint": "اضغط مرتين أو باعد بإصبعين للتكبير · اسحب للتصفح · اسحب للأسفل للإغلاق"
   },
   "colors": {
     "black": "أسود",
@@ -334,39 +343,110 @@
     "itemOnly": "لهذا المنتج وحده. تُؤكَّد الرسوم النهائية عند إتمام الطلب."
   },
   "categories": {
-    "men": { "name": "ملابس رجالية", "short": "رجالي" },
-    "women": { "name": "ملابس نسائية", "short": "نسائي" },
-    "bags": { "name": "حقائب", "short": "حقائب" },
-    "womens-shoes": { "name": "أحذية نسائية", "short": "أحذية نسائية" },
-    "sneakers": { "name": "أحذية رياضية", "short": "أحذية رياضية" },
-    "t-shirts": { "name": "تيشيرتات" },
-    "shirts": { "name": "قمصان" },
-    "trousers": { "name": "بناطيل" },
-    "jeans": { "name": "جينز" },
-    "hoodies-sweatshirts": { "name": "هوديز وسويت شيرت" },
-    "jackets-outerwear": { "name": "جاكيتات وملابس خارجية" },
-    "shorts": { "name": "شورتات" },
-    "dresses": { "name": "فساتين" },
-    "tops-blouses": { "name": "بلايز وقمصان نسائية" },
-    "skirts": { "name": "تنانير" },
-    "trousers-jeans": { "name": "بناطيل وجينز" },
-    "matching-sets": { "name": "أطقم متناسقة" },
-    "handbags": { "name": "حقائب يد" },
-    "shoulder-bags": { "name": "حقائب كتف" },
-    "crossbody-bags": { "name": "حقائب كروس" },
-    "tote-bags": { "name": "حقائب توت" },
-    "backpacks": { "name": "حقائب ظهر" },
-    "evening-bags": { "name": "حقائب سهرة" },
-    "heels": { "name": "أحذية بكعب" },
-    "flats": { "name": "أحذية مسطحة" },
-    "sandals": { "name": "صنادل" },
-    "boots": { "name": "أحذية بوت" },
-    "casual-shoes": { "name": "أحذية كاجوال" },
-    "mens-sneakers": { "name": "أحذية رياضية رجالية" },
-    "womens-sneakers": { "name": "أحذية رياضية نسائية" },
-    "unisex-sneakers": { "name": "أحذية رياضية للجنسين" },
-    "casual-sneakers": { "name": "أحذية رياضية كاجوال" },
-    "sport-inspired-sneakers": { "name": "أحذية مستوحاة من الرياضة" }
+    "men": {
+      "name": "ملابس رجالية",
+      "short": "رجالي"
+    },
+    "women": {
+      "name": "ملابس نسائية",
+      "short": "نسائي"
+    },
+    "bags": {
+      "name": "حقائب",
+      "short": "حقائب"
+    },
+    "womens-shoes": {
+      "name": "أحذية نسائية",
+      "short": "أحذية نسائية"
+    },
+    "sneakers": {
+      "name": "أحذية رياضية",
+      "short": "أحذية رياضية"
+    },
+    "t-shirts": {
+      "name": "تيشيرتات"
+    },
+    "shirts": {
+      "name": "قمصان"
+    },
+    "trousers": {
+      "name": "بناطيل"
+    },
+    "jeans": {
+      "name": "جينز"
+    },
+    "hoodies-sweatshirts": {
+      "name": "هوديز وسويت شيرت"
+    },
+    "jackets-outerwear": {
+      "name": "جاكيتات وملابس خارجية"
+    },
+    "shorts": {
+      "name": "شورتات"
+    },
+    "dresses": {
+      "name": "فساتين"
+    },
+    "tops-blouses": {
+      "name": "بلايز وقمصان نسائية"
+    },
+    "skirts": {
+      "name": "تنانير"
+    },
+    "trousers-jeans": {
+      "name": "بناطيل وجينز"
+    },
+    "matching-sets": {
+      "name": "أطقم متناسقة"
+    },
+    "handbags": {
+      "name": "حقائب يد"
+    },
+    "shoulder-bags": {
+      "name": "حقائب كتف"
+    },
+    "crossbody-bags": {
+      "name": "حقائب كروس"
+    },
+    "tote-bags": {
+      "name": "حقائب توت"
+    },
+    "backpacks": {
+      "name": "حقائب ظهر"
+    },
+    "evening-bags": {
+      "name": "حقائب سهرة"
+    },
+    "heels": {
+      "name": "أحذية بكعب"
+    },
+    "flats": {
+      "name": "أحذية مسطحة"
+    },
+    "sandals": {
+      "name": "صنادل"
+    },
+    "boots": {
+      "name": "أحذية بوت"
+    },
+    "casual-shoes": {
+      "name": "أحذية كاجوال"
+    },
+    "mens-sneakers": {
+      "name": "أحذية رياضية رجالية"
+    },
+    "womens-sneakers": {
+      "name": "أحذية رياضية نسائية"
+    },
+    "unisex-sneakers": {
+      "name": "أحذية رياضية للجنسين"
+    },
+    "casual-sneakers": {
+      "name": "أحذية رياضية كاجوال"
+    },
+    "sport-inspired-sneakers": {
+      "name": "أحذية مستوحاة من الرياضة"
+    }
   },
   "cart": {
     "bag": "حقيبة التسوق",

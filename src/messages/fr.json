@@ -163,7 +163,16 @@
     "deliveryNote": "Les frais et délais de livraison sont calculés pour votre adresse au moment du paiement.",
     "policies": "Consultez notre <returns>politique de retour</returns> et notre <shipping>politique de livraison</shipping>.",
     "completeLook": "Complétez le look",
-    "youMayLike": "Vous aimerez aussi"
+    "youMayLike": "Vous aimerez aussi",
+    "openGallery": "Voir les photos en plein écran",
+    "galleryLabel": "Galerie photos : {name}",
+    "photoOf": "Photo {current} sur {total}",
+    "zoomIn": "Zoomer",
+    "zoomOut": "Dézoomer",
+    "closeGallery": "Fermer la galerie",
+    "thumbnails": "Miniatures des photos",
+    "showPhoto": "Afficher la photo {n}",
+    "galleryHint": "Touchez deux fois ou pincez pour zoomer · glissez pour parcourir · glissez vers le bas pour fermer"
   },
   "colors": {
     "black": "Noir",
@@ -334,39 +343,110 @@
     "itemOnly": "Pour cet article seul. Les frais définitifs sont confirmés au paiement."
   },
   "categories": {
-    "men": { "name": "Vêtements homme", "short": "Homme" },
-    "women": { "name": "Vêtements femme", "short": "Femme" },
-    "bags": { "name": "Sacs", "short": "Sacs" },
-    "womens-shoes": { "name": "Chaussures femme", "short": "Chaussures femme" },
-    "sneakers": { "name": "Baskets", "short": "Baskets" },
-    "t-shirts": { "name": "T-shirts" },
-    "shirts": { "name": "Chemises" },
-    "trousers": { "name": "Pantalons" },
-    "jeans": { "name": "Jeans" },
-    "hoodies-sweatshirts": { "name": "Sweats à capuche et sweat-shirts" },
-    "jackets-outerwear": { "name": "Vestes et manteaux" },
-    "shorts": { "name": "Shorts" },
-    "dresses": { "name": "Robes" },
-    "tops-blouses": { "name": "Hauts et chemisiers" },
-    "skirts": { "name": "Jupes" },
-    "trousers-jeans": { "name": "Pantalons et jeans" },
-    "matching-sets": { "name": "Ensembles assortis" },
-    "handbags": { "name": "Sacs à main" },
-    "shoulder-bags": { "name": "Sacs portés épaule" },
-    "crossbody-bags": { "name": "Sacs bandoulière" },
-    "tote-bags": { "name": "Cabas" },
-    "backpacks": { "name": "Sacs à dos" },
-    "evening-bags": { "name": "Sacs de soirée" },
-    "heels": { "name": "Talons" },
-    "flats": { "name": "Ballerines et chaussures plates" },
-    "sandals": { "name": "Sandales" },
-    "boots": { "name": "Bottes" },
-    "casual-shoes": { "name": "Chaussures décontractées" },
-    "mens-sneakers": { "name": "Baskets homme" },
-    "womens-sneakers": { "name": "Baskets femme" },
-    "unisex-sneakers": { "name": "Baskets unisexes" },
-    "casual-sneakers": { "name": "Baskets décontractées" },
-    "sport-inspired-sneakers": { "name": "Baskets d’inspiration sport" }
+    "men": {
+      "name": "Vêtements homme",
+      "short": "Homme"
+    },
+    "women": {
+      "name": "Vêtements femme",
+      "short": "Femme"
+    },
+    "bags": {
+      "name": "Sacs",
+      "short": "Sacs"
+    },
+    "womens-shoes": {
+      "name": "Chaussures femme",
+      "short": "Chaussures femme"
+    },
+    "sneakers": {
+      "name": "Baskets",
+      "short": "Baskets"
+    },
+    "t-shirts": {
+      "name": "T-shirts"
+    },
+    "shirts": {
+      "name": "Chemises"
+    },
+    "trousers": {
+      "name": "Pantalons"
+    },
+    "jeans": {
+      "name": "Jeans"
+    },
+    "hoodies-sweatshirts": {
+      "name": "Sweats à capuche et sweat-shirts"
+    },
+    "jackets-outerwear": {
+      "name": "Vestes et manteaux"
+    },
+    "shorts": {
+      "name": "Shorts"
+    },
+    "dresses": {
+      "name": "Robes"
+    },
+    "tops-blouses": {
+      "name": "Hauts et chemisiers"
+    },
+    "skirts": {
+      "name": "Jupes"
+    },
+    "trousers-jeans": {
+      "name": "Pantalons et jeans"
+    },
+    "matching-sets": {
+      "name": "Ensembles assortis"
+    },
+    "handbags": {
+      "name": "Sacs à main"
+    },
+    "shoulder-bags": {
+      "name": "Sacs portés épaule"
+    },
+    "crossbody-bags": {
+      "name": "Sacs bandoulière"
+    },
+    "tote-bags": {
+      "name": "Cabas"
+    },
+    "backpacks": {
+      "name": "Sacs à dos"
+    },
+    "evening-bags": {
+      "name": "Sacs de soirée"
+    },
+    "heels": {
+      "name": "Talons"
+    },
+    "flats": {
+      "name": "Ballerines et chaussures plates"
+    },
+    "sandals": {
+      "name": "Sandales"
+    },
+    "boots": {
+      "name": "Bottes"
+    },
+    "casual-shoes": {
+      "name": "Chaussures décontractées"
+    },
+    "mens-sneakers": {
+      "name": "Baskets homme"
+    },
+    "womens-sneakers": {
+      "name": "Baskets femme"
+    },
+    "unisex-sneakers": {
+      "name": "Baskets unisexes"
+    },
+    "casual-sneakers": {
+      "name": "Baskets décontractées"
+    },
+    "sport-inspired-sneakers": {
+      "name": "Baskets d’inspiration sport"
+    }
   },
   "cart": {
     "bag": "Panier",

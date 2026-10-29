@@ -163,7 +163,16 @@
     "deliveryNote": "Delivery fees and estimates are calculated for your address at checkout.",
     "policies": "See our <returns>returns policy</returns> and <shipping>shipping policy</shipping>.",
     "completeLook": "Complete the look",
-    "youMayLike": "You may also like"
+    "youMayLike": "You may also like",
+    "openGallery": "View photos full screen",
+    "galleryLabel": "Photo gallery: {name}",
+    "photoOf": "Photo {current} of {total}",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "closeGallery": "Close gallery",
+    "thumbnails": "Photo thumbnails",
+    "showPhoto": "Show photo {n}",
+    "galleryHint": "Double-tap or pinch to zoom · swipe to browse · swipe down to close"
   },
   "colors": {
     "black": "Black",

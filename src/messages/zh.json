@@ -163,7 +163,16 @@
     "deliveryNote": "配送费用和预计时间将在结账时根据您的地址计算。",
     "policies": "请查看我们的<returns>退货政策</returns>和<shipping>配送政策</shipping>。",
     "completeLook": "完成整体造型",
-    "youMayLike": "您可能还喜欢"
+    "youMayLike": "您可能还喜欢",
+    "openGallery": "全屏查看图片",
+    "galleryLabel": "图片库：{name}",
+    "photoOf": "第 {current} 张，共 {total} 张",
+    "zoomIn": "放大",
+    "zoomOut": "缩小",
+    "closeGallery": "关闭图片库",
+    "thumbnails": "图片缩略图",
+    "showPhoto": "查看第 {n} 张",
+    "galleryHint": "双击或双指缩放 · 左右滑动浏览 · 向下滑动关闭"
   },
   "colors": {
     "black": "黑色",
@@ -334,39 +343,110 @@
     "itemOnly": "仅针对此商品。最终运费将在结账时确认。"
   },
   "categories": {
-    "men": { "name": "男装", "short": "男士" },
-    "women": { "name": "女装", "short": "女士" },
-    "bags": { "name": "包袋", "short": "包袋" },
-    "womens-shoes": { "name": "女鞋", "short": "女鞋" },
-    "sneakers": { "name": "运动鞋", "short": "运动鞋" },
-    "t-shirts": { "name": "T 恤" },
-    "shirts": { "name": "衬衫" },
-    "trousers": { "name": "长裤" },
-    "jeans": { "name": "牛仔裤" },
-    "hoodies-sweatshirts": { "name": "连帽衫和卫衣" },
-    "jackets-outerwear": { "name": "夹克和外套" },
-    "shorts": { "name": "短裤" },
-    "dresses": { "name": "连衣裙" },
-    "tops-blouses": { "name": "上衣和衬衫" },
-    "skirts": { "name": "半身裙" },
-    "trousers-jeans": { "name": "长裤和牛仔裤" },
-    "matching-sets": { "name": "套装" },
-    "handbags": { "name": "手提包" },
-    "shoulder-bags": { "name": "单肩包" },
-    "crossbody-bags": { "name": "斜挎包" },
-    "tote-bags": { "name": "托特包" },
-    "backpacks": { "name": "双肩包" },
-    "evening-bags": { "name": "晚宴包" },
-    "heels": { "name": "高跟鞋" },
-    "flats": { "name": "平底鞋" },
-    "sandals": { "name": "凉鞋" },
-    "boots": { "name": "靴子" },
-    "casual-shoes": { "name": "休闲鞋" },
-    "mens-sneakers": { "name": "男士运动鞋" },
-    "womens-sneakers": { "name": "女士运动鞋" },
-    "unisex-sneakers": { "name": "中性运动鞋" },
-    "casual-sneakers": { "name": "休闲运动鞋" },
-    "sport-inspired-sneakers": { "name": "运动风运动鞋" }
+    "men": {
+      "name": "男装",
+      "short": "男士"
+    },
+    "women": {
+      "name": "女装",
+      "short": "女士"
+    },
+    "bags": {
+      "name": "包袋",
+      "short": "包袋"
+    },
+    "womens-shoes": {
+      "name": "女鞋",
+      "short": "女鞋"
+    },
+    "sneakers": {
+      "name": "运动鞋",
+      "short": "运动鞋"
+    },
+    "t-shirts": {
+      "name": "T 恤"
+    },
+    "shirts": {
+      "name": "衬衫"
+    },
+    "trousers": {
+      "name": "长裤"
+    },
+    "jeans": {
+      "name": "牛仔裤"
+    },
+    "hoodies-sweatshirts": {
+      "name": "连帽衫和卫衣"
+    },
+    "jackets-outerwear": {
+      "name": "夹克和外套"
+    },
+    "shorts": {
+      "name": "短裤"
+    },
+    "dresses": {
+      "name": "连衣裙"
+    },
+    "tops-blouses": {
+      "name": "上衣和衬衫"
+    },
+    "skirts": {
+      "name": "半身裙"
+    },
+    "trousers-jeans": {
+      "name": "长裤和牛仔裤"
+    },
+    "matching-sets": {
+      "name": "套装"
+    },
+    "handbags": {
+      "name": "手提包"
+    },
+    "shoulder-bags": {
+      "name": "单肩包"
+    },
+    "crossbody-bags": {
+      "name": "斜挎包"
+    },
+    "tote-bags": {
+      "name": "托特包"
+    },
+    "backpacks": {
+      "name": "双肩包"
+    },
+    "evening-bags": {
+      "name": "晚宴包"
+    },
+    "heels": {
+      "name": "高跟鞋"
+    },
+    "flats": {
+      "name": "平底鞋"
+    },
+    "sandals": {
+      "name": "凉鞋"
+    },
+    "boots": {
+      "name": "靴子"
+    },
+    "casual-shoes": {
+      "name": "休闲鞋"
+    },
+    "mens-sneakers": {
+      "name": "男士运动鞋"
+    },
+    "womens-sneakers": {
+      "name": "女士运动鞋"
+    },
+    "unisex-sneakers": {
+      "name": "中性运动鞋"
+    },
+    "casual-sneakers": {
+      "name": "休闲运动鞋"
+    },
+    "sport-inspired-sneakers": {
+      "name": "运动风运动鞋"
+    }
   },
   "cart": {
     "bag": "购物袋",

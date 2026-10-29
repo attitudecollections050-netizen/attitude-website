@@ -163,7 +163,16 @@
     "deliveryNote": "Los gastos y plazos de envío se calculan para tu dirección al pagar.",
     "policies": "Consulta nuestra <returns>política de devoluciones</returns> y nuestra <shipping>política de envíos</shipping>.",
     "completeLook": "Completa el look",
-    "youMayLike": "También te puede gustar"
+    "youMayLike": "También te puede gustar",
+    "openGallery": "Ver fotos a pantalla completa",
+    "galleryLabel": "Galería de fotos: {name}",
+    "photoOf": "Foto {current} de {total}",
+    "zoomIn": "Acercar",
+    "zoomOut": "Alejar",
+    "closeGallery": "Cerrar galería",
+    "thumbnails": "Miniaturas de las fotos",
+    "showPhoto": "Ver foto {n}",
+    "galleryHint": "Toca dos veces o pellizca para ampliar · desliza para ver más · desliza hacia abajo para cerrar"
   },
   "colors": {
     "black": "Negro",
@@ -334,39 +343,110 @@
     "itemOnly": "Solo para este artículo. El importe final se confirma al pagar."
   },
   "categories": {
-    "men": { "name": "Ropa de hombre", "short": "Hombre" },
-    "women": { "name": "Ropa de mujer", "short": "Mujer" },
-    "bags": { "name": "Bolsos", "short": "Bolsos" },
-    "womens-shoes": { "name": "Zapatos de mujer", "short": "Zapatos de mujer" },
-    "sneakers": { "name": "Zapatillas", "short": "Zapatillas" },
-    "t-shirts": { "name": "Camisetas" },
-    "shirts": { "name": "Camisas" },
-    "trousers": { "name": "Pantalones" },
-    "jeans": { "name": "Vaqueros" },
-    "hoodies-sweatshirts": { "name": "Sudaderas" },
-    "jackets-outerwear": { "name": "Chaquetas y abrigos" },
-    "shorts": { "name": "Pantalones cortos" },
-    "dresses": { "name": "Vestidos" },
-    "tops-blouses": { "name": "Tops y blusas" },
-    "skirts": { "name": "Faldas" },
-    "trousers-jeans": { "name": "Pantalones y vaqueros" },
-    "matching-sets": { "name": "Conjuntos" },
-    "handbags": { "name": "Bolsos de mano" },
-    "shoulder-bags": { "name": "Bolsos de hombro" },
-    "crossbody-bags": { "name": "Bolsos bandolera" },
-    "tote-bags": { "name": "Bolsos tote" },
-    "backpacks": { "name": "Mochilas" },
-    "evening-bags": { "name": "Bolsos de fiesta" },
-    "heels": { "name": "Tacones" },
-    "flats": { "name": "Zapatos planos" },
-    "sandals": { "name": "Sandalias" },
-    "boots": { "name": "Botas" },
-    "casual-shoes": { "name": "Zapatos casual" },
-    "mens-sneakers": { "name": "Zapatillas de hombre" },
-    "womens-sneakers": { "name": "Zapatillas de mujer" },
-    "unisex-sneakers": { "name": "Zapatillas unisex" },
-    "casual-sneakers": { "name": "Zapatillas casual" },
-    "sport-inspired-sneakers": { "name": "Zapatillas de inspiración deportiva" }
+    "men": {
+      "name": "Ropa de hombre",
+      "short": "Hombre"
+    },
+    "women": {
+      "name": "Ropa de mujer",
+      "short": "Mujer"
+    },
+    "bags": {
+      "name": "Bolsos",
+      "short": "Bolsos"
+    },
+    "womens-shoes": {
+      "name": "Zapatos de mujer",
+      "short": "Zapatos de mujer"
+    },
+    "sneakers": {
+      "name": "Zapatillas",
+      "short": "Zapatillas"
+    },
+    "t-shirts": {
+      "name": "Camisetas"
+    },
+    "shirts": {
+      "name": "Camisas"
+    },
+    "trousers": {
+      "name": "Pantalones"
+    },
+    "jeans": {
+      "name": "Vaqueros"
+    },
+    "hoodies-sweatshirts": {
+      "name": "Sudaderas"
+    },
+    "jackets-outerwear": {
+      "name": "Chaquetas y abrigos"
+    },
+    "shorts": {
+      "name": "Pantalones cortos"
+    },
+    "dresses": {
+      "name": "Vestidos"
+    },
+    "tops-blouses": {
+      "name": "Tops y blusas"
+    },
+    "skirts": {
+      "name": "Faldas"
+    },
+    "trousers-jeans": {
+      "name": "Pantalones y vaqueros"
+    },
+    "matching-sets": {
+      "name": "Conjuntos"
+    },
+    "handbags": {
+      "name": "Bolsos de mano"
+    },
+    "shoulder-bags": {
+      "name": "Bolsos de hombro"
+    },
+    "crossbody-bags": {
+      "name": "Bolsos bandolera"
+    },
+    "tote-bags": {
+      "name": "Bolsos tote"
+    },
+    "backpacks": {
+      "name": "Mochilas"
+    },
+    "evening-bags": {
+      "name": "Bolsos de fiesta"
+    },
+    "heels": {
+      "name": "Tacones"
+    },
+    "flats": {
+      "name": "Zapatos planos"
+    },
+    "sandals": {
+      "name": "Sandalias"
+    },
+    "boots": {
+      "name": "Botas"
+    },
+    "casual-shoes": {
+      "name": "Zapatos casual"
+    },
+    "mens-sneakers": {
+      "name": "Zapatillas de hombre"
+    },
+    "womens-sneakers": {
+      "name": "Zapatillas de mujer"
+    },
+    "unisex-sneakers": {
+      "name": "Zapatillas unisex"
+    },
+    "casual-sneakers": {
+      "name": "Zapatillas casual"
+    },
+    "sport-inspired-sneakers": {
+      "name": "Zapatillas de inspiración deportiva"
+    }
   },
   "cart": {
     "bag": "Bolsa de compra",

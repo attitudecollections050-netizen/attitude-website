@@ -1,9 +1,9 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
-import { ArrowRight, ChevronDown, ChevronUp, Minus, PackageSearch, Plus, ShieldCheck, Truck } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronUp, Expand, Minus, PackageSearch, Plus, ShieldCheck, Truck } from "lucide-react";
 import type { ProductDetail } from "@/lib/catalog/types";
 import { sortSizes } from "@/lib/catalog/filters";
 import { useTranslations } from "next-intl";
@@ -12,6 +12,8 @@ import { useColorName } from "@/components/intl/useColorName";
 import { useCart } from "@/components/cart/CartProvider";
 import { SmartImage } from "@/components/ui/SmartImage";
 import { cn } from "@/lib/cn";
+import { ProductLightbox } from "@/components/product/ProductLightbox";
+import { CoverflowGallery } from "@/components/product/CoverflowGallery";
 import { FashionOrbit, LivelyProduct, Sparkle } from "./StageMotion";
 
 type Variant = ProductDetail["variants"][number];
@@ -97,6 +99,8 @@ export function Showcase({ products, mode, maxPerItem, headline, caption, footer
   const [size, setSize] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
   const [imageIndex, setImageIndex] = useState(0);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const closeGallery = useCallback(() => setGalleryOpen(false), []);
   const [error, setError] = useState<string | null>(null);
   const [lastProduct, setLastProduct] = useState(product.id);
   if (lastProduct !== product.id) {
@@ -115,6 +119,8 @@ export function Showcase({ products, mode, maxPerItem, headline, caption, footer
     return untagged.length ? untagged : product.images;
   }, [product.images, color]);
   const image = images[Math.min(imageIndex, Math.max(images.length - 1, 0))] ?? null;
+  // Products with 1–5 photos keep the circular stage; 6 or more get the 3D coverflow.
+  const coverflow = mode === "product" && images.length >= 6;
 
   const forColor = product.variants.filter((v) => !color || v.color === color);
   const sizes = sortSizes([...new Set(forColor.map((v) => v.size).filter(Boolean))] as string[]);
@@ -228,7 +234,18 @@ export function Showcase({ products, mode, maxPerItem, headline, caption, footer
               {total > 1 && counter}
             </div>
 
-            {/* Stage: product in a glowing ring with colour options on an orbit */}
+            {coverflow ? (
+              <div className="relative min-w-0">
+                <CoverflowGallery
+                  images={images.map((i) => ({ id: i.id, url: i.url, alt: i.alt || product.name }))}
+                  index={Math.min(imageIndex, images.length - 1)}
+                  onIndexChange={setImageIndex}
+                  onOpen={() => setGalleryOpen(true)}
+                  title={product.name}
+                />
+              </div>
+            ) : (
+            /* Stage: product in a glowing ring with colour options on an orbit */
             <div className="relative mx-auto mb-8 aspect-square w-full max-w-[34rem] [--r:9.5rem] sm:[--r:13rem] lg:max-w-none lg:[--r:11.5rem] xl:[--r:14.5rem] 2xl:[--r:16rem]">
               {/* rings */}
               <div className="absolute left-1/2 top-1/2 size-[calc(var(--r)*2)] -translate-x-1/2 -translate-y-1/2 rounded-full border border-plum/10" aria-hidden />
@@ -247,7 +264,11 @@ export function Showcase({ products, mode, maxPerItem, headline, caption, footer
 
               {/* product photo: floats, tilts toward the pointer, swipe to change */}
               <div className="absolute left-1/2 top-1/2 size-[calc(var(--r)*2-3.5rem)] -translate-x-1/2 -translate-y-1/2">
-              <LivelyProduct onSwipe={total > 1 ? (dir) => go(dir) : undefined} className="relative size-full cursor-grab select-none active:cursor-grabbing">
+              <LivelyProduct
+                onSwipe={total > 1 ? (dir) => go(dir) : undefined}
+                onTap={mode === "product" && image ? () => setGalleryOpen(true) : undefined}
+                className={cn("relative size-full select-none", mode === "product" && image ? "cursor-zoom-in" : "cursor-grab active:cursor-grabbing")}
+              >
               <div className="absolute inset-0 overflow-hidden rounded-full bg-neutral shadow-[0_25px_60px_-25px_rgba(37,25,35,0.45)]">
                 <AnimatePresence mode="popLayout" initial={false}>
                   <m.div key={`${product.id}-${image?.id ?? "x"}`} className="absolute inset-0" {...blurIn}>
@@ -265,6 +286,16 @@ export function Showcase({ products, mode, maxPerItem, headline, caption, footer
                 </AnimatePresence>
               </div>
               </LivelyProduct>
+              {mode === "product" && image && (
+                <button
+                  type="button"
+                  onClick={() => setGalleryOpen(true)}
+                  className="absolute bottom-[6%] right-[6%] z-10 grid size-11 place-items-center rounded-[1.15rem_0.45rem_1.15rem_0.45rem] bg-white/90 text-plum shadow-[0_10px_24px_-10px_rgba(37,25,35,0.6)] backdrop-blur transition-[border-radius,background-color,color,transform] duration-300 hover:scale-105 hover:rounded-[0.45rem_1.15rem_0.45rem_1.15rem] hover:bg-plum hover:text-white"
+                  aria-label={t("openGallery")}
+                >
+                  <Expand className="size-4" aria-hidden />
+                </button>
+              )}
               </div>
               {total > 1 && (
                 <p className="pointer-events-none absolute inset-x-0 -bottom-9 text-center text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted" aria-hidden>
@@ -320,6 +351,7 @@ export function Showcase({ products, mode, maxPerItem, headline, caption, footer
                 </div>
               )}
             </div>
+            )}
 
             {/* Details panel */}
             <div className="flex flex-col justify-center" aria-live="polite">
@@ -344,7 +376,7 @@ export function Showcase({ products, mode, maxPerItem, headline, caption, footer
 
               {/* mobile colour row */}
               {colors.length > 0 && (
-                <div className="mt-6 sm:hidden" role="radiogroup" aria-label={t("colour")}>
+                <div className={cn("mt-6", !coverflow && "sm:hidden")} role="radiogroup" aria-label={t("colour")}>
                   <p className="eyebrow text-[0.62rem]">{t("colour")} · <span className="normal-case tracking-normal text-muted">{color ? colorName(color) : ""}</span></p>
                   <div className="mt-3 flex flex-wrap gap-3">
                     {colors.map((c) => (
@@ -465,6 +497,16 @@ export function Showcase({ products, mode, maxPerItem, headline, caption, footer
         <p className="sr-only" aria-live="polite">
           {`Showing ${index + 1} of ${products.length}: ${product.name}`}
         </p>
+      )}
+      {mode === "product" && (
+        <ProductLightbox
+          open={galleryOpen}
+          images={images.map((i) => ({ id: i.id, url: i.url, alt: i.alt || product.name }))}
+          index={Math.min(imageIndex, Math.max(images.length - 1, 0))}
+          onIndexChange={setImageIndex}
+          onClose={closeGallery}
+          title={product.name}
+        />
       )}
     </section>
   );

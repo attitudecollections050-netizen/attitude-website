@@ -85,7 +85,7 @@ export function Sparkle() {
  * Wraps the product photo: it floats gently, tilts in 3D toward the pointer,
  * and can be dragged/swiped sideways to move to the next or previous item.
  */
-export function LivelyProduct({ children, onSwipe, className }: { children: React.ReactNode; onSwipe?: (dir: 1 | -1) => void; className?: string }) {
+export function LivelyProduct({ children, onSwipe, onTap, className }: { children: React.ReactNode; onSwipe?: (dir: 1 | -1) => void; onTap?: () => void; className?: string }) {
   const reduce = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
   const px = useMotionValue(0);
@@ -94,7 +94,7 @@ export function LivelyProduct({ children, onSwipe, className }: { children: Reac
   const rotateY = useSpring(useTransform(px, [-0.5, 0.5], [-10, 10]), { stiffness: 150, damping: 18 });
   const rotateX = useSpring(useTransform(py, [-0.5, 0.5], [8, -8]), { stiffness: 150, damping: 18 });
   const dragRotate = useTransform(dragX, [-160, 160], [-8, 8]);
-  const start = useRef<{ x: number; id: number } | null>(null);
+  const start = useRef<{ x: number; y: number; t: number; id: number } | null>(null);
 
   const reset = () => {
     px.set(0);
@@ -115,19 +115,21 @@ export function LivelyProduct({ children, onSwipe, className }: { children: Reac
           px.set((e.clientX - r.left) / r.width - 0.5);
           py.set((e.clientY - r.top) / r.height - 0.5);
         }
-        if (start.current && start.current.id === e.pointerId) dragX.set((e.clientX - start.current.x) * 0.6);
+        if (onSwipe && start.current && start.current.id === e.pointerId) dragX.set((e.clientX - start.current.x) * 0.6);
       }}
       onPointerDown={(e) => {
-        if (!onSwipe) return;
-        start.current = { x: e.clientX, id: e.pointerId };
+        if (!onSwipe && !onTap) return;
+        start.current = { x: e.clientX, y: e.clientY, t: Date.now(), id: e.pointerId };
         (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
       }}
       onPointerUp={(e) => {
         const s = start.current;
         start.current = null;
-        if (s && onSwipe) {
+        if (s) {
           const dx = e.clientX - s.x;
-          if (Math.abs(dx) > 60) onSwipe(dx < 0 ? 1 : -1);
+          // A short, still press is a tap (opens the full-screen gallery); a long sideways drag is a swipe.
+          if (onTap && Math.hypot(dx, e.clientY - s.y) < 8 && Date.now() - s.t < 450) onTap();
+          else if (onSwipe && Math.abs(dx) > 60) onSwipe(dx < 0 ? 1 : -1);
         }
         animate(dragX, 0, { type: "spring", stiffness: 260, damping: 22 });
       }}
