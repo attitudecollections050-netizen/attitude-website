@@ -2,10 +2,12 @@
 
 import { useEffect, useId, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { m, useReducedMotion } from "motion/react";
+import { AnimatePresence, m, useReducedMotion } from "motion/react";
 import { MotionProvider } from "@/components/ui/MotionProvider";
 import { WhatsAppIcon } from "@/components/ui/WhatsAppLink";
 import { launchTime } from "@/lib/launch";
+import { createLaunchSound, type LaunchSound } from "@/lib/audio/launchSound";
+import { Bag, Bubble, ChatDuo, Girl, LINES, Sneaker, TIWA, Tee, ZARA, useChat } from "@/components/launch/AnimeChat";
 import { cn } from "@/lib/cn";
 
 // ---------- time ----------
@@ -47,6 +49,52 @@ function useCountdown() {
 }
 
 const pad = (n: number | undefined) => (n === undefined ? "--" : String(n).padStart(2, "0"));
+
+/** Sound on/off (starts from a tap), the chat line, and the tick + voices that go with them. */
+function useLaunchAudio(seconds: number | undefined) {
+  const [sound, setSound] = useState<LaunchSound | null>(null);
+  const [run, setRun] = useState(0);
+  const index = useChat(run);
+  const toggle = async () => {
+    if (sound) {
+      sound.stop();
+      setSound(null);
+      return;
+    }
+    const s = createLaunchSound();
+    if (!s) return;
+    await s.start();
+    setSound(s);
+    setRun((r) => r + 1);
+  };
+  useEffect(() => () => sound?.stop(), [sound]);
+  useEffect(() => {
+    if (seconds !== undefined) sound?.tick();
+  }, [seconds, sound]);
+  useEffect(() => {
+    if (!sound) return;
+    sound.chime();
+    sound.speak(LINES[index].text, LINES[index].who);
+  }, [index, sound]);
+  return { on: Boolean(sound), toggle, index };
+}
+
+function SoundButton({ on, toggle, className }: { on: boolean; toggle: () => void; className?: string }) {
+  return (
+    <m.button
+      type="button"
+      onClick={toggle}
+      whileTap={{ scale: 0.92 }}
+      animate={on ? undefined : { scale: [1, 1.08, 1] }}
+      transition={{ duration: 1.2, repeat: Infinity }}
+      className={cn("inline-flex items-center gap-2 rounded-full border-2 border-white bg-white/85 px-4 py-2 text-xs font-bold uppercase tracking-[0.15em] text-[#C71585] shadow-lg backdrop-blur", className)}
+      aria-pressed={on}
+      data-testid="sound-toggle"
+    >
+      <span aria-hidden className="text-base">{on ? "🔊" : "🔈"}</span> {on ? "Sound on" : "Tap for sound"}
+    </m.button>
+  );
+}
 
 // ---------- type styles ----------
 
@@ -395,6 +443,7 @@ export function ComingSoon({ whatsappHref }: { whatsappHref: string | null }) {
   const t = useCountdown();
   const reduce = useReducedMotion() ?? false;
   const router = useRouter();
+  const audio = useLaunchAudio(t?.seconds);
   const done = t?.left === 0;
   useEffect(() => {
     if (done) router.replace("/");
@@ -404,6 +453,7 @@ export function ComingSoon({ whatsappHref }: { whatsappHref: string | null }) {
     <MotionProvider>
       <main className="relative isolate flex min-h-dvh flex-col items-center justify-center overflow-hidden px-4 py-8 text-[15px] sm:text-[18px]" data-testid="coming-soon">
         <Backdrop still={reduce} />
+        <SoundButton on={audio.on} toggle={audio.toggle} className="fixed bottom-4 right-4 z-20" />
         <m.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="relative w-full max-w-xl">
           <Brand />
           <h1 className="mt-4 text-center font-display text-[2em] font-bold leading-tight sm:text-[2.4em]">
@@ -441,6 +491,10 @@ export function ComingSoon({ whatsappHref }: { whatsappHref: string | null }) {
               </m.a>
             </div>
           )}
+
+          <section className="mx-auto mt-8 max-w-md rounded-[1.8rem] border-2 border-white/80 bg-white/30 p-4 text-[13px] shadow-[0_20px_50px_rgba(199,21,133,0.3)] backdrop-blur-md sm:text-[15px]">
+            <ChatDuo index={audio.index} />
+          </section>
         </m.div>
       </main>
     </MotionProvider>
@@ -494,6 +548,112 @@ export function StatusCountdown() {
 }
 
 /** WhatsApp poster, 1080×1920 (/coming-soon/poster): "launches tonight 10PM" with the hourglass and live boxes. */
+/** Anime boutique scene for a WhatsApp Status recording (/coming-soon/story): the two girls chat about the launch. */
+export function LaunchStory() {
+  const t = useCountdown();
+  const audio = useLaunchAudio(t?.seconds);
+  const [rec, setRec] = useState(false);
+  useEffect(() => {
+    // ?rec=1 hides the "tap for sound" button for a clean recording.
+    if (new URLSearchParams(window.location.search).has("rec")) setRec(true); // eslint-disable-line react-hooks/set-state-in-effect
+  }, []);
+  const line = LINES[audio.index];
+  const hours = t ? t.days * 24 + t.hours : undefined;
+  return (
+    <Frame916 testId="story-frame">
+      {/* boutique wall + floor */}
+      <div aria-hidden className="absolute inset-0 bg-[repeating-linear-gradient(90deg,rgba(255,255,255,0.12)_0_60px,transparent_60px_120px)]" />
+      <div aria-hidden className="absolute inset-x-0 bottom-0 h-[420px] bg-gradient-to-b from-[#F3A9C8] to-[#E98AB5]" />
+      {/* string lights */}
+      <svg aria-hidden viewBox="0 0 1080 120" className="absolute inset-x-0 top-0 w-full">
+        <path d="M0 20 Q540 120 1080 20" fill="none" stroke="#8d5a6e" strokeWidth="3" />
+      </svg>
+      {Array.from({ length: 15 }, (_, i) => {
+        const x = (i + 0.5) * 72;
+        const y = 20 + 100 * (1 - ((x - 540) / 540) ** 2) * 0.5;
+        return (
+          <m.span
+            key={i}
+            aria-hidden
+            className="absolute size-[22px] rounded-full bg-[#FFF3B0]"
+            style={{ left: x - 11, top: y, boxShadow: "0 0 18px 6px rgba(255,236,150,0.85)" }}
+            animate={{ opacity: [1, 0.45, 1] }}
+            transition={{ duration: 1.4, repeat: Infinity, delay: (i % 4) * 0.3 }}
+          />
+        );
+      })}
+      {/* neon sign */}
+      <m.div
+        className="absolute left-1/2 top-[120px] w-[940px] -translate-x-1/2 whitespace-nowrap rounded-[60px] border-[8px] border-[#FFD1E8] bg-[#C2185B]/25 px-6 py-8 text-center font-sans font-extrabold leading-[1.05] backdrop-blur-sm"
+        style={{ boxShadow: "0 0 30px #ff4fb0, 0 0 70px #ff1493, inset 0 0 40px rgba(255,79,176,0.7)" }}
+        animate={{ opacity: [1, 1, 0.82, 1] }}
+        transition={{ duration: 2.6, repeat: Infinity, times: [0, 0.8, 0.84, 1] }}
+      >
+        <p className="text-[104px]"><Neon>COMING SOON</Neon></p>
+        <p className="text-[104px]"><Neon>TONIGHT 10PM</Neon></p>
+      </m.div>
+      {/* shelves */}
+      <div aria-hidden className="absolute left-[24px] top-[520px] w-[300px]">
+        <div className="h-[8px] rounded bg-[#9b6b80]" />
+        <div className="flex justify-around">
+          {["#FBB6D2", "#ffffff", "#F48FB8"].map((c, i) => (
+            <m.div key={i} animate={{ rotate: [-3, 3, -3] }} transition={{ duration: 3 + i, repeat: Infinity }} style={{ originY: 0 }}>
+              <Tee color={c} className="w-[90px]" />
+            </m.div>
+          ))}
+        </div>
+        <div className="mt-16 h-[8px] rounded bg-[#9b6b80]" />
+        <div className="flex justify-around">
+          {["#9BB4E8", "#7c8fb5", "#cfd8ea"].map((c, i) => (
+            <Tee key={i} color={c} className="w-[90px]" />
+          ))}
+        </div>
+      </div>
+      <div aria-hidden className="absolute right-[24px] top-[520px] w-[300px]">
+        <div className="flex items-end justify-around">
+          <Bag color="#F48FB8" className="w-[90px]" />
+          <Bag color="#ffffff" className="w-[76px]" />
+          <Bag color="#C9A7E8" className="w-[86px]" />
+        </div>
+        <div className="h-[10px] rounded bg-[#9b6b80]" />
+        <div className="mt-20 flex items-end justify-around">
+          <Sneaker color="#FF6FAE" className="w-[120px]" />
+          <Sneaker color="#8EA6E8" className="w-[120px]" />
+        </div>
+        <div className="h-[10px] rounded bg-[#9b6b80]" />
+      </div>
+      {/* speech bubble */}
+      <div className="absolute inset-x-[60px] top-[790px] h-[240px] text-[40px]">
+        <AnimatePresence mode="wait">
+          <div key={audio.index} className={cn("absolute bottom-0 w-[760px]", line.who === 0 ? "left-0" : line.who === 1 ? "right-0" : "left-[120px]")}>
+            <Bubble text={line.text} side={line.who === 0 ? "left" : line.who === 1 ? "right" : "center"} />
+          </div>
+        </AnimatePresence>
+      </div>
+      {/* the girls */}
+      <div className="absolute inset-x-[70px] top-[1050px] flex items-end justify-between">
+        <Girl look={TIWA} talking={line.who !== 1} className="w-[360px]" />
+        <Girl look={ZARA} talking={line.who !== 0} className="w-[360px]" flip />
+      </div>
+      {/* crystal timer */}
+      <div
+        className="absolute left-1/2 top-[1590px] -translate-x-1/2 rounded-[30px] border-[6px] border-white/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.75),rgba(255,182,217,0.55),rgba(255,255,255,0.8))] px-12 py-3 shadow-[0_0_50px_rgba(255,255,255,0.9)]"
+        data-testid="story-timer"
+      >
+        <span className="font-mono text-[96px] font-bold tabular-nums" style={NEON}>
+          {pad(hours)}:{pad(t?.minutes)}:{pad(t?.seconds)}
+        </span>
+      </div>
+      {/* banner */}
+      <div className="absolute inset-x-[40px] bottom-[36px] rounded-[40px] border-[5px] border-white bg-gradient-to-r from-[#FF8CC6] via-[#FFB6D9] to-[#FF8CC6] px-6 py-5 text-center shadow-[0_10px_40px_rgba(199,21,133,0.4)]">
+        <p className="font-display text-[56px] font-bold leading-tight text-[#8E1B54]">Thursday Oct 29 · 10PM WAT</p>
+        <p className="text-[34px] font-extrabold uppercase tracking-[0.12em] text-white drop-shadow">Don&rsquo;t miss it • Attitude Collections</p>
+      </div>
+      {!rec && <SoundButton on={audio.on} toggle={audio.toggle} className="absolute right-6 top-6 z-20 text-[28px]" />}
+    </Frame916>
+  );
+}
+
 export function LaunchPoster() {
   const t = useCountdown();
   return (
