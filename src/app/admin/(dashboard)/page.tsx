@@ -1,3 +1,6 @@
+import { categoryOptions } from "@/lib/admin/categories";
+import { QuickAddProduct } from "@/components/admin/QuickAddProduct";
+import { isStoreOwner } from "@/lib/owner";
 import { getSettings } from "@/lib/settings";
 import { bankTransferActive } from "@/lib/payments/bank-transfer";
 import { isEmailConfigured } from "@/lib/groundmail";
@@ -17,7 +20,7 @@ export const metadata = { title: "Overview" };
 interface Stats {
   total_orders: number;
   paid_orders: number;
-  revenue: number;
+  revenue: number | null;
   pending_fulfilment: number;
   inventory_conflicts: number;
   products_in_stock: number;
@@ -27,13 +30,17 @@ interface Stats {
 }
 
 export default async function AdminOverview({ searchParams }: PageProps<"/admin">) {
-  const { permissions } = await requireStaffPage();
+  const { user, roles, permissions } = await requireStaffPage();
+  // Sales revenue is only for the store owner (the database also withholds it from everyone else).
+  const owner = isStoreOwner(user.email, roles);
   const sp = await searchParams;
   const db = await createClient();
   const canVerify = permissions.includes("payments:verify");
-  const [settings, pendingTransfers] = await Promise.all([
+  const canAddProducts = permissions.includes("products:write");
+  const [settings, pendingTransfers, categories] = await Promise.all([
     getSettings(),
     canVerify ? db.from("payment_claims").select("id", { count: "exact", head: true }).eq("status", "pending").then((r) => r.count ?? 0) : Promise.resolve(0),
+    canAddProducts ? categoryOptions() : Promise.resolve([]),
   ]);
   const [{ data: stats }, { data: recent }, { data: low }] = await Promise.all([
     db.rpc("admin_dashboard_stats"),
@@ -52,7 +59,7 @@ export default async function AdminOverview({ searchParams }: PageProps<"/admin"
   const tiles = [
     { label: "Total orders", value: s.total_orders ?? 0, href: "/admin/orders" },
     { label: "Paid orders", value: s.paid_orders ?? 0, href: "/admin/orders?payment=paid" },
-    { label: "Sales revenue", value: formatMoney(s.revenue ?? 0), note: "Paid orders, excluding refunds" },
+    ...(owner && s.revenue != null ? [{ label: "Sales revenue", value: formatMoney(s.revenue), note: "Paid orders, excluding refunds" }] : []),
     { label: "Pending fulfilment", value: s.pending_fulfilment ?? 0, href: "/admin/orders?status=to_fulfil" },
     { label: "Products in stock", value: s.products_in_stock ?? 0, href: "/admin/products?stock=in" },
     { label: "Low-stock variants", value: s.low_stock_variants ?? 0, href: "/admin/products?stock=low" },
@@ -62,6 +69,11 @@ export default async function AdminOverview({ searchParams }: PageProps<"/admin"
   return (
     <div className="space-y-8">
       <PageHeader title="Overview" description="Live figures from your store database." />
+      {canAddProducts && (
+        <Card title="Add a product" description="Name, price, category and a photo. You'll add sizes, colours and stock on the next page.">
+          <QuickAddProduct categories={categories} />
+        </Card>
+      )}
       {sp.error === "forbidden" && <Notice tone="error">You don&apos;t have permission to open that section.</Notice>}
 
       <div className="space-y-3">

@@ -50,6 +50,46 @@ export async function createProduct(_prev: AdminResult, formData: FormData): Pro
   return result;
 }
 
+/**
+ * Quick add from the dashboard: name, price, category and an optional photo. The product
+ * starts as a draft (the database records who added it); the edit page opens next to add
+ * sizes, colours and stock before publishing.
+ */
+export async function quickAddProduct(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
+  let newId: string | null = null;
+  const result = await guarded("products:write", async ({ db }) => {
+    const input = z.object({ name: str(140).min(2, "Name is required"), price: money, category_id: uuid }).parse({
+      name: formData.get("name"),
+      price: formData.get("price"),
+      category_id: formData.get("category_id"),
+    });
+    const base = slugify(input.name) || "product";
+    let created: { id: string } | null = null;
+    for (let attempt = 0; attempt < 3 && !created; attempt++) {
+      const finalSlug = slug.parse(attempt === 0 ? base : `${base}-${randomUUID().slice(0, 4)}`);
+      const { data, error } = await db.from("products").insert({ ...input, slug: finalSlug, description: "", status: "draft" }).select("id").single();
+      if (error && error.code !== "23505") return dbError(error);
+      created = data;
+    }
+    if (!created) return { ok: false, message: "A product with that name already exists." };
+    newId = created.id;
+
+    const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
+    if (files.length) {
+      const fd = new FormData();
+      fd.set("product_id", created.id);
+      fd.set("alt", input.name);
+      files.forEach((f) => fd.append("files", f));
+      const up = await uploadProductImages(null, fd);
+      if (up && !up.ok) return { ok: false, message: `Product saved as a draft, but the photo wasn't added: ${up.message}` };
+    }
+    revalidateProduct();
+    return { ok: true, message: "Product added." };
+  });
+  if (newId && result?.ok) redirect(`/admin/products/${newId}?created=1`);
+  return result;
+}
+
 export async function updateProduct(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
   return guarded("products:write", async ({ db }) => {
     const id = uuid.parse(formData.get("id"));

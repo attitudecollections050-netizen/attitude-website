@@ -1,3 +1,5 @@
+import { categoryOptions } from "@/lib/admin/categories";
+import { QuickAddProduct } from "@/components/admin/QuickAddProduct";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireStaffPage } from "@/lib/auth";
@@ -30,6 +32,7 @@ export default async function StaffDashboardPage({ searchParams }: PageProps<"/s
   }
 
   const db = await createClient();
+  const categories = isOwner ? [] : await categoryOptions();
   const [{ data: staff }, { data: stats, error: statsError }, { data: products }] = await Promise.all([
     db.from("staff_members").select("full_name, email").eq("user_id", targetId).maybeSingle(),
     // The database refuses anyone else's numbers unless the caller is the owner.
@@ -42,7 +45,7 @@ export default async function StaffDashboardPage({ searchParams }: PageProps<"/s
   const row = (stats as { products_added: number; live_products: number }[] | null)?.[0];
   const added = row?.products_added ?? 0;
   const live = row?.live_products ?? 0;
-  const e = earningsFor(live);
+  const e = earningsFor(added);
   const name = staff?.full_name || (!isOwner ? (user.user_metadata?.full_name as string | undefined) : undefined) || "there";
   const email = staff?.email ?? user.email ?? "";
   const reward = formatMoney(REWARD_KOBO);
@@ -59,6 +62,13 @@ export default async function StaffDashboardPage({ searchParams }: PageProps<"/s
         <p className="mt-1 text-sm text-black/60">{email}</p>
       </div>
 
+      {!isOwner && (
+        <section aria-labelledby="quick-add-h" className="border border-black p-6">
+          <h2 id="quick-add-h" className="text-[11px] font-bold uppercase tracking-[0.18em]">Add a product</h2>
+          <div className="mt-4"><QuickAddProduct categories={categories} /></div>
+        </section>
+      )}
+
       <section id="earnings" className="grid scroll-mt-6 gap-px border border-black bg-black sm:grid-cols-3" aria-label="My earnings">
         <div className="bg-white p-6">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/50">Products added</p>
@@ -68,7 +78,7 @@ export default async function StaffDashboardPage({ searchParams }: PageProps<"/s
         <div className="bg-white p-6">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/50">Total earned</p>
           <p className="mt-3 text-5xl font-extrabold tracking-tight text-success" data-testid="earned">{formatMoney(e.earnedKobo)}</p>
-          <p className="mt-1 text-xs text-black/60">{reward} per {PRODUCTS_PER_REWARD} live products</p>
+          <p className="mt-1 text-xs text-black/60">{reward} for every {PRODUCTS_PER_REWARD} products you add</p>
         </div>
         <div className="bg-white p-6">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/50">Next payout</p>
@@ -120,7 +130,7 @@ export default async function StaffDashboardPage({ searchParams }: PageProps<"/s
       <aside className="border border-black bg-neutral p-6">
         <p className="text-[11px] font-bold uppercase tracking-[0.18em]">How you earn</p>
         <p className="mt-2 text-sm">
-          {reward} for every {PRODUCTS_PER_REWARD} products you add that are live in the store. Drafts count once they&apos;re published; archived products don&apos;t count. Keep adding!
+          {reward} for every {PRODUCTS_PER_REWARD} products you add. Archived products don&apos;t count. Keep adding!
         </p>
       </aside>
     </div>

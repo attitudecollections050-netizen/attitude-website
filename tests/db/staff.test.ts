@@ -186,6 +186,21 @@ run("database: staff roles (owner vs Product Staff)", () => {
     expect(all.rows.map((r) => r.user_id)).toEqual(expect.arrayContaining([staffer, deleter, owner]));
   });
 
+  it("sales revenue is for the store owner only", async () => {
+    // The store's own owner address gets revenue; another admin and order staff don't.
+    const storeOwner = await createUser(db, "attitudecollections050@gmail.com");
+    await db.query(`select public.grant_role_by_email('attitudecollections050@gmail.com', 'admin')`);
+    const orderStaff = await createUser(db, "orders-team@example.com");
+    await db.query(`select public.grant_role_by_email('orders-team@example.com', 'staff')`);
+    const stats = async (id: string) => (await as(db, user(id), () => db.query(`select public.admin_dashboard_stats() as s`))).rows[0].s;
+    expect(typeof (await stats(storeOwner)).revenue).toBe("number");
+    expect((await stats(owner)).revenue).toBeNull();
+    expect((await stats(orderStaff)).revenue).toBeNull();
+    expect((await stats(orderStaff)).total_orders).toBeTypeOf("number");
+    await expect(as(db, user(staffer), () => db.query(`select public.admin_dashboard_stats()`))).rejects.toThrow(/forbidden/);
+    await db.query(`delete from user_roles where user_id = any($1::uuid[])`, [[storeOwner, orderStaff]]);
+  });
+
   it("the owner keeps full access and can't be removed or turned into staff", async () => {
     expect((await newProduct(owner, "owner-made")).rowCount).toBe(1);
     expect((await as(db, user(owner), () => db.query(`select * from staff_members`))).rowCount).toBe(3);

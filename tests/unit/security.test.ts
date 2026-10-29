@@ -74,6 +74,16 @@ describe("staff roles", async () => {
   });
 });
 
+describe("store owner", () => {
+  it("needs the owner role and the owner's address", async () => {
+    const { isStoreOwner } = await import("@/lib/owner");
+    expect(isStoreOwner("AttitudeCollections050@gmail.com ", ["admin"])).toBe(true);
+    expect(isStoreOwner("attitudecollections050@gmail.com", ["staff"])).toBe(false);
+    expect(isStoreOwner("someone@example.com", ["admin"])).toBe(false);
+    expect(isStoreOwner(null, ["admin"])).toBe(false);
+  });
+});
+
 describe("staff earnings", () => {
   it("pays ₦1,000 per 10 live products and shows progress", async () => {
     const { earningsFor } = await import("@/lib/staff-earnings");

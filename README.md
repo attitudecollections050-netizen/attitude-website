@@ -84,13 +84,22 @@ In the Supabase dashboard:
 
 Invitations sent from Staff Management already use these links, whether they're emailed through Groundmail or copied by the owner.
 
+### Signing in as the owner or staff
+
+The owner and staff can sign in on the shop's normal **Sign in** page or at `/admin/login`:
+- the owner and order staff land on **/admin**
+- Product Staff land on **/staff/dashboard**
+- customers go to **My Account**
+
+Roles live in the protected `user_roles` table, not `profiles`, so nobody can give themselves a role. The Overview and the staff dashboard both have a quick **Add a product** card (name, price, category, photo). It saves a draft, records who added it, and opens the product so you can add sizes, colours and stock before publishing.
+
 ### Staff Management (Product Staff)
 
 The owner (admin) opens **Staff Management** in the dashboard to invite helpers by email. Each person gets their own account: the invite contains a private, single-use link (it expires after the Supabase *Email OTP expiration* time, about an hour by default) where they choose their own password. Never share the owner login.
 
 - **Product Staff** can add and edit products: names, descriptions, prices, categories, sizes, colours, stock and images. They can publish or archive products. They can delete products only if the owner ticks **Allow deleting** for that person (off by default).
 - **Each person sees only the products they added.** The database records who added every product (it can't be faked or changed), and Product Staff can open, edit, stock and add images only to their own products.
-- **Staff dashboard** (`/staff/dashboard`): after accepting the invite or signing in, Product Staff land on their own dashboard. It shows products added, total earned (₦1,000 for every 10 of their products that are live in the store), progress to the next ₦1,000 and a list of their products. The reward rule is in `src/lib/staff-earnings.ts`. Staff can never see other people's earnings or store revenue. In Staff Management the owner sees everyone's products added and earnings, and **View as staff** opens a read-only copy of a person's dashboard.
+- **Staff dashboard** (`/staff/dashboard`): after accepting the invite or signing in, Product Staff land on their own dashboard. It shows products added, total earned (₦1,000 for every 10 products they add; archived products don't count), progress to the next ₦1,000 and a list of their products. The reward rule is in `src/lib/staff-earnings.ts`. Staff can never see other people's earnings or store revenue: sales revenue on the Overview is shown only to the store owner (owner role and attitudecollections050@gmail.com), and the database withholds it from everyone else. In Staff Management the owner sees everyone's products added and earnings, and **View as staff** opens a read-only copy of a person's dashboard.
 - Besides their dashboard, they see only **Products**. Orders, payments, customers, settings, shipping, discounts, analytics, suppliers, Staff Management and your account all redirect them away. The server actions, export APIs and database (RLS) policies refuse them too, so typing a URL or calling the API directly doesn't help. Supplier costs are hidden on their product pages.
 - **Disable** cuts access immediately (role removed, login blocked). **Enable** restores it. **Remove** deletes the staff record, and deletes the login too if it was created by the invite. If you invite an existing customer, they keep their own shopping account.
 - The owner role can't be removed or downgraded (a database trigger blocks it), and the owner can't be invited as staff.
@@ -309,4 +318,4 @@ docs/DATABASE.md          schema documentation
 - `CRON_SECRET` on Vercel for the daily exchange-rate update (and optionally `EXCHANGE_RATE_API_KEY`). Review the AI-prepared translations, especially checkout and policy text.
 - Optional: Anthropic API key for the Dj Attitude Mini chat (basic mode works without it).
 - Groundmail API key (`GROUNDMAIL_API_KEY`) and a sender on a verified domain (`EMAIL_FROM`) for order receipts, staff invitations and notifications; optionally Groundmail SMTP for Supabase Auth emails.
-- Staff Management and bank transfers: `SUPABASE_SECRET_KEY` and the production `NEXT_PUBLIC_SITE_URL` on Vercel; apply migrations 11–14 (12–14 in one go: paste `supabase/manual/live-update-12-13-14.sql` into the Supabase SQL Editor and run it once).
+- Staff Management and bank transfers: `SUPABASE_SECRET_KEY` and the production `NEXT_PUBLIC_SITE_URL` on Vercel; apply migrations 11–15 (12–15 in one go: paste `supabase/manual/live-update-12-to-15.sql` into the Supabase SQL Editor and run it once).

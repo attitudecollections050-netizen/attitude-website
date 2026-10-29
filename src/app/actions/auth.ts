@@ -8,6 +8,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { attachCartToUser } from "@/lib/cart/server";
 import { emailSchema, fieldErrors, loginSchema, passwordSchema, registerSchema, safeNextPath, addressSchema, phoneSchema } from "@/lib/validation";
 import { getCurrentUser } from "@/lib/auth";
+import type { AppRole } from "@/lib/permissions";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { localizeFieldErrors, localizeMessage } from "@/lib/intl/server-text";
@@ -32,7 +33,17 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   }
   await attachCartToUser(data.user.id).catch((e) => console.error("[auth] cart merge:", e.message));
   await restoreProfilePreferences(data.user.id).catch((e) => console.error("[auth] preferences:", e.message));
-  redirect(safeNextPath(formData.get("next")));
+  // The owner and staff go to their dashboard unless the sign-in asked for a specific page.
+  const requested = formData.get("next");
+  let destination = safeNextPath(requested);
+  if (!requested || destination === "/account") {
+    const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id);
+    const list = (roles ?? []).map((r) => r.role as AppRole);
+    // Owner and order staff → the dashboard; Product Staff → their own dashboard.
+    if (list.includes("admin") || list.includes("staff")) destination = "/admin";
+    else if (list.includes("product_staff")) destination = "/staff/dashboard";
+  }
+  redirect(destination);
 }
 
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {

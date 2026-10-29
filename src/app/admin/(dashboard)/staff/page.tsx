@@ -109,7 +109,7 @@ export default async function StaffPage() {
                   <span className="text-xs text-muted">Delete products: {s.can_delete_products ? "allowed" : "not allowed"}</span>
                   <p className="w-full text-xs text-muted">
                     Products added: <strong className="text-plum">{stats.get(s.user_id)?.products_added ?? 0}</strong>
-                    {" · "}Earned: <strong className="text-base font-extrabold text-success">{formatMoney(earningsFor(stats.get(s.user_id)?.live_products ?? 0).earnedKobo)}</strong>
+                    {" · "}Earned: <strong className="text-base font-extrabold text-success">{formatMoney(earningsFor(stats.get(s.user_id)?.products_added ?? 0).earnedKobo)}</strong>
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -147,7 +147,7 @@ export default async function StaffPage() {
       <Card title="What Product Staff can do">
         <ul className="grid gap-2 text-sm sm:grid-cols-2">
           <li>✓ Add products, and edit the ones they added: names, descriptions, prices, categories, sizes, colours and stock</li>
-          <li>✓ See their own products and earnings (₦1,000 per 10 live products) on their dashboard</li>
+          <li>✓ See their own products and earnings (₦1,000 for every 10 products they add) on their dashboard</li>
           <li>✓ Upload, edit and remove product images</li>
           <li>✓ Publish, unpublish and archive products</li>
           <li>✓ Delete products — only if you switch it on for them</li>
