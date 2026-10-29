@@ -14,6 +14,7 @@ import { SmartImage } from "@/components/ui/SmartImage";
 import { cn } from "@/lib/cn";
 import { ProductLightbox } from "@/components/product/ProductLightbox";
 import { CoverflowGallery } from "@/components/product/CoverflowGallery";
+import { ProductGallery } from "@/components/product/ProductGallery";
 import { FashionOrbit, LivelyProduct, Sparkle } from "./StageMotion";
 
 type Variant = ProductDetail["variants"][number];
@@ -119,7 +120,7 @@ export function Showcase({ products, mode, maxPerItem, headline, caption, footer
     return untagged.length ? untagged : product.images;
   }, [product.images, color]);
   const image = images[Math.min(imageIndex, Math.max(images.length - 1, 0))] ?? null;
-  // Products with 1–5 photos keep the circular stage; 6 or more get the 3D coverflow.
+  // Product pages: 6 or more photos get the 3D coverflow, fewer use the standard gallery.
   const coverflow = mode === "product" && images.length >= 6;
 
   const forColor = product.variants.filter((v) => !color || v.color === color);
@@ -192,60 +193,9 @@ export function Showcase({ products, mode, maxPerItem, headline, caption, footer
     </div>
   );
 
-  return (
-    <section
-      className="relative isolate overflow-hidden bg-neutral"
-      aria-roledescription={mode === "hero" ? "carousel" : undefined}
-      aria-label={mode === "hero" ? t("featured") : product.name}
-    >
-      {/* Soft, blurred backdrop taken from the current photo */}
-      <AnimatePresence initial={false}>
-        <m.div key={image?.url ?? "none"} className="absolute inset-0 -z-10" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.9 }} aria-hidden>
-          <SmartImage src={image?.url} alt="" fill sizes="40vw" className="scale-125 object-cover opacity-50 blur-3xl" />
-        </m.div>
-      </AnimatePresence>
-      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-white/70 via-neutral/60 to-white/80" aria-hidden />
-
-      <div className="container-luxe py-6 sm:py-10">
-        <div className="relative rounded-[2rem] border border-white/80 bg-white/75 shadow-[0_30px_80px_-40px_rgba(37,25,35,0.35)] backdrop-blur-xl">
-          <div className="grid gap-8 p-5 sm:p-8 lg:grid-cols-[6.5rem_minmax(0,1fr)_minmax(19rem,25rem)] lg:gap-6 lg:p-10 xl:gap-10">
-            {/* Vertical headline + counter */}
-            <div className="hidden lg:flex lg:flex-col lg:items-start lg:justify-between">
-              <div className="flex items-start gap-3">
-                <HeadTag className="display text-[3.4rem] leading-none [writing-mode:vertical-rl] rotate-180 xl:text-[4.2rem]">
-                  {headWords.join(" ")} <span className="italic text-rose-deep">{headLast}</span>
-                </HeadTag>
-                <p className="eyebrow mt-4 text-[0.6rem] text-muted [writing-mode:vertical-rl] rotate-180">{caption}</p>
-              </div>
-              <div className="mt-8 flex flex-col gap-4">
-                <span className="ml-3 h-12 w-px bg-plum/20" aria-hidden />
-                {counter}
-              </div>
-            </div>
-
-            {/* Mobile headline */}
-            <div className="flex items-end justify-between gap-4 lg:hidden">
-              <div>
-                <p className="eyebrow text-[0.6rem] text-muted">{caption}</p>
-                <HeadTag className="display mt-2 text-4xl sm:text-5xl">
-                  {headWords.join(" ")} <span className="italic text-rose-deep">{headLast}</span>
-                </HeadTag>
-              </div>
-              {total > 1 && counter}
-            </div>
-
-            {coverflow ? (
-              <div className="relative min-w-0">
-                <CoverflowGallery
-                  images={images.map((i) => ({ id: i.id, url: i.url, alt: i.alt || product.name }))}
-                  index={Math.min(imageIndex, images.length - 1)}
-                  onIndexChange={setImageIndex}
-                  onOpen={() => setGalleryOpen(true)}
-                  title={product.name}
-                />
-              </div>
-            ) : (
-            /* Stage: product in a glowing ring with colour options on an orbit */
+  // Photo stage (homepage: ring; product page: gallery) and the details panel are shared by both layouts.
+  // Homepage stage: product in a glowing ring with colour options on an orbit.
+  const stageEl = (
             <div className="relative mx-auto mb-8 aspect-square w-full max-w-[34rem] [--r:9.5rem] sm:[--r:13rem] lg:max-w-none lg:[--r:11.5rem] xl:[--r:14.5rem] 2xl:[--r:16rem]">
               {/* rings */}
               <div className="absolute left-1/2 top-1/2 size-[calc(var(--r)*2)] -translate-x-1/2 -translate-y-1/2 rounded-full border border-plum/10" aria-hidden />
@@ -351,14 +301,14 @@ export function Showcase({ products, mode, maxPerItem, headline, caption, footer
                 </div>
               )}
             </div>
-            )}
+  );
 
-            {/* Details panel */}
-            <div className="flex flex-col justify-center" aria-live="polite">
+  const detailsPanel = (
+<div className="flex flex-col justify-center" aria-live="polite">
               <AnimatePresence mode="wait" initial={false}>
                 <m.div key={product.id} {...blurIn}>
                   <p className="eyebrow text-muted">{product.category.parent?.name ?? product.category.name}</p>
-                  <TitleTag className="display mt-3 text-[2.6rem] sm:text-5xl xl:text-[3.6rem]">
+                  <TitleTag className={cn("display mt-3", mode === "product" ? "text-[2.2rem] leading-[1.05] sm:text-[2.6rem] xl:text-[3rem]" : "text-[2.6rem] sm:text-5xl xl:text-[3.6rem]")}>
                     {mode === "hero" ? (
                       <Link href={`/products/${product.slug}`} className="hover:text-rose-deep">
                         <span className="font-semibold">{lead}</span> {last && <span className="font-light italic">{last}</span>}
@@ -375,8 +325,8 @@ export function Showcase({ products, mode, maxPerItem, headline, caption, footer
               </AnimatePresence>
 
               {/* mobile colour row */}
-              {colors.length > 0 && (
-                <div className={cn("mt-6", !coverflow && "sm:hidden")} role="radiogroup" aria-label={t("colour")}>
+              {colors.length > 0 && (mode === "hero" || coverflow) && (
+                <div className={cn("mt-6", mode === "hero" && "sm:hidden")} role="radiogroup" aria-label={t("colour")}>
                   <p className="eyebrow text-[0.62rem]">{t("colour")} · <span className="normal-case tracking-normal text-muted">{color ? colorName(color) : ""}</span></p>
                   <div className="mt-3 flex flex-wrap gap-3">
                     {colors.map((c) => (
@@ -489,6 +439,133 @@ export function Showcase({ products, mode, maxPerItem, headline, caption, footer
               </div>
               {error && <p className="mt-3 text-sm font-semibold text-danger" role="alert">{error}</p>}
             </div>
+  );
+
+  const lightboxImages = images.map((i) => ({ id: i.id, url: i.url, alt: i.alt || product.name }));
+  const lightbox = (
+    <ProductLightbox
+      open={galleryOpen}
+      images={lightboxImages}
+      index={Math.min(imageIndex, Math.max(images.length - 1, 0))}
+      onIndexChange={setImageIndex}
+      onClose={closeGallery}
+      title={product.name}
+    />
+  );
+
+  // Product page: a plain two-column layout — photos on the left, details on the right.
+  if (mode === "product") {
+    const galleryProps = {
+      images: lightboxImages,
+      index: Math.min(imageIndex, Math.max(images.length - 1, 0)),
+      onIndexChange: setImageIndex,
+      onOpen: () => setGalleryOpen(true),
+      title: product.name,
+    };
+    // Colour choices sit on the left edge of the photo (the coverflow keeps them with the details).
+    const colourRail = colors.length > 0 && (
+      <div
+        role="radiogroup"
+        aria-label={t("colour")}
+        className="absolute left-3 top-3 z-10 flex flex-col gap-2 rounded-full bg-white/80 p-1.5 shadow-[0_10px_30px_-15px_rgba(37,25,35,0.6)] backdrop-blur sm:left-4 sm:top-4"
+      >
+        {colors.map((c) => {
+          const has = product.variants.some((v) => v.color === c.name && available(v));
+          const selected = c.name === color;
+          return (
+            <button
+              key={c.name}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              aria-label={has ? colorName(c.name) : t("colourSoldOut", { colour: colorName(c.name) })}
+              title={colorName(c.name)}
+              onClick={() => {
+                setColor(c.name);
+                setSize(null);
+                setImageIndex(0);
+              }}
+              className={cn(
+                "relative size-8 rounded-full border-2 border-white shadow transition-transform hover:scale-110 sm:size-9",
+                selected && "ring-2 ring-plum ring-offset-1",
+                !has && "opacity-45",
+              )}
+            >
+              <Gem hex={c.hex} />
+            </button>
+          );
+        })}
+      </div>
+    );
+    return (
+      <section className="relative isolate overflow-hidden" aria-label={product.name}>
+        {/* Brand backdrop: blush gradient with a soft glow taken from the current photo */}
+        <AnimatePresence initial={false}>
+          <m.div key={image?.url ?? "none"} className="absolute inset-0 -z-10" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.9 }} aria-hidden>
+            <SmartImage src={image?.url} alt="" fill sizes="40vw" className="scale-125 object-cover opacity-40 blur-3xl" />
+          </m.div>
+        </AnimatePresence>
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-blush/90 via-white/70 to-white" aria-hidden />
+        <div className="container-luxe py-5 sm:py-8">
+          <div className="rounded-[2rem] border border-white/80 bg-white/75 p-4 shadow-[0_30px_80px_-40px_rgba(37,25,35,0.35)] backdrop-blur-xl sm:p-6 lg:p-8">
+            <div className="grid gap-7 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)] lg:gap-12 xl:gap-16">
+              <div className="min-w-0">
+                {coverflow ? <CoverflowGallery {...galleryProps} /> : <ProductGallery {...galleryProps} overlay={colourRail} />}
+              </div>
+              <div className="min-w-0 lg:sticky lg:top-28 lg:self-start lg:pt-2">{detailsPanel}</div>
+            </div>
+          </div>
+        </div>
+        {lightbox}
+      </section>
+    );
+  }
+
+  return (
+    <section
+      className="relative isolate overflow-hidden bg-neutral"
+      aria-roledescription={mode === "hero" ? "carousel" : undefined}
+      aria-label={mode === "hero" ? t("featured") : product.name}
+    >
+      {/* Soft, blurred backdrop taken from the current photo */}
+      <AnimatePresence initial={false}>
+        <m.div key={image?.url ?? "none"} className="absolute inset-0 -z-10" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.9 }} aria-hidden>
+          <SmartImage src={image?.url} alt="" fill sizes="40vw" className="scale-125 object-cover opacity-50 blur-3xl" />
+        </m.div>
+      </AnimatePresence>
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-white/70 via-neutral/60 to-white/80" aria-hidden />
+
+      <div className="container-luxe py-6 sm:py-10">
+        <div className="relative rounded-[2rem] border border-white/80 bg-white/75 shadow-[0_30px_80px_-40px_rgba(37,25,35,0.35)] backdrop-blur-xl">
+          <div className="grid gap-8 p-5 sm:p-8 lg:grid-cols-[6.5rem_minmax(0,1fr)_minmax(19rem,25rem)] lg:gap-6 lg:p-10 xl:gap-10">
+            {/* Vertical headline + counter */}
+            <div className="hidden lg:flex lg:flex-col lg:items-start lg:justify-between">
+              <div className="flex items-start gap-3">
+                <HeadTag className="display text-[3.4rem] leading-none [writing-mode:vertical-rl] rotate-180 xl:text-[4.2rem]">
+                  {headWords.join(" ")} <span className="italic text-rose-deep">{headLast}</span>
+                </HeadTag>
+                <p className="eyebrow mt-4 text-[0.6rem] text-muted [writing-mode:vertical-rl] rotate-180">{caption}</p>
+              </div>
+              <div className="mt-8 flex flex-col gap-4">
+                <span className="ml-3 h-12 w-px bg-plum/20" aria-hidden />
+                {counter}
+              </div>
+            </div>
+
+            {/* Mobile headline */}
+            <div className="flex items-end justify-between gap-4 lg:hidden">
+              <div>
+                <p className="eyebrow text-[0.6rem] text-muted">{caption}</p>
+                <HeadTag className="display mt-2 text-4xl sm:text-5xl">
+                  {headWords.join(" ")} <span className="italic text-rose-deep">{headLast}</span>
+                </HeadTag>
+              </div>
+              {total > 1 && counter}
+            </div>
+
+            {stageEl}
+
+            {detailsPanel}
           </div>
           {footer && <div className="border-t border-plum/[0.07] px-5 py-5 sm:px-8 lg:px-10">{footer}</div>}
         </div>
@@ -497,16 +574,6 @@ export function Showcase({ products, mode, maxPerItem, headline, caption, footer
         <p className="sr-only" aria-live="polite">
           {`Showing ${index + 1} of ${products.length}: ${product.name}`}
         </p>
-      )}
-      {mode === "product" && (
-        <ProductLightbox
-          open={galleryOpen}
-          images={images.map((i) => ({ id: i.id, url: i.url, alt: i.alt || product.name }))}
-          index={Math.min(imageIndex, Math.max(images.length - 1, 0))}
-          onIndexChange={setImageIndex}
-          onClose={closeGallery}
-          title={product.name}
-        />
       )}
     </section>
   );
