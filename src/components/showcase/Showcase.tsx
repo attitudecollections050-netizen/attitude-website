@@ -14,7 +14,7 @@ import { SmartImage } from "@/components/ui/SmartImage";
 import { cn } from "@/lib/cn";
 import { ProductLightbox } from "@/components/product/ProductLightbox";
 import { CoverflowGallery } from "@/components/product/CoverflowGallery";
-import { ProductGallery } from "@/components/product/ProductGallery";
+import { BackButton } from "@/components/product/BackButton";
 import { FashionOrbit, LivelyProduct, Sparkle } from "./StageMotion";
 
 type Variant = ProductDetail["variants"][number];
@@ -120,7 +120,7 @@ export function Showcase({ products, mode, maxPerItem, headline, caption, footer
     return untagged.length ? untagged : product.images;
   }, [product.images, color]);
   const image = images[Math.min(imageIndex, Math.max(images.length - 1, 0))] ?? null;
-  // Product pages: 6 or more photos get the 3D coverflow, fewer use the standard gallery.
+  // Product pages: 1–5 photos get the circular stage, 6 or more the 3D coverflow.
   const coverflow = mode === "product" && images.length >= 6;
 
   const forColor = product.variants.filter((v) => !color || v.color === color);
@@ -325,8 +325,8 @@ export function Showcase({ products, mode, maxPerItem, headline, caption, footer
               </AnimatePresence>
 
               {/* mobile colour row */}
-              {colors.length > 0 && (mode === "hero" || coverflow) && (
-                <div className={cn("mt-6", mode === "hero" && "sm:hidden")} role="radiogroup" aria-label={t("colour")}>
+              {colors.length > 0 && (
+                <div className={cn("mt-6", !coverflow && "sm:hidden")} role="radiogroup" aria-label={t("colour")}>
                   <p className="eyebrow text-[0.62rem]">{t("colour")} · <span className="normal-case tracking-normal text-muted">{color ? colorName(color) : ""}</span></p>
                   <div className="mt-3 flex flex-wrap gap-3">
                     {colors.map((c) => (
@@ -462,43 +462,8 @@ export function Showcase({ products, mode, maxPerItem, headline, caption, footer
       onOpen: () => setGalleryOpen(true),
       title: product.name,
     };
-    // Colour choices sit on the left edge of the photo (the coverflow keeps them with the details).
-    const colourRail = colors.length > 0 && (
-      <div
-        role="radiogroup"
-        aria-label={t("colour")}
-        className="absolute left-3 top-3 z-10 flex flex-col gap-2 rounded-full bg-white/80 p-1.5 shadow-[0_10px_30px_-15px_rgba(37,25,35,0.6)] backdrop-blur sm:left-4 sm:top-4"
-      >
-        {colors.map((c) => {
-          const has = product.variants.some((v) => v.color === c.name && available(v));
-          const selected = c.name === color;
-          return (
-            <button
-              key={c.name}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              aria-label={has ? colorName(c.name) : t("colourSoldOut", { colour: colorName(c.name) })}
-              title={colorName(c.name)}
-              onClick={() => {
-                setColor(c.name);
-                setSize(null);
-                setImageIndex(0);
-              }}
-              className={cn(
-                "relative size-8 rounded-full border-2 border-white shadow transition-transform hover:scale-110 sm:size-9",
-                selected && "ring-2 ring-plum ring-offset-1",
-                !has && "opacity-45",
-              )}
-            >
-              <Gem hex={c.hex} />
-            </button>
-          );
-        })}
-      </div>
-    );
     return (
-      <section className="relative isolate overflow-hidden" aria-label={product.name}>
+      <section className="relative isolate overflow-clip" aria-label={product.name}>
         {/* Brand backdrop: blush gradient with a soft glow taken from the current photo */}
         <AnimatePresence initial={false}>
           <m.div key={image?.url ?? "none"} className="absolute inset-0 -z-10" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.9 }} aria-hidden>
@@ -506,11 +471,20 @@ export function Showcase({ products, mode, maxPerItem, headline, caption, footer
           </m.div>
         </AnimatePresence>
         <div className="absolute inset-0 -z-10 bg-gradient-to-b from-blush/90 via-white/70 to-white" aria-hidden />
+        {/* "<" back: always on screen (see BackButton) */}
+        <BackButton anchor="[data-back-anchor]" />
         <div className="container-luxe py-5 sm:py-8">
           <div className="rounded-[2rem] border border-white/80 bg-white/75 p-4 shadow-[0_30px_80px_-40px_rgba(37,25,35,0.35)] backdrop-blur-xl sm:p-6 lg:p-8">
             <div className="grid gap-7 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)] lg:gap-12 xl:gap-16">
-              <div className="min-w-0">
-                {coverflow ? <CoverflowGallery {...galleryProps} /> : <ProductGallery {...galleryProps} overlay={colourRail} />}
+              <div className="min-w-0" data-back-anchor>
+                {coverflow ? (
+                  <CoverflowGallery {...galleryProps} />
+                ) : (
+                  <div className="relative pb-10 sm:pb-6">
+                    {stageEl}
+                    {total > 1 && <div className="absolute bottom-0 left-0 sm:bottom-2">{counter}</div>}
+                  </div>
+                )}
               </div>
               <div className="min-w-0 lg:sticky lg:top-28 lg:self-start lg:pt-2">{detailsPanel}</div>
             </div>

@@ -173,7 +173,10 @@
     "closeGallery": "Cerrar galería",
     "thumbnails": "Miniaturas de las fotos",
     "showPhoto": "Ver foto {n}",
-    "galleryHint": "Toca dos veces o pellizca para ampliar · desliza para ver más · desliza hacia abajo para cerrar"
+    "galleryHint": "Toca dos veces o pellizca para ampliar · desliza para ver más · desliza hacia abajo para cerrar",
+    "goBack": "Volver",
+    "morePhotos": "{count, plural, one {# foto más} other {# fotos más}}",
+    "lastPhoto": "Ya viste todas las fotos"
   },
   "colors": {
     "black": "Negro",

@@ -173,7 +173,10 @@
     "closeGallery": "关闭图片库",
     "thumbnails": "图片缩略图",
     "showPhoto": "查看第 {n} 张",
-    "galleryHint": "双击或双指缩放 · 左右滑动浏览 · 向下滑动关闭"
+    "galleryHint": "双击或双指缩放 · 左右滑动浏览 · 向下滑动关闭",
+    "goBack": "返回",
+    "morePhotos": "{count, plural, other {还有 # 张照片}}",
+    "lastPhoto": "已看完所有照片"
   },
   "colors": {
     "black": "黑色",

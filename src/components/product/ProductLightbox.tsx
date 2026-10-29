@@ -1,5 +1,6 @@
 "use client";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, animate, m, useMotionValue, useReducedMotion, useTransform, type MotionValue } from "motion/react";
 import { ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -24,6 +25,8 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
  * double-tap, scroll-wheel or the +/− buttons to zoom, drag to pan while
  * zoomed, swipe down (or Escape / the phone's back button) to close.
  */
+const noopSubscribe = () => () => {};
+
 export function ProductLightbox({
   open,
   images,
@@ -40,6 +43,7 @@ export function ProductLightbox({
   title: string;
 }) {
   const t = useTranslations("product");
+  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
   const reduce = useReducedMotion();
   const panel = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
@@ -359,7 +363,9 @@ export function ProductLightbox({
   const iconBtn =
     "grid size-11 place-items-center rounded-[1.15rem_0.45rem_1.15rem_0.45rem] bg-white/10 text-white backdrop-blur transition-[border-radius,background-color] duration-300 hover:rounded-[0.45rem_1.15rem_0.45rem_1.15rem] hover:bg-white/20 disabled:opacity-30";
 
-  return (
+  // Rendered at the end of <body> so it covers the whole page (header and chat button included).
+  if (!mounted) return null;
+  return createPortal(
     <AnimatePresence>
       {open && (
         <m.div
@@ -439,6 +445,30 @@ export function ProductLightbox({
                 ))}
               </m.div>
 
+              {/* Dots: where you are and how many photos are left */}
+              {count > 1 && (
+                <m.div
+                  className="pointer-events-none absolute inset-x-0 bottom-3 z-10 flex flex-col items-center gap-1.5"
+                  animate={{ opacity: chrome && scale === 1 ? 1 : 0 }}
+                  data-testid="lightbox-dots"
+                >
+                  <div className="flex items-center gap-1.5 rounded-full bg-black/35 px-2.5 py-1.5 backdrop-blur" aria-hidden>
+                    {images.map((img, i) => (
+                      <span
+                        key={img.id}
+                        className={cn(
+                          "h-1.5 rounded-full transition-all duration-300",
+                          i === current ? "w-6 bg-rose shadow-[0_0_10px_rgba(217,79,145,0.9)]" : i < current ? "w-1.5 bg-white/85" : "w-1.5 bg-white/35",
+                        )}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-[0.7rem] font-semibold text-white/80" data-testid="photos-left">
+                    {current < count - 1 ? t("morePhotos", { count: count - 1 - current }) : t("lastPhoto")}
+                  </p>
+                </m.div>
+              )}
+
               {count > 1 && (
                 <m.div className="pointer-events-none absolute inset-y-0 left-0 right-0 hidden items-center justify-between px-4 sm:flex" animate={{ opacity: chrome ? 1 : 0 }}>
                   <button type="button" className={cn(iconBtn, "pointer-events-auto size-12")} onClick={() => goTo(current - 1)} disabled={current === 0} aria-label={t("prevPhoto")}>
@@ -481,12 +511,13 @@ export function ProductLightbox({
             )}
           </div>
 
-          <m.p className="pointer-events-none absolute inset-x-0 bottom-24 z-10 text-center text-[0.68rem] text-white/60 lg:bottom-6" animate={{ opacity: chrome && scale === 1 ? 1 : 0 }} aria-hidden>
+          <m.p className="pointer-events-none absolute inset-x-0 top-16 z-10 text-center text-[0.68rem] text-white/60 sm:top-20" animate={{ opacity: chrome && scale === 1 ? 1 : 0 }} aria-hidden>
             {t("galleryHint")}
           </m.p>
         </m.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
 

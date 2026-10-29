@@ -23,6 +23,7 @@ import { AnalyticsTracker } from "@/components/analytics/AnalyticsTracker";
 import { CookieConsent } from "@/components/analytics/CookieConsent";
 import { FeedbackInvite } from "@/components/feedback/FeedbackInvite";
 import { AssistantWidget } from "@/components/assistant/AssistantWidget";
+import { NavigationTracker } from "@/components/product/BackButton";
 
 // Cart, session and stock are per-request: never prerender these routes.
 export const dynamic = "force-dynamic";
@@ -73,6 +74,7 @@ export default async function StoreLayout({ children }: LayoutProps<"/">) {
         <CartDrawer />
         <CartToast />
         <AnalyticsTracker />
+        <NavigationTracker />
         <CookieConsent />
         <FeedbackInvite />
         <AssistantWidget />

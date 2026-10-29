@@ -173,7 +173,10 @@
     "closeGallery": "Close gallery",
     "thumbnails": "Photo thumbnails",
     "showPhoto": "Show photo {n}",
-    "galleryHint": "Double-tap or pinch to zoom · swipe to browse · swipe down to close"
+    "galleryHint": "Double-tap or pinch to zoom · swipe to browse · swipe down to close",
+    "goBack": "Go back",
+    "morePhotos": "{count, plural, one {# more photo} other {# more photos}}",
+    "lastPhoto": "That's every photo"
   },
   "colors": {
     "black": "Black",

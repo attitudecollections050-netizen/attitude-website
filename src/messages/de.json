@@ -173,7 +173,10 @@
     "closeGallery": "Galerie schließen",
     "thumbnails": "Foto-Miniaturen",
     "showPhoto": "Foto {n} anzeigen",
-    "galleryHint": "Doppelt tippen oder mit zwei Fingern zoomen · wischen zum Blättern · nach unten wischen zum Schließen"
+    "galleryHint": "Doppelt tippen oder mit zwei Fingern zoomen · wischen zum Blättern · nach unten wischen zum Schließen",
+    "goBack": "Zurück",
+    "morePhotos": "{count, plural, one {Noch # Foto} other {Noch # Fotos}}",
+    "lastPhoto": "Das waren alle Fotos"
   },
   "colors": {
     "black": "Schwarz",
