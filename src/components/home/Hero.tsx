@@ -10,8 +10,8 @@ import { createHeroTrack, type HeroTrack } from "@/lib/audio/heroTrack";
 
 /**
  * Homepage hero as a short fashion film (about 19 seconds, looping): an intro with a handwritten
- * "attitude", a giant headline snapping into focus, the hero photo floating with call-out labels,
- * a "choose your attitude" split, then the title and call to action. Pink on plum, story-style
+ * "ATTITUDE", a giant headline snapping into focus, the hero photo floating with call-out labels,
+ * a "choose your ATTITUDE" split, then the title and call to action. Pink on plum, story-style
  * progress bars, original music on request ("Tap for sound"), and a pause button. Visitors who
  * prefer reduced motion get the still final frame. Wording and images come from Admin → Homepage.
  */
@@ -293,7 +293,7 @@ function Intro({ edition }: { edition: string }) {
       </m.div>
       <div className="relative mt-6">
         <span className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center font-sans text-[22vw] font-extrabold leading-none text-white/[0.06] sm:text-[14rem]" aria-hidden>AC</span>
-        <Scribble text="attitude" className="text-7xl text-rose-light sm:text-9xl" delay={0.25} />
+        <Scribble text="ATTITUDE" className="text-[13vw] text-rose-light sm:text-8xl lg:text-9xl" delay={0.25} />
       </div>
       <div className="mt-8 h-[3px] w-56 overflow-hidden rounded-full bg-white/15">
         <m.span className="block h-full bg-gradient-to-r from-rose to-rose-light" initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: 2.2, ease: "easeInOut" }} />
@@ -359,7 +359,7 @@ function Photo({ imageUrl, edition, drop }: { imageUrl: string | null; edition: 
       <Callout className="left-[4%] top-[36%] sm:left-[14%]" label={edition} value="New season" delay={0.7} side="left" />
       <Callout className="right-[4%] top-[58%] sm:right-[14%]" label="Made to be seen" value={`Drop ${String(drop).padStart(2, "0")}`} delay={1.2} side="right" />
       <div className="absolute bottom-[20%] left-[6%] -rotate-6 sm:left-[16%]">
-        <Scribble text="wear your attitude" className="text-4xl text-white sm:text-6xl" delay={1.6} />
+        <Scribble text="wear your ATTITUDE" className="text-3xl text-white sm:text-6xl" delay={1.6} />
       </div>
     </div>
   );
@@ -370,10 +370,10 @@ function Choose({ tiles, fallback }: { tiles: Edition[]; fallback: string | null
     <div className="grid h-full grid-rows-[auto_1fr] gap-3 px-4 pb-24 pt-28 sm:grid-cols-[0.8fr_1.2fr] sm:grid-rows-1 sm:gap-4 sm:px-8 sm:pt-32">
       <div className="flex flex-col justify-center gap-4 rounded-[1.6rem] bg-blush px-6 py-7 text-plum shadow-[0_30px_60px_-30px_rgba(217,79,145,0.7)] sm:px-10">
         <m.p className="font-mono text-[10px] uppercase tracking-[0.3em] text-rose-deep" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          Three editions · one attitude
+          Three editions · one ATTITUDE
         </m.p>
         <m.p className="font-sans text-4xl font-extrabold uppercase leading-[0.95] tracking-tight sm:text-6xl" initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15, duration: 0.7, ease: EASE }}>
-          Choose your <span className="font-display font-normal normal-case italic text-rose-deep">attitude</span>
+          Choose your <span className="font-display font-normal italic text-rose-deep">ATTITUDE</span>
         </m.p>
         <div className="flex gap-2" aria-hidden>
           {["#d94f91", "#251923", "#f283b8", "#fff0f5"].map((c, i) => (
@@ -441,7 +441,7 @@ function Cta({ imageUrl, eyebrow, words, subtitle, ctaLabel, ctaHref, explore, s
           </ButtonLink>
         </m.div>
         <m.p className="mt-8 font-mono text-[10px] uppercase tracking-[0.3em] text-white/70" initial={still ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.1 }}>
-          Ready to wear your attitude?
+          Ready to wear your ATTITUDE?
         </m.p>
       </div>
     </div>
