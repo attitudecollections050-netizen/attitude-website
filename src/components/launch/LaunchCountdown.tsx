@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, m, useReducedMotion } from "motion/react";
 import { MotionProvider } from "@/components/ui/MotionProvider";
@@ -55,7 +55,8 @@ function useLaunchAudio(seconds: number | undefined) {
   const [sound, setSound] = useState<LaunchSound | null>(null);
   const [run, setRun] = useState(0);
   const index = useChat(run);
-  const toggle = async () => {
+  const spoken = useRef("");
+  const toggle = () => {
     if (sound) {
       sound.stop();
       setSound(null);
@@ -63,7 +64,10 @@ function useLaunchAudio(seconds: number | undefined) {
     }
     const s = createLaunchSound();
     if (!s) return;
-    await s.start();
+    s.start();
+    // Say the first line right inside the tap so phones allow the voices from then on.
+    s.speak(LINES[0].text, LINES[0].who, true);
+    spoken.current = `${run + 1}-0`;
     setSound(s);
     setRun((r) => r + 1);
   };
@@ -74,8 +78,10 @@ function useLaunchAudio(seconds: number | undefined) {
   useEffect(() => {
     if (!sound) return;
     sound.chime();
+    if (spoken.current === `${run}-${index}`) return;
+    spoken.current = `${run}-${index}`;
     sound.speak(LINES[index].text, LINES[index].who);
-  }, [index, sound]);
+  }, [index, sound, run]);
   return { on: Boolean(sound), toggle, index };
 }
 
