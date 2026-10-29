@@ -5,7 +5,8 @@ import { isSupabaseConfigured } from "@/lib/env";
 import { rateLimit } from "@/lib/rate-limit";
 import { contactSchema, emailSchema, fieldErrors } from "@/lib/validation";
 import { getSettings } from "@/lib/settings";
-import { sendEmail } from "@/lib/email";
+import { sendEmail } from "@/lib/groundmail";
+import { notificationEmail } from "@/lib/emails/templates";
 import { getTranslations } from "next-intl/server";
 import { localizeFieldErrors } from "@/lib/intl/server-text";
 
@@ -47,13 +48,15 @@ export async function submitContact(_prev: FormState, formData: FormData): Promi
   }
   const settings = await getSettings();
   if (settings.store.support_email) {
-    const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
-    await sendEmail(
-      settings.store.support_email,
-      `New enquiry: ${row.subject}`,
-      `<p><strong>${esc(row.name)}</strong> (${esc(row.email)})${row.order_number ? ` — order ${esc(row.order_number)}` : ""}</p><p>${esc(row.message).replace(/\n/g, "<br>")}</p>`,
-      `${row.name} (${row.email}): ${row.message}`,
-    ).catch(() => false);
+    await sendEmail({
+      to: settings.store.support_email,
+      ...notificationEmail({
+        title: `New enquiry: ${row.subject}`,
+        message: `From ${row.name} (${row.email})${row.order_number ? ` about order ${row.order_number}` : ""}:\n\n${row.message}`,
+      }),
+      replyTo: row.email,
+      type: "contact",
+    });
   }
   return { ok: true, message: await fm("messageSentReply") };
 }

@@ -1,3 +1,4 @@
+import { isEmailConfigured } from "@/lib/groundmail";
 import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -5,7 +6,7 @@ import { requireStaffPage } from "@/lib/auth";
 import { formatMoney } from "@/lib/money";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { statusTone } from "@/lib/orders/labels";
-import { isPaystackConfigured, paystackMode, serverSecrets } from "@/lib/env";
+import { isPaystackConfigured, paystackMode } from "@/lib/env";
 import { Badge, Card, PageHeader, Table } from "@/components/admin/ui";
 import { Notice } from "@/components/ui/Notice";
 
@@ -59,7 +60,7 @@ export default async function AdminOverview({ searchParams }: PageProps<"/admin"
       <div className="space-y-3">
         {!isPaystackConfigured() && <Notice tone="warning" title="Payments not configured">Add PAYSTACK_SECRET_KEY and NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY. Customers cannot pay until this is done.</Notice>}
         {paystackMode() === "test" && <Notice tone="info" title="Paystack test mode">Payments use test keys. Switch to live keys only after testing the full flow.</Notice>}
-        {!serverSecrets().resendApiKey && <Notice tone="info" title="Email not configured">Order confirmation emails are skipped until RESEND_API_KEY and EMAIL_FROM are set.</Notice>}
+        {!isEmailConfigured() && <Notice tone="info" title="Email not configured">Order receipts and staff invitations aren&apos;t emailed until GROUNDMAIL_API_KEY and EMAIL_FROM are set in Vercel → Settings → Environment Variables.</Notice>}
         {(s.unreviewed_shipping_rates ?? 0) > 0 && (
           <Notice tone="warning" title={`${s.unreviewed_shipping_rates} shipping rate(s) not yet confirmed`}>
             Development defaults are active (e.g. ₦2,500 same-city, ₦4,000 elsewhere in Nigeria). These are sample values, not verified courier prices. <Link href="/admin/shipping" className="underline">Review shipping rates</Link> before launch.

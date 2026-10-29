@@ -1,6 +1,7 @@
+import { isEmailConfigured } from "@/lib/groundmail";
 import { requireStaffPage } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
-import { isPaystackConfigured, paystackMode, serverSecrets, env } from "@/lib/env";
+import { isPaystackConfigured, paystackMode, env } from "@/lib/env";
 import { saveCheckoutSettings, saveStoreSettings } from "@/app/admin/actions/store";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { Badge, Card, Field, PageHeader, inputCls } from "@/components/admin/ui";
@@ -53,7 +54,7 @@ export default async function SettingsPage() {
         <ul className="space-y-3 text-sm">
           <li className="flex items-center justify-between gap-3">Paystack payments <Badge tone={mode === "live" ? "success" : mode === "test" ? "warning" : "danger"}>{mode === "unconfigured" ? "Not configured" : `${mode} mode`}</Badge></li>
           <li className="flex items-center justify-between gap-3">Paystack webhook URL <code className="text-xs">{env.siteUrl}/api/webhooks/paystack</code></li>
-          <li className="flex items-center justify-between gap-3">Order emails (Resend) <Badge tone={serverSecrets().resendApiKey ? "success" : "neutral"}>{serverSecrets().resendApiKey ? "Configured" : "Not configured"}</Badge></li>
+          <li className="flex items-center justify-between gap-3">Emails (Groundmail) <Badge tone={isEmailConfigured() ? "success" : "neutral"}>{isEmailConfigured() ? "Configured" : "Not configured"}</Badge></li>
           <li className="flex items-center justify-between gap-3">Live courier quotes <Badge>Not connected — manual rates</Badge></li>
           <li className="flex items-center justify-between gap-3">Supplier API <Badge>Not connected — manual fulfilment</Badge></li>
         </ul>

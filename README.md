@@ -23,7 +23,7 @@ A premium fashion e-commerce store for men's and women's clothing, bags, women's
 - Node.js **20.9+** (22 recommended)
 - A Supabase project (free tier is fine)
 - A Paystack account (test keys work immediately; live keys need a verified business)
-- Optional: a Resend account for order-confirmation emails
+- A Groundmail account (groundmail.dev) for order receipts, staff invitations and other emails
 
 ## 2. Local setup
 
@@ -78,7 +78,7 @@ The owner (admin) opens **Staff Management** in the dashboard to invite helpers 
 - Besides their dashboard, they see only **Products**. Orders, payments, customers, settings, shipping, discounts, analytics, suppliers, Staff Management and your account all redirect them away. The server actions, export APIs and database (RLS) policies refuse them too, so typing a URL or calling the API directly doesn't help. Supplier costs are hidden on their product pages.
 - **Disable** cuts access immediately (role removed, login blocked). **Enable** restores it. **Remove** deletes the staff record, and deletes the login too if it was created by the invite. If you invite an existing customer, they keep their own shopping account.
 - The owner role can't be removed or downgraded (a database trigger blocks it), and the owner can't be invited as staff.
-- Invites are emailed through Resend when `RESEND_API_KEY` and `EMAIL_FROM` are set. Otherwise the dashboard shows the link for the owner to copy and send privately. Invite links use `NEXT_PUBLIC_SITE_URL`, and Staff Management needs `SUPABASE_SECRET_KEY` on the server.
+- Invites are emailed through Groundmail when `GROUNDMAIL_API_KEY` and `EMAIL_FROM` are set (see *Email* below). Otherwise the dashboard shows the link for the owner to copy and send privately. Invite links use `NEXT_PUBLIC_SITE_URL`, and Staff Management needs `SUPABASE_SECRET_KEY` on the server.
 
 ### Run
 
@@ -193,6 +193,27 @@ A floating pink DJ-girl avatar (bottom-right on every store page except checkout
 
 **Payment methods by country** (Paystack channels such as card, bank transfer and USSD) are set in Admin → International. Paystack only shows the methods your account supports. **Preview the store** on that page opens the storefront in any language/country/currency in your own browser. The admin dashboard itself stays in English.
 
+## 7d. Email (Groundmail)
+
+All transactional email goes through one function, `sendEmail()` in `src/lib/groundmail.ts`, with ready-made templates in `src/lib/emails/templates.ts`: invitation, email verification, password reset, receipt/invoice and general notification. Each template returns `{ subject, html, text }`.
+
+```ts
+import { sendEmail } from "@/lib/groundmail";
+import { notificationEmail } from "@/lib/emails/templates";
+
+await sendEmail({
+  to: user.email,
+  ...notificationEmail({ title: "Your item is back in stock", message: "…", actionUrl, actionLabel: "Shop now" }),
+  type: "back-in-stock",
+  idempotencyKey: `back-in-stock-${productId}-${user.id}`, // optional; default `${type}-${to}-${Date.now()}`
+});
+```
+
+- Every send carries an `Idempotency-Key` (Groundmail ignores a repeat for 24 hours). Pass a stable key when the same email could be triggered twice; order receipts use `receipt-<order number>` so a customer never gets two.
+- `sendEmail` never throws. It returns `{ ok: true, id }` or `{ ok: false, reason }`, logs the outcome with the address masked, and retries rate-limit, server and network errors twice with the same key.
+- Setup: run `npx -y groundmail-cli login`, then `npx -y groundmail-cli keys create --name "attitude-collections production" --scopes emails:send`. Verify your sending domain in Groundmail. Set `GROUNDMAIL_API_KEY`, `EMAIL_FROM` and, optionally, `EMAIL_REPLY_TO` in `.env.local` and in Vercel (Production), then redeploy.
+- Supabase sign-up confirmation and password-reset emails are sent by Supabase Auth. To send them through Groundmail too, create SMTP credentials in Groundmail and enter them under Supabase → Authentication → Emails → SMTP settings. The `verificationEmail` and `passwordResetEmail` templates are ready for flows the app sends itself.
+
 ## 8. Deploying to Vercel
 
 1. Push the repository to GitHub and import it in Vercel. The framework is detected automatically.
@@ -242,5 +263,5 @@ docs/DATABASE.md          schema documentation
 - Real product photography and supplier products (replace the demo catalogue).
 - `CRON_SECRET` on Vercel for the daily exchange-rate update (and optionally `EXCHANGE_RATE_API_KEY`). Review the AI-prepared translations, especially checkout and policy text.
 - Optional: Anthropic API key for the Dj Attitude Mini chat (basic mode works without it).
-- Optional: Resend API key and a verified sender domain for order emails and staff invitations; custom SMTP for Supabase Auth emails.
+- Groundmail API key (`GROUNDMAIL_API_KEY`) and a sender on a verified domain (`EMAIL_FROM`) for order receipts, staff invitations and notifications; optionally Groundmail SMTP for Supabase Auth emails.
 - Staff Management: `SUPABASE_SECRET_KEY` and the production `NEXT_PUBLIC_SITE_URL` on Vercel; apply migrations 11, 12 and 13.

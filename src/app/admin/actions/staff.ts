@@ -5,7 +5,8 @@ import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
-import { sendEmail } from "@/lib/email";
+import { sendEmail } from "@/lib/groundmail";
+import { inviteEmail, notificationEmail } from "@/lib/emails/templates";
 import { getCurrentUser } from "@/lib/auth";
 import { INVITABLE_ROLES, ROLE_LABELS } from "@/lib/permissions";
 import { emailSchema, passwordSchema } from "@/lib/validation";
@@ -37,16 +38,8 @@ async function inviteLink(svc: Svc, email: string, fullName: string | null): Pro
 }
 
 async function emailInvite(to: string, name: string | null, link: string, role: string): Promise<boolean> {
-  const hi = name ? `Hi ${name.replace(/[<>&"]/g, "")},` : "Hi,";
-  const html = `<div style="font-family:Arial,sans-serif;color:#251923;max-width:560px;margin:auto">
-  <h1 style="font-family:Georgia,serif;font-weight:400;letter-spacing:.08em">ATTITUDE COLLECTIONS</h1>
-  <p>${hi}</p>
-  <p>You've been invited to help manage the Attitude Collections store as <strong>${role}</strong>.</p>
-  <p><a href="${link}" style="display:inline-block;background:#251923;color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none">Accept invitation &amp; choose your password</a></p>
-  <p style="color:#7a6a74;font-size:13px">This link works once and expires soon. If it has expired, ask the store owner to send a new one. If you weren't expecting this, you can ignore it.</p>
-  </div>`;
-  const text = `${hi}\nYou've been invited to help manage the Attitude Collections store as ${role}.\nAccept and choose your password: ${link}\nThis link works once and expires soon.`;
-  return sendEmail(to, "You're invited to the Attitude Collections dashboard", html, text);
+  const res = await sendEmail({ to, ...inviteEmail({ name, role, link }), type: "invite" });
+  return res.ok;
 }
 
 function done(message: string, extra: Partial<NonNullable<InviteResult>> = {}): InviteResult {
@@ -112,12 +105,18 @@ export async function inviteStaff(_prev: InviteResult, formData: FormData): Prom
 
     const roleLabel = ROLE_LABELS[input.role];
     if (!link) {
-      const emailed = await sendEmail(
-        input.email,
-        "You now have access to the Attitude Collections dashboard",
-        `<p>You've been given ${roleLabel} access to the Attitude Collections dashboard. Sign in with your existing password at <a href="${env.siteUrl}/admin/login">${env.siteUrl}/admin/login</a>.</p>`,
-        `You've been given ${roleLabel} access. Sign in with your existing password at ${env.siteUrl}/admin/login`,
-      );
+      const emailed = (
+        await sendEmail({
+          to: input.email,
+          ...notificationEmail({
+            title: "You now have access to the Attitude Collections dashboard",
+            message: `You've been given ${roleLabel} access. Sign in with your existing password.`,
+            actionUrl: `${env.siteUrl}/admin/login`,
+            actionLabel: "Sign in",
+          }),
+          type: "staff-access",
+        })
+      ).ok;
       result = done(`${input.email} already had an account, so they can sign in at /admin/login with their own password.${emailed ? " We emailed them." : ""}`);
       return result;
     }
