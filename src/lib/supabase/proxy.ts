@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { env, isSupabaseConfigured } from "@/lib/env";
+import { isLaunched, openBeforeLaunch } from "@/lib/launch";
 
 /** Refreshes the Supabase auth session cookie on every matched request. */
 export async function updateSession(request: NextRequest) {
@@ -26,6 +27,22 @@ export async function updateSession(request: NextRequest) {
   });
 
   // Validates the JWT and refreshes it when needed. Do not remove.
-  await supabase.auth.getClaims();
+  const { data } = await supabase.auth.getClaims();
+
+  // Before launch, visitors see the countdown; the owner and staff (by their role) can use everything.
+  if (!isLaunched() && !openBeforeLaunch(request.nextUrl.pathname)) {
+    const userId = data?.claims?.sub;
+    let team = false;
+    if (userId) {
+      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId).limit(1);
+      team = Boolean(roles?.length);
+    }
+    if (!team) {
+      const redirect = NextResponse.redirect(new URL("/coming-soon", request.url));
+      response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
+      redirect.headers.set("Cache-Control", "no-store");
+      return redirect;
+    }
+  }
   return response;
 }
