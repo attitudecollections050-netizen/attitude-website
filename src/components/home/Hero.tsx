@@ -370,7 +370,7 @@ function Choose({ tiles, fallback }: { tiles: Edition[]; fallback: string | null
     <div className="grid h-full grid-rows-[auto_1fr] gap-3 px-4 pb-24 pt-28 sm:grid-cols-[0.8fr_1.2fr] sm:grid-rows-1 sm:gap-4 sm:px-8 sm:pt-32">
       <div className="flex flex-col justify-center gap-4 rounded-[1.6rem] bg-blush px-6 py-7 text-plum shadow-[0_30px_60px_-30px_rgba(217,79,145,0.7)] sm:px-10">
         <m.p className="font-mono text-[10px] uppercase tracking-[0.3em] text-rose-deep" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          Three editions · one ATTITUDE
+          Every edition · one ATTITUDE
         </m.p>
         <m.p className="font-sans text-4xl font-extrabold uppercase leading-[0.95] tracking-tight sm:text-6xl" initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15, duration: 0.7, ease: EASE }}>
           Choose your <span className="font-display font-normal italic text-rose-deep">ATTITUDE</span>

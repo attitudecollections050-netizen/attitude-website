@@ -202,7 +202,7 @@ A floating pink DJ-girl avatar (bottom-right on every store page except checkout
   4. "Choose your attitude"
   5. your title and Shop button
 
-  Each loop features the next edition: Clothing (your hero photo), Sneaker (Sneakers category photo) and Bag (Bags category photo). The title, subtitle, button and photo come from **Admin → Homepage → Hero**, and category photos come from **Admin → Categories**. No product cards appear in any banner.
+  Each loop features the next edition: Women's (your hero photo), Men's (Men's Clothing category photo), Sneaker (Sneakers category photo) and Bag (Bags category photo). The film only ever shows clothing for women and men, sneakers and bags. The title, subtitle, button and photo come from **Admin → Homepage → Hero**, and category photos come from **Admin → Categories**. No product cards appear in any banner.
 - **Sound (hero only):** an original soundtrack made in the browser (no audio files or licensing), with a whoosh between scenes and a chime on the last one. Browsers don't let websites play sound by themselves, so it starts when a visitor taps **Tap for sound**. Visitors can pause the film, and it pauses when scrolled away. If someone has asked their phone or computer to reduce motion, they see the still title card instead.
 - **Promo and strip banners** move silently: a slow zoom, a pink light sweep and glow, a shifting pink gradient and a scrolling word ribbon.
 

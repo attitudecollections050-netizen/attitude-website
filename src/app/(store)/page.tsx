@@ -22,11 +22,15 @@ export default async function HomePage() {
   const strip = home.banners.find((b) => b.placement === "strip");
   // The hero film features one edition per loop, pictured with its category photo (no product cards).
   const allCategories = categories.flatMap((c) => [c, ...c.children]);
-  const top = (re: RegExp) => allCategories.find((c) => re.test(`${c.slug} ${c.name}`) && c.image_url);
+  const find = (match: (c: (typeof allCategories)[number]) => boolean) => allCategories.find((c) => match(c) && c.image_url)?.image_url ?? null;
+  const womens = find((c) => /^women/i.test(c.slug) || /^women/i.test(c.name));
+  const mens = find((c) => /^men(s|-|$)/i.test(c.slug) || /^men'?s\b/i.test(c.name));
+  // Only clothing (women's and men's), sneakers and bags: the store's range.
   const editions = [
-    { label: "Clothing Edition", image: hero?.image_url ?? top(/women|men|cloth/i)?.image_url ?? null },
-    { label: "Sneaker Edition", image: top(/sneaker/i)?.image_url ?? null },
-    { label: "Bag Edition", image: top(/bag/i)?.image_url ?? null },
+    { label: "Women's Edition", image: hero?.image_url ?? womens },
+    { label: "Men's Edition", image: mens },
+    { label: "Sneaker Edition", image: find((c) => /sneaker/i.test(`${c.slug} ${c.name}`)) },
+    { label: "Bag Edition", image: find((c) => /bag/i.test(`${c.slug} ${c.name}`)) },
   ].filter((e) => e.image);
 
   return (
