@@ -8,7 +8,7 @@ import { Card, PageHeader } from "@/components/admin/ui";
 export const metadata = { title: "New product" };
 
 export default async function NewProductPage() {
-  await requireStaffPage("catalog:write");
+  await requireStaffPage("products:write");
   const categories = await categoryOptions();
   return (
     <div className="max-w-4xl">

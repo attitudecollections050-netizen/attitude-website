@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireStaffPage } from "@/lib/auth";
-import { can } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { categoryOptions } from "@/lib/admin/categories";
 import { toMajorString } from "@/lib/money";
@@ -17,7 +16,9 @@ import { Notice } from "@/components/ui/Notice";
 export const metadata = { title: "Edit product" };
 
 export default async function EditProductPage({ params, searchParams }: PageProps<"/admin/products/[id]">) {
-  const { roles } = await requireStaffPage("catalog:write");
+  const { permissions } = await requireStaffPage("products:write");
+  // Supplier details are owner-only; Product Staff never load them.
+  const showSuppliers = permissions.includes("suppliers:write");
   const { id } = await params;
   const sp = await searchParams;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
@@ -29,8 +30,8 @@ export default async function EditProductPage({ params, searchParams }: PageProp
       .eq("id", id)
       .maybeSingle(),
     categoryOptions(),
-    db.from("suppliers").select("id, name").eq("is_active", true).order("name"),
-    db.from("product_supplier_info").select("*").eq("product_id", id).maybeSingle(),
+    showSuppliers ? db.from("suppliers").select("id, name").eq("is_active", true).order("name") : Promise.resolve({ data: null }),
+    showSuppliers ? db.from("product_supplier_info").select("*").eq("product_id", id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   if (!product) notFound();
   const images = [...(product.product_images as { id: string; url: string; alt: string; color: string | null; sort_order: number }[])].sort((a, b) => a.sort_order - b.sort_order);
@@ -165,7 +166,7 @@ export default async function EditProductPage({ params, searchParams }: PageProp
         </div>
       </Card>
 
-      {can(roles, "suppliers:write") && (
+      {showSuppliers && (
         <Card title="Supplier (internal)" description="Never shown to customers.">
           <ActionForm action={saveSupplierInfo} submitLabel="Save supplier details">
             <input type="hidden" name="product_id" value={product.id} />
@@ -197,9 +198,11 @@ export default async function EditProductPage({ params, searchParams }: PageProp
           {product.status !== "archived" && (
             <ActionForm action={setProductStatus} submitLabel="Archive" variant="outline" inline><input type="hidden" name="id" value={product.id} /><input type="hidden" name="status" value="archived" /></ActionForm>
           )}
-          <ActionForm action={deleteProduct} submitLabel="Delete permanently" variant="ghost" inline confirm="Permanently delete this product, its variants and images? Past orders keep their item details. Archiving is usually better.">
-            <input type="hidden" name="id" value={product.id} />
-          </ActionForm>
+          {permissions.includes("products:delete") && (
+            <ActionForm action={deleteProduct} submitLabel="Delete permanently" variant="ghost" inline confirm="Permanently delete this product, its variants and images? Past orders keep their item details. Archiving is usually better.">
+              <input type="hidden" name="id" value={product.id} />
+            </ActionForm>
+          )}
         </div>
       </Card>
     </div>

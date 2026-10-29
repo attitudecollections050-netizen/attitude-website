@@ -3,14 +3,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { AnimatePresence, m } from "motion/react";
-import { LayoutDashboard, Package, ShoppingBag, Layers, Truck, Tag, Home, Settings, Boxes, Mail, Menu, X, Store, LogOut, FileText, CreditCard, Users, BarChart3, Heart, Globe2 } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingBag, Layers, Truck, Tag, Home, Settings, Boxes, Mail, Menu, X, Store, LogOut, FileText, CreditCard, Users, BarChart3, Heart, Globe2, UserCog } from "lucide-react";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { signOut } from "@/app/actions/auth";
 import { cn } from "@/lib/cn";
 
 const ITEMS = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard, perm: "orders:read" },
-  { href: "/admin/products", label: "Products", icon: Package, perm: "catalog:write" },
+  { href: "/admin/products", label: "Products", icon: Package, perm: "products:write" },
   { href: "/admin/categories", label: "Categories", icon: Layers, perm: "catalog:write" },
   { href: "/admin/collections", label: "Collections", icon: Boxes, perm: "catalog:write" },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag, perm: "orders:read" },
@@ -26,6 +26,7 @@ const ITEMS = [
   { href: "/admin/messages", label: "Messages", icon: Mail, perm: "messages:read" },
   { href: "/admin/international", label: "International", icon: Globe2, perm: "settings:write" },
   { href: "/admin/settings", label: "Store Settings", icon: Settings, perm: "settings:write" },
+  { href: "/admin/staff", label: "Staff Management", icon: UserCog, perm: "staff:manage" },
 ] as const;
 
 export function AdminNav({ permissions, email }: { permissions: string[]; email: string }) {

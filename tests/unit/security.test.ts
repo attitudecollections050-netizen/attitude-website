@@ -39,3 +39,37 @@ describe("admin-edited page content", () => {
     expect(html("Contact us at [support email].")).toContain('class="placeholder"');
   });
 });
+
+describe("staff roles", async () => {
+  const { adminHome, can, isStaffRole, permissionsFor } = await import("@/lib/permissions");
+  const ownerOnly = ["orders:read", "customers:read", "reports:read", "settings:write", "shipping:write", "discounts:write", "suppliers:write", "staff:manage", "catalog:write", "messages:read", "feedback:manage"] as const;
+
+  it("Product Staff can manage products and nothing else", () => {
+    const p = permissionsFor(["product_staff"]);
+    expect(p).toEqual(["products:write"]);
+    for (const perm of ownerOnly) expect(p, perm).not.toContain(perm);
+    expect(p).not.toContain("products:delete");
+  });
+
+  it("product deletion only when the owner allows it", () => {
+    expect(permissionsFor(["product_staff"], { canDeleteProducts: true })).toContain("products:delete");
+    // The flag means nothing for people who aren't Product Staff.
+    expect(permissionsFor([], { canDeleteProducts: true })).toEqual([]);
+    expect(permissionsFor(["staff"], { canDeleteProducts: true })).not.toContain("products:delete");
+  });
+
+  it("the owner keeps every permission, including Staff Management", () => {
+    const p = permissionsFor(["admin"]);
+    for (const perm of [...ownerOnly, "products:write", "products:delete"] as const) expect(p, perm).toContain(perm);
+    expect(can(["admin"], "staff:manage")).toBe(true);
+    expect(can(["staff"], "staff:manage")).toBe(false);
+  });
+
+  it("Product Staff land on Products; customers get no admin home", () => {
+    expect(isStaffRole(["product_staff"])).toBe(true);
+    expect(isStaffRole([])).toBe(false);
+    expect(adminHome(permissionsFor(["product_staff"]))).toBe("/admin/products");
+    expect(adminHome(permissionsFor(["admin"]))).toBe("/admin");
+    expect(adminHome([])).toBe("/admin/login?error=forbidden");
+  });
+});

@@ -8,6 +8,8 @@ import { Wordmark } from "@/components/brand/Wordmark";
 import { Notice } from "@/components/ui/Notice";
 import { signOut } from "@/app/actions/auth";
 import { MotionProvider } from "@/components/ui/MotionProvider";
+import { NextIntlClientProvider } from "next-intl";
+import { getMessages } from "next-intl/server";
 
 export const metadata: Metadata = { title: "Admin sign in", robots: { index: false, follow: false } };
 
@@ -19,8 +21,11 @@ export default async function AdminLoginPage({ searchParams }: PageProps<"/admin
   const user = await getCurrentUser();
   const roles = await getCurrentRoles();
   if (user && isStaffRole(roles)) redirect("/admin");
+  // The sign-in form's labels come from the English messages (the admin is English only).
+  const messages = await getMessages();
 
   return (
+    <NextIntlClientProvider locale="en" messages={messages}>
     <MotionProvider>
       <div className="flex min-h-dvh items-center justify-center bg-plum px-4 py-16">
         <div className="w-full max-w-md bg-white p-8 sm:p-10">
@@ -51,5 +56,6 @@ export default async function AdminLoginPage({ searchParams }: PageProps<"/admin
         </div>
       </div>
     </MotionProvider>
+    </NextIntlClientProvider>
   );
 }

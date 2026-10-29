@@ -37,7 +37,7 @@ function revalidateProduct(productSlug?: string) {
 
 export async function createProduct(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
   let newId: string | null = null;
-  const result = await guarded("catalog:write", async ({ db }) => {
+  const result = await guarded("products:write", async ({ db }) => {
     const p = productSchema.parse(Object.fromEntries(formData));
     const finalSlug = slug.parse(p.slug || slugify(p.name));
     const { data, error } = await db.from("products").insert({ ...p, slug: finalSlug }).select("id").single();
@@ -51,7 +51,7 @@ export async function createProduct(_prev: AdminResult, formData: FormData): Pro
 }
 
 export async function updateProduct(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
-  return guarded("catalog:write", async ({ db }) => {
+  return guarded("products:write", async ({ db }) => {
     const id = uuid.parse(formData.get("id"));
     const p = productSchema.parse(Object.fromEntries(formData));
     const finalSlug = slug.parse(p.slug || slugify(p.name));
@@ -64,7 +64,7 @@ export async function updateProduct(_prev: AdminResult, formData: FormData): Pro
 }
 
 export async function setProductStatus(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
-  return guarded("catalog:write", async ({ db }) => {
+  return guarded("products:write", async ({ db }) => {
     const id = uuid.parse(formData.get("id"));
     const status = z.enum(["draft", "published", "archived"]).parse(formData.get("status"));
     const { data, error } = await db.from("products").update({ status }).eq("id", id).select("slug").single();
@@ -77,7 +77,8 @@ export async function setProductStatus(_prev: AdminResult, formData: FormData): 
 
 export async function deleteProduct(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
   let deleted = false;
-  const result = await guarded("catalog:write", async ({ db }) => {
+  // Deleting needs its own permission: owner, or Product Staff the owner has allowed to delete.
+  const result = await guarded("products:delete", async ({ db }) => {
     const id = uuid.parse(formData.get("id"));
     const { data: imgs } = await db.from("product_images").select("storage_path").eq("product_id", id);
     const { error } = await db.from("products").delete().eq("id", id);
@@ -94,7 +95,7 @@ export async function deleteProduct(_prev: AdminResult, formData: FormData): Pro
 
 // ---------------------------------------------------------------- images
 export async function uploadProductImages(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
-  return guarded("catalog:write", async ({ db }) => {
+  return guarded("products:write", async ({ db }) => {
     const productId = uuid.parse(formData.get("product_id"));
     const alt = optStr(200).parse(formData.get("alt") ?? "") ?? "";
     const color = optStr(40).parse(formData.get("color") ?? "");
@@ -127,7 +128,7 @@ export async function uploadProductImages(_prev: AdminResult, formData: FormData
 }
 
 export async function addImageUrl(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
-  return guarded("catalog:write", async ({ db }) => {
+  return guarded("products:write", async ({ db }) => {
     const input = z
       .object({ product_id: uuid, url: z.string().trim().url().regex(/^https:\/\//, "Use an https:// URL"), alt: optStr(200), color: optStr(40) })
       .parse(Object.fromEntries(formData));
@@ -141,7 +142,7 @@ export async function addImageUrl(_prev: AdminResult, formData: FormData): Promi
 }
 
 export async function updateImage(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
-  return guarded("catalog:write", async ({ db }) => {
+  return guarded("products:write", async ({ db }) => {
     const input = z.object({ id: uuid, product_id: uuid, alt: str(200), color: optStr(40), sort_order: intStr(0, 1000) }).parse(Object.fromEntries(formData));
     const { id, product_id, ...row } = input;
     const { error } = await db.from("product_images").update(row).eq("id", id).eq("product_id", product_id);
@@ -153,7 +154,7 @@ export async function updateImage(_prev: AdminResult, formData: FormData): Promi
 }
 
 export async function deleteImage(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
-  return guarded("catalog:write", async ({ db }) => {
+  return guarded("products:write", async ({ db }) => {
     const id = uuid.parse(formData.get("id"));
     const productId = uuid.parse(formData.get("product_id"));
     const { data, error } = await db.from("product_images").delete().eq("id", id).eq("product_id", productId).select("storage_path").maybeSingle();
@@ -169,7 +170,7 @@ export async function deleteImage(_prev: AdminResult, formData: FormData): Promi
 const hex = z.union([z.literal(""), z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Colour hex like #D94F91")]).transform((v) => v || null);
 
 export async function saveVariant(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
-  return guarded("catalog:write", async ({ db }) => {
+  return guarded("products:write", async ({ db }) => {
     const input = z
       .object({
         id: z.union([uuid, z.literal("")]).optional(),
@@ -203,7 +204,7 @@ export async function saveVariant(_prev: AdminResult, formData: FormData): Promi
 }
 
 export async function generateVariants(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
-  return guarded("catalog:write", async ({ db }) => {
+  return guarded("products:write", async ({ db }) => {
     const input = z
       .object({ product_id: uuid, sizes: z.string().max(400).default(""), colors: z.string().max(800).default(""), stock: intStr(0, 100000) })
       .parse(Object.fromEntries(formData));
@@ -245,7 +246,7 @@ export async function generateVariants(_prev: AdminResult, formData: FormData): 
 }
 
 export async function deleteVariant(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
-  return guarded("catalog:write", async ({ db }) => {
+  return guarded("products:write", async ({ db }) => {
     const id = uuid.parse(formData.get("id"));
     const productId = uuid.parse(formData.get("product_id"));
     const { error } = await db.from("product_variants").delete().eq("id", id).eq("product_id", productId);

@@ -17,7 +17,7 @@ type Row = {
 };
 
 export default async function AdminProductsPage({ searchParams }: PageProps<"/admin/products">) {
-  await requireStaffPage("catalog:write");
+  await requireStaffPage("products:write");
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q.trim().slice(0, 100) : "";
   const status = typeof sp.status === "string" ? sp.status : "";

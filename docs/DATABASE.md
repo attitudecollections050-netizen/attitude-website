@@ -22,7 +22,7 @@ All money is stored as **integers in minor units** (kobo: ₦4,000 = `400000`). 
 | Table | Purpose | Who can read / write (RLS) |
 | --- | --- | --- |
 | `profiles` | Name, phone, marketing opt-in (1:1 with `auth.users`, created by trigger) | Owner reads/updates `full_name`, `phone`, `marketing_opt_in` only; staff read |
-| `user_roles` | `admin` or `staff` per user | Owner can read own roles. **No one can insert/update via the API** — roles are granted with `grant_role_by_email()` from the SQL editor |
+| `user_roles` | `admin` (owner), `staff` (orders) or `product_staff` per user. A trigger (`protect_owner_role`) blocks removing the last admin | Owner can read own roles. **No one can insert/update via the API** — roles are granted with `grant_role_by_email()` from the SQL editor |
 | `addresses` | Saved delivery addresses | Owner only |
 
 ### Catalogue
@@ -91,10 +91,19 @@ Public (anon) users can read only **published** products and their images/varian
 | `orders.display_currency/display_rate/display_total/locale` | Snapshot of what the shopper saw; `total`/`currency` remain the NGN amount charged | Same as the order |
 | `store_settings` key `intl` | Enabled languages, default language/country, rate provider, expiry, payment currency (NGN) and Paystack channels by country | Public read (no secrets) |
 
+### Staff Management (migrations 11–12)
+| Table / column | Purpose | Access |
+| --- | --- | --- |
+| `staff_members` | One row per invited helper: email, name, role (never `admin`), status `invited`/`active`/`disabled`, `can_delete_products` (default off), `created_by_invite`, invite/accept/disable times | Admin reads all; a staff member reads their own row. **No API writes**: the owner's server actions use the service role after checking `staff:manage` |
+| `products`, `product_images`, `product_variants`, `inventory` | Writable by `can_manage_products()` (admin, or active/invited Product Staff); product delete needs `can_delete_products()` | As before for customers |
+| Storage `product-images` | Insert/update/delete only for `can_manage_products()`; bucket limited to 5 MB JPEG/PNG/WebP/AVIF. Other buckets are unchanged and closed to Product Staff | Public read |
+
 ## Key functions
 
 | Function | Caller | What it does |
 | --- | --- | --- |
+| `can_manage_products()` / `can_delete_products()` | RLS (security definer) | True for the owner, or for Product Staff with a non-disabled staff record (and the delete flag) |
+| `admin_set_stock(variant, on_hand, note)` | owner or Product Staff | Sets stock and logs a `manual_adjustment` movement |
 | `catalog_search(...)` | anon (security invoker) | Search + category/size/colour/price/availability/sale filters, sort by newest/price/popularity, pagination with total count |
 | `catalog_facets(category)` | anon | Sizes, colours, price range, and whether genuine sales data exists |
 | `product_sales_counts()` | anon | Units sold per product from **paid, non-cancelled** orders only (aggregate, no personal data) |

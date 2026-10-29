@@ -68,6 +68,16 @@ Email confirmation is controlled under Authentication → Providers → Email. I
 
 Nobody can give themselves admin access from the website. The `user_roles` table has no write policy, and the grant function can only run from the SQL editor (service role).
 
+### Staff Management (Product Staff)
+
+The owner (admin) opens **Staff Management** in the dashboard to invite helpers by email. Each person gets their own account: the invite contains a private, single-use link (it expires after the Supabase *Email OTP expiration* time, about an hour by default) where they choose their own password. Never share the owner login.
+
+- **Product Staff** can add and edit products: names, descriptions, prices, categories, sizes, colours, stock and images. They can publish or archive products. They can delete products only if the owner ticks **Allow deleting** for that person (off by default).
+- They see only **Products**. Orders, payments, customers, settings, shipping, discounts, analytics, suppliers, Staff Management and your account all redirect them away. The server actions, export APIs and database (RLS) policies refuse them too, so typing a URL or calling the API directly doesn't help. Supplier costs are hidden on their product pages.
+- **Disable** cuts access immediately (role removed, login blocked). **Enable** restores it. **Remove** deletes the staff record, and deletes the login too if it was created by the invite. If you invite an existing customer, they keep their own shopping account.
+- The owner role can't be removed or downgraded (a database trigger blocks it), and the owner can't be invited as staff.
+- Invites are emailed through Resend when `RESEND_API_KEY` and `EMAIL_FROM` are set. Otherwise the dashboard shows the link for the owner to copy and send privately. Invite links use `NEXT_PUBLIC_SITE_URL`, and Staff Management needs `SUPABASE_SECRET_KEY` on the server.
+
 ### Run
 
 ```bash
@@ -230,4 +240,5 @@ docs/DATABASE.md          schema documentation
 - Real product photography and supplier products (replace the demo catalogue).
 - `CRON_SECRET` on Vercel for the daily exchange-rate update (and optionally `EXCHANGE_RATE_API_KEY`). Review the AI-prepared translations, especially checkout and policy text.
 - Optional: Anthropic API key for the Dj Attitude Mini chat (basic mode works without it).
-- Optional: Resend API key and a verified sender domain for order emails; custom SMTP for Supabase Auth emails.
+- Optional: Resend API key and a verified sender domain for order emails and staff invitations; custom SMTP for Supabase Auth emails.
+- Staff Management: `SUPABASE_SECRET_KEY` and the production `NEXT_PUBLIC_SITE_URL` on Vercel; apply migrations 11 and 12.
