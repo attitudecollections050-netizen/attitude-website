@@ -39,9 +39,7 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   if (!requested || destination === "/account") {
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id);
     const list = (roles ?? []).map((r) => r.role as AppRole);
-    // Owner and order staff → the dashboard; Product Staff → their own dashboard.
-    if (list.includes("admin") || list.includes("staff")) destination = "/admin";
-    else if (list.includes("product_staff")) destination = "/staff/dashboard";
+    if (list.some((r) => r === "admin" || r === "staff" || r === "product_staff")) destination = "/admin";
   }
   redirect(destination);
 }

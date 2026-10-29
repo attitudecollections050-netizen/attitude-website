@@ -10,7 +10,7 @@ import { cn } from "@/lib/cn";
 
 const ITEMS = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard, perm: "orders:read" },
-  { href: "/staff/dashboard", label: "My Dashboard", icon: Wallet, perm: "earnings:self" },
+  { href: "/admin", label: "My Dashboard", icon: Wallet, perm: "earnings:self" },
   { href: "/admin/products", label: "Products", icon: Package, perm: "products:write" },
   { href: "/admin/categories", label: "Categories", icon: Layers, perm: "catalog:write" },
   { href: "/admin/collections", label: "Collections", icon: Boxes, perm: "catalog:write" },
@@ -34,7 +34,8 @@ const ITEMS = [
 export function AdminNav({ permissions, email }: { permissions: string[]; email: string }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const items = ITEMS.filter((i) => permissions.includes(i.perm));
+  // One link per page (someone with both order and product access sees Overview only once).
+  const items = ITEMS.filter((i, idx) => permissions.includes(i.perm) && ITEMS.findIndex((o) => o.href === i.href && permissions.includes(o.perm)) === idx);
   const isActive = (href: string) => (href === "/admin" ? pathname === "/admin" : pathname.startsWith(href));
 
   const list = (

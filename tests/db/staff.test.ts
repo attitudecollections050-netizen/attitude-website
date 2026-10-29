@@ -201,6 +201,30 @@ run("database: staff roles (owner vs Product Staff)", () => {
     await db.query(`delete from user_roles where user_id = any($1::uuid[])`, [[storeOwner, orderStaff]]);
   });
 
+  it("get_my_stats: each person's own count and earnings, signed-in only", async () => {
+    const before = (await as(db, user(deleter), () => db.query(`select * from public.get_my_stats()`))).rows[0];
+    const count = Number(before.product_count);
+    expect(count).toBe(Number((await db.query(`select count(*) from products where added_by = $1 and status <> 'archived'`, [deleter])).rows[0].count));
+    expect(before.earnings).toBe(Math.floor(count / 10) * 1000);
+    expect(before.remaining).toBe(10 - (count % 10));
+    // archived products don't count; other people's products don't count
+    const id = (await newProduct(deleter, "to-archive")).rows[0].id;
+    expect(Number((await as(db, user(deleter), () => db.query(`select product_count from public.get_my_stats()`))).rows[0].product_count)).toBe(count + 1);
+    await db.query(`update products set status = 'archived' where id = $1`, [id]);
+    expect(Number((await as(db, user(deleter), () => db.query(`select product_count from public.get_my_stats()`))).rows[0].product_count)).toBe(count);
+    expect(Number((await as(db, user(customer), () => db.query(`select product_count from public.get_my_stats()`))).rows[0].product_count)).toBe(0);
+    await expect(as(db, { role: "anon" }, () => db.query(`select * from public.get_my_stats()`))).rejects.toThrow();
+  });
+
+  it("customers can't write orders directly", async () => {
+    await expect(
+      as(db, user(customer), () =>
+        db.query(`insert into orders (email, phone, customer_name, shipping_address, shipping_method_name, currency, subtotal, discount_total, shipping_fee, tax_total, total, status, payment_status, idempotency_key, user_id)
+                  values ('c@example.com', '+234', 'C', '{}'::jsonb, 'x', 'NGN', 1, 0, 0, 0, 1, 'paid', 'paid', 'forged-order', $1)`, [customer]),
+      ),
+    ).rejects.toThrow();
+  });
+
   it("the owner keeps full access and can't be removed or turned into staff", async () => {
     expect((await newProduct(owner, "owner-made")).rowCount).toBe(1);
     expect((await as(db, user(owner), () => db.query(`select * from staff_members`))).rowCount).toBe(3);

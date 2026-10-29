@@ -65,10 +65,10 @@ export function isStaffRole(roles: AppRole[]): boolean {
   return roles.includes("admin") || roles.includes("staff") || roles.includes("product_staff");
 }
 
-/** First page a person lands on after signing in (Product Staff get their own dashboard). */
+/** First page a person lands on after signing in (everyone on the team starts at /admin). */
 export function adminHome(permissions: Permission[]): string {
   if (permissions.includes("orders:read")) return "/admin";
-  if (permissions.includes("earnings:self")) return "/staff/dashboard";
+  if (permissions.includes("earnings:self")) return "/admin";
   if (permissions.includes("products:write")) return "/admin/products";
   return "/admin/login?error=forbidden";
 }

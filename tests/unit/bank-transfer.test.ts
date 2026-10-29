@@ -21,7 +21,7 @@ describe("WhatsApp links", () => {
 });
 
 describe("bank transfer", () => {
-  const ok = { enabled: true, bank_name: "First Bank", account_name: "OKONYE JUSTICE JESSICA NKEM", account_number: "3043027979", note: "" };
+  const ok = { enabled: true, bank_name: "First Bank", account_name: "OKONYE JUSTICE JESSICA", account_number: "3043027979", note: "" };
   it("is active only when switched on with complete details", () => {
     expect(bankTransferActive(ok)).toBe(true);
     expect(bankTransferActive({ ...ok, enabled: false })).toBe(false);

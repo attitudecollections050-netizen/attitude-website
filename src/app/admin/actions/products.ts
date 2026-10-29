@@ -37,10 +37,11 @@ function revalidateProduct(productSlug?: string) {
 
 export async function createProduct(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
   let newId: string | null = null;
-  const result = await guarded("products:write", async ({ db }) => {
+  const result = await guarded("products:write", async ({ db, userId }) => {
     const p = productSchema.parse(Object.fromEntries(formData));
     const finalSlug = slug.parse(p.slug || slugify(p.name));
-    const { data, error } = await db.from("products").insert({ ...p, slug: finalSlug }).select("id").single();
+    // added_by is also stamped by the database from the session, so it can't be faked.
+    const { data, error } = await db.from("products").insert({ ...p, slug: finalSlug, added_by: userId }).select("id").single();
     if (error) return dbError(error);
     newId = data.id;
     revalidateProduct();
@@ -57,7 +58,7 @@ export async function createProduct(_prev: AdminResult, formData: FormData): Pro
  */
 export async function quickAddProduct(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
   let newId: string | null = null;
-  const result = await guarded("products:write", async ({ db }) => {
+  const result = await guarded("products:write", async ({ db, userId }) => {
     const input = z.object({ name: str(140).min(2, "Name is required"), price: money, category_id: uuid }).parse({
       name: formData.get("name"),
       price: formData.get("price"),
@@ -67,7 +68,7 @@ export async function quickAddProduct(_prev: AdminResult, formData: FormData): P
     let created: { id: string } | null = null;
     for (let attempt = 0; attempt < 3 && !created; attempt++) {
       const finalSlug = slug.parse(attempt === 0 ? base : `${base}-${randomUUID().slice(0, 4)}`);
-      const { data, error } = await db.from("products").insert({ ...input, slug: finalSlug, description: "", status: "draft" }).select("id").single();
+      const { data, error } = await db.from("products").insert({ ...input, slug: finalSlug, description: "", status: "draft", added_by: userId }).select("id").single();
       if (error && error.code !== "23505") return dbError(error);
       created = data;
     }

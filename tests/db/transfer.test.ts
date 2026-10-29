@@ -120,6 +120,6 @@ run("database: bank transfer payments", () => {
 
   it("bank details setting is seeded and public", async () => {
     const row = (await as(db, { role: "anon" }, () => db.query(`select value from store_settings where key = 'bank_transfer'`))).rows[0];
-    expect(row.value).toMatchObject({ enabled: true, bank_name: "First Bank", account_number: "3043027979", account_name: "OKONYE JUSTICE JESSICA NKEM" });
+    expect(row.value).toMatchObject({ enabled: true, bank_name: "First Bank", account_number: "3043027979", account_name: "OKONYE JUSTICE JESSICA" });
   });
 });

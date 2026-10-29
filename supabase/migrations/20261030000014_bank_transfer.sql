@@ -100,5 +100,5 @@ on conflict (id) do update set public = false, file_size_limit = excluded.file_s
 
 -- Bank details shown at checkout (public by design: customers need them to pay).
 insert into public.store_settings (key, value, is_public)
-values ('bank_transfer', '{"enabled": true, "bank_name": "First Bank", "account_name": "OKONYE JUSTICE JESSICA NKEM", "account_number": "3043027979", "note": ""}', true)
+values ('bank_transfer', '{"enabled": true, "bank_name": "First Bank", "account_name": "OKONYE JUSTICE JESSICA", "account_number": "3043027979", "note": ""}', true)
 on conflict (key) do nothing;

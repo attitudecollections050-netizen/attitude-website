@@ -30,11 +30,18 @@ interface Stats {
 }
 
 export default async function AdminOverview({ searchParams }: PageProps<"/admin">) {
-  const { user, roles, permissions } = await requireStaffPage();
-  // Sales revenue is only for the store owner (the database also withholds it from everyone else).
-  const owner = isStoreOwner(user.email, roles);
+  const { user, roles, permissions } = await requireStaffPage(null);
   const sp = await searchParams;
   const db = await createClient();
+  // Only the store owner gets the store overview (orders, sales, revenue). Everyone else on the
+  // team sees their own numbers instead, and orders/revenue are never fetched for them.
+  const owner = isStoreOwner(user.email, roles);
+  if (!owner) {
+    const canAdd = permissions.includes("products:write");
+    const [{ data: mine }, categories] = await Promise.all([db.rpc("get_my_stats"), canAdd ? categoryOptions() : Promise.resolve([])]);
+    const m = (Array.isArray(mine) ? mine[0] : mine) as { product_count: number | string; earnings: number; remaining: number } | null;
+    return <MyStats count={Number(m?.product_count ?? 0)} earnings={m?.earnings ?? 0} remaining={m?.remaining ?? 10} categories={categories} canAdd={canAdd} forbidden={sp.error === "forbidden"} />;
+  }
   const canVerify = permissions.includes("payments:verify");
   const canAddProducts = permissions.includes("products:write");
   const [settings, pendingTransfers, categories] = await Promise.all([
@@ -160,6 +167,40 @@ export default async function AdminOverview({ searchParams }: PageProps<"/admin"
           )}
         </Card>
       </div>
+    </div>
+  );
+}
+
+/** The team's view of /admin: their own products and earnings (₦1,000 for every 10 products added). */
+function MyStats({ count, earnings, remaining, categories, canAdd, forbidden }: { count: number; earnings: number; remaining: number; categories: Awaited<ReturnType<typeof categoryOptions>>; canAdd: boolean; forbidden: boolean }) {
+  const progress = (10 - remaining) % 10;
+  return (
+    <div className="space-y-8">
+      <PageHeader title="My dashboard" description="Your products and earnings. ₦1,000 for every 10 products you add." />
+      {forbidden && <Notice tone="error">You don&apos;t have permission to open that section.</Notice>}
+      <ul className="grid gap-3 sm:grid-cols-3" data-testid="my-stats">
+        <li className="border border-line bg-white p-5">
+          <p className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-muted">My products added</p>
+          <p className="mt-2 font-display text-4xl tabular-nums" data-testid="my-count">{count}</p>
+          <Link href="/admin/products" className="mt-1 inline-block text-xs underline">See my products</Link>
+        </li>
+        <li className="border border-line bg-white p-5">
+          <p className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-muted">My earnings</p>
+          <p className="mt-2 text-4xl font-extrabold tabular-nums text-success" data-testid="my-earnings">{formatMoney(earnings * 100)}</p>
+        </li>
+        <li className="border border-line bg-white p-5">
+          <p className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-muted">Remaining to next ₦1,000</p>
+          <p className="mt-2 font-display text-4xl tabular-nums" data-testid="my-remaining">{remaining}</p>
+          <div className="mt-3 h-1.5 w-full bg-line" role="progressbar" aria-valuemin={0} aria-valuemax={10} aria-valuenow={progress} aria-label="Progress to the next ₦1,000">
+            <div className="h-full bg-rose" style={{ width: `${progress * 10}%` }} />
+          </div>
+        </li>
+      </ul>
+      {canAdd && (
+        <Card title="Add a product" description="Name, price, category and a photo. You'll add sizes, colours and stock on the next page.">
+          <QuickAddProduct categories={categories} />
+        </Card>
+      )}
     </div>
   );
 }

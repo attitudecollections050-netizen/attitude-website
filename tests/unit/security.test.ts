@@ -68,7 +68,7 @@ describe("staff roles", async () => {
   it("Product Staff land on Products; customers get no admin home", () => {
     expect(isStaffRole(["product_staff"])).toBe(true);
     expect(isStaffRole([])).toBe(false);
-    expect(adminHome(permissionsFor(["product_staff"]))).toBe("/staff/dashboard");
+    expect(adminHome(permissionsFor(["product_staff"]))).toBe("/admin");
     expect(adminHome(permissionsFor(["admin"]))).toBe("/admin");
     expect(adminHome([])).toBe("/admin/login?error=forbidden");
   });

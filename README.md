@@ -87,8 +87,7 @@ Invitations sent from Staff Management already use these links, whether they're 
 ### Signing in as the owner or staff
 
 The owner and staff can sign in on the shop's normal **Sign in** page or at `/admin/login`:
-- the owner and order staff land on **/admin**
-- Product Staff land on **/staff/dashboard**
+- everyone on the team lands on **/admin**: the store owner (attitudecollections050@gmail.com) sees the store overview with orders and sales; everyone else sees only My Products Added, My Earnings and how many products remain to the next ₦1,000 (from `get_my_stats()`), and no orders or revenue are loaded for them
 - customers go to **My Account**
 
 Roles live in the protected `user_roles` table, not `profiles`, so nobody can give themselves a role. The Overview and the staff dashboard both have a quick **Add a product** card (name, price, category, photo). It saves a draft, records who added it, and opens the product so you can add sizes, colours and stock before publishing.
@@ -318,4 +317,4 @@ docs/DATABASE.md          schema documentation
 - `CRON_SECRET` on Vercel for the daily exchange-rate update (and optionally `EXCHANGE_RATE_API_KEY`). Review the AI-prepared translations, especially checkout and policy text.
 - Optional: Anthropic API key for the Dj Attitude Mini chat (basic mode works without it).
 - Groundmail API key (`GROUNDMAIL_API_KEY`) and a sender on a verified domain (`EMAIL_FROM`) for order receipts, staff invitations and notifications; optionally Groundmail SMTP for Supabase Auth emails.
-- Staff Management and bank transfers: `SUPABASE_SECRET_KEY` and the production `NEXT_PUBLIC_SITE_URL` on Vercel; apply migrations 11–15 (12–15 in one go: paste `supabase/manual/live-update-12-to-15.sql` into the Supabase SQL Editor and run it once).
+- Staff Management and bank transfers: `SUPABASE_SECRET_KEY` and the production `NEXT_PUBLIC_SITE_URL` on Vercel; apply migrations 11–16. For the live project (12 and 13 already applied), paste `supabase/manual/live-repair-14-15-16.sql` into the Supabase SQL Editor and run it; it is safe to run more than once.
