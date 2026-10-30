@@ -52,6 +52,8 @@ export default async function AdminOverview({ searchParams }: PageProps<"/admin"
         earnings={m?.earnings ?? 0}
         remaining={m?.remaining ?? 10}
         withdrawn={payTotals?.totalWithdrawn ?? 0}
+        pending={payTotals?.pendingAmount ?? 0}
+        hasBank={Boolean(payTotals?.bank)}
         balanceLeft={payTotals?.balanceLeft ?? m?.earnings ?? 0}
         userId={user.id}
         categories={categories}
@@ -195,6 +197,8 @@ function MyStats({
   earnings,
   remaining,
   withdrawn,
+  pending,
+  hasBank,
   balanceLeft,
   userId,
   categories,
@@ -205,6 +209,8 @@ function MyStats({
   earnings: number;
   remaining: number;
   withdrawn: number;
+  pending: number;
+  hasBank: boolean;
   balanceLeft: number;
   userId: string;
   categories: Awaited<ReturnType<typeof categoryOptions>>;
@@ -217,6 +223,16 @@ function MyStats({
       <PageHeader title="My dashboard" description="Your products and earnings. ₦1,000 for every 10 products you add." />
       {forbidden && <Notice tone="error">You don&apos;t have permission to open that section.</Notice>}
       <PaymentsLive staffId={userId} />
+      {pending > 0 && (
+        <Link href="/staff/dashboard" className="block border-2 border-[#E94E8A] bg-[#FFF0F7] px-4 py-3 text-sm font-semibold text-[#C2185B]" data-testid="my-pending-alert">
+          🔔 The owner sent you {naira(pending)}. Tap here to confirm you received it.
+        </Link>
+      )}
+      {!hasBank && (
+        <Link href="/staff/dashboard#bank-h" className="block border border-[#EA580C] bg-[#FFF7ED] px-4 py-3 text-sm font-semibold text-[#9A3412]" data-testid="my-bank-warning">
+          ⚠️ Add your bank details to receive payments →
+        </Link>
+      )}
       <ul className="grid gap-3 sm:grid-cols-2" data-testid="my-payments">
         <li className="border border-line bg-white p-5">
           <p className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-muted">Total withdrawn</p>

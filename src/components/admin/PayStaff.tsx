@@ -11,7 +11,27 @@ import { cn } from "@/lib/cn";
 const naira = (n: number) => `₦${n.toLocaleString("en-NG", { maximumFractionDigits: 2 })}`;
 
 /** "Pay" button + modal: the owner records a payout (or a bonus) for a staff member. */
-export function PayStaffButton({ staffId, name, balanceLeft, label = "Pay", testId }: { staffId: string; name: string; balanceLeft: number; label?: string; testId?: string }) {
+export function PayStaffButton({
+  staffId,
+  name,
+  balanceLeft,
+  earned,
+  withdrawn,
+  pending = 0,
+  bank,
+  label = "Pay",
+  testId,
+}: {
+  staffId: string;
+  name: string;
+  balanceLeft: number;
+  earned: number;
+  withdrawn: number;
+  pending?: number;
+  bank: { bankName: string; accountNumber: string; accountName: string } | null;
+  label?: string;
+  testId?: string;
+}) {
   const router = useRouter();
   const id = useId();
   const panel = useRef<HTMLDivElement>(null);
@@ -39,6 +59,7 @@ export function PayStaffButton({ staffId, name, balanceLeft, label = "Pay", test
   const value = Number(amount);
   const valid = amount.trim() !== "" && Number.isFinite(value) && value > 0 && value <= 100_000_000 && Math.round(value * 100) === value * 100;
   const over = type === "withdrawal" && valid && value > balanceLeft;
+  const needsBank = type === "withdrawal" && !bank;
 
   const submit = async () => {
     setBusy(true);
@@ -56,7 +77,7 @@ export function PayStaffButton({ staffId, name, balanceLeft, label = "Pay", test
         return;
       }
       setDone(`${type === "withdrawal" ? "Paid" : "Added"} ${naira(value)}${typeof data.balance_left === "number" ? ` — balance left ${naira(data.balance_left)}` : ""}`);
-      setToast(type === "withdrawal" ? `You paid ${name} ${naira(value)}` : `You added a ${naira(value)} ${type === "bonus" ? "bonus" : "extra earning"} for ${name}`);
+      setToast(type === "withdrawal" ? `You paid ${name} ${naira(value)} — waiting for them to confirm receipt` : `You added a ${naira(value)} ${type === "bonus" ? "bonus" : "extra earning"} for ${name}`);
       setOpen(false);
       setConfirming(false);
       setAmount("");
@@ -98,13 +119,27 @@ export function PayStaffButton({ staffId, name, balanceLeft, label = "Pay", test
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 id={`${id}-t`} className="font-display text-2xl">Pay {name}</h2>
-                <p className="mt-1 text-sm text-muted">Balance left: <strong className="text-plum">{naira(balanceLeft)}</strong></p>
+                <p className="mt-1 text-sm" data-testid="pay-modal-totals">
+                  Earned: <strong className="text-[#2563EB]">{naira(earned)}</strong> | Withdrawn: <strong className="text-[#EA580C]">{naira(withdrawn)}</strong> | Left:{" "}
+                  <strong className="text-[#16A34A]">{naira(balanceLeft)}</strong>
+                </p>
+                {pending > 0 && <p className="mt-0.5 text-xs text-muted">{naira(pending)} sent and waiting for them to confirm.</p>}
               </div>
               <button type="button" onClick={close} className="grid size-9 place-items-center rounded-full hover:bg-neutral" aria-label="Close">
                 <X className="size-5" />
               </button>
             </div>
 
+            <div className={cn("mt-4 rounded-2xl border px-4 py-3 text-sm", bank ? "border-line bg-neutral" : "border-[#EA580C] bg-[#FFF7ED] text-[#9A3412]")} data-testid="pay-modal-bank">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] opacity-70">Their account</p>
+              {bank ? (
+                <p className="mt-1 font-semibold">
+                  {bank.bankName} - <span className="font-mono">{bank.accountNumber}</span> - {bank.accountName}
+                </p>
+              ) : (
+                <p className="mt-1 font-semibold">⚠️ No bank details yet. Ask {name} to add them on their dashboard before you pay a payout.</p>
+              )}
+            </div>
             {!confirming ? (
               <form
                 className="mt-5 space-y-4"
@@ -148,21 +183,32 @@ export function PayStaffButton({ staffId, name, balanceLeft, label = "Pay", test
                   Description <span className="font-normal text-muted">(optional)</span>
                   <input className={cn(inputCls, "mt-1.5")} maxLength={200} placeholder="e.g. October payout, bank transfer" value={description} onChange={(e) => setDescription(e.target.value)} name="description" />
                 </label>
+                {needsBank && <p className="text-xs font-semibold text-[#9A3412]">A payout needs their bank details. You can still add a bonus.</p>}
                 {over && <p className="rounded-xl bg-[#fff8e8] px-3 py-2 text-xs text-[#6b4a00]">This is more than their balance left — the balance will go negative ({naira(balanceLeft - value)}).</p>}
                 {error && <p className="text-sm text-danger" role="alert">{error}</p>}
-                <button type="submit" disabled={!valid} className={cn(buttonClasses("primary", "md"), "w-full disabled:opacity-50")}>Continue</button>
+                <button type="submit" disabled={!valid || needsBank} className={cn(buttonClasses("primary", "md"), "w-full disabled:opacity-50")}>Continue</button>
               </form>
             ) : (
               <div className="mt-5 space-y-4" data-testid="pay-confirm">
                 <p className="rounded-2xl bg-neutral p-4 text-sm">
-                  Record <strong>{naira(value)}</strong> as a <strong>{type === "withdrawal" ? "payout" : type}</strong> for <strong>{name}</strong>
+                  {type === "withdrawal" ? (
+                    <>
+                      Send <strong>{naira(value)}</strong> to <strong>{bank?.bankName} - {bank?.accountNumber} - {bank?.accountName}</strong>
+                    </>
+                  ) : (
+                    <>
+                      Record <strong>{naira(value)}</strong> as a <strong>{type}</strong> for <strong>{name}</strong>
+                    </>
+                  )}
                   {description.trim() ? <> — “{description.trim()}”</> : null}?
-                  <span className="mt-1 block text-xs text-muted">Payments can&apos;t be edited later. They will see this on their dashboard.</span>
+                  <span className="mt-1 block text-xs text-muted">
+                    {type === "withdrawal" ? `Make the bank transfer, then confirm here. ${name} will be asked to confirm they received it.` : "Payments can't be edited later."}
+                  </span>
                 </p>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => setConfirming(false)} className={cn(buttonClasses("outline", "md"), "flex-1")} disabled={busy}>Back</button>
                   <button type="button" onClick={() => void submit()} className={cn(buttonClasses("primary", "md"), "flex-1")} disabled={busy} data-testid="pay-confirm-btn">
-                    {busy ? "Saving…" : "Confirm payment"}
+                    {busy ? "Saving…" : type === "withdrawal" ? "Confirm & Pay" : "Confirm"}
                   </button>
                 </div>
               </div>
@@ -192,7 +238,7 @@ export function PaymentsLive({ staffId }: { staffId?: string }) {
     if (db) {
       channel = db
         .channel(`staff-payments-${staffId ?? "all"}`)
-        .on("postgres_changes", { event: "INSERT", schema: "public", table: "staff_payments", ...(staffId ? { filter: `staff_id=eq.${staffId}` } : {}) }, () => router.refresh())
+        .on("postgres_changes", { event: "*", schema: "public", table: "staff_payments", ...(staffId ? { filter: `staff_id=eq.${staffId}` } : {}) }, () => router.refresh())
         .subscribe();
     }
     // Also refresh when the tab comes back into view (covers networks that block live updates).

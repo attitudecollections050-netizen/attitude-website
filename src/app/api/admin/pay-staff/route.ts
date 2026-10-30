@@ -32,8 +32,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       payment_id: result.paymentId,
+      status: result.status,
       total_earnings: result.totalEarnings,
       total_withdrawn: result.totalWithdrawn,
+      pending_amount: result.pendingAmount,
       balance_left: result.balanceLeft,
     });
   } catch (e) {

@@ -12,8 +12,10 @@ export async function GET() {
       {
         total_earnings: totals?.totalEarnings ?? 0,
         total_withdrawn: totals?.totalWithdrawn ?? 0,
+        pending_amount: totals?.pendingAmount ?? 0,
         balance_left: totals?.balanceLeft ?? 0,
-        history: history.map((p) => ({ id: p.id, amount: p.amount, type: p.type, description: p.description, created_at: p.createdAt })),
+        bank: totals?.bank ? { bank_name: totals.bank.bankName, account_number: totals.bank.accountNumber, account_name: totals.bank.accountName } : null,
+        history: history.map((p) => ({ id: p.id, amount: p.amount, type: p.type, status: p.status, description: p.description, created_at: p.createdAt, confirmed_at: p.confirmedAt })),
       },
       { headers: { "Cache-Control": "no-store" } },
     );

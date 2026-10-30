@@ -77,23 +77,24 @@ export default async function StaffPage() {
       />
 
       <PaymentsLive />
-      <Card title="Staff payments" description="What each person has earned, what you've paid them (withdrawn) and what's left. Tap Pay after you send money — it shows on their dashboard straight away.">
+      <Card title="Staff payments" description="What each person has earned, what you've paid them (withdrawn) and what's left. Send the money to their account, then tap Pay — they confirm on their dashboard when it arrives.">
         {!payReady ? (
           <Notice tone="warning">
-            Payments aren&apos;t switched on in your database yet. In Supabase → SQL Editor, run the file <code>supabase/migrations/20261030000018_staff_payments.sql</code> once, then reload this page.
+            Payments aren&apos;t switched on in your database yet. In Supabase → SQL Editor, run the file <code>supabase/manual/live-staff-payouts.sql</code> once, then reload this page.
           </Notice>
         ) : payTotals.length === 0 ? (
           <Empty>No staff yet.</Empty>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[40rem] text-left text-sm" data-testid="staff-payments-table">
+            <table className="w-full min-w-[52rem] text-left text-sm" data-testid="staff-payments-table">
               <thead className="border-b border-line text-[11px] uppercase tracking-[0.14em] text-muted">
                 <tr>
                   <th className="py-2 pr-3 font-bold">Name</th>
+                  <th className="py-2 pr-3 font-bold">Account details</th>
                   <th className="py-2 pr-3 font-bold">Total earned</th>
                   <th className="py-2 pr-3 font-bold">Withdrawn</th>
-                  <th className="py-2 pr-3 font-bold">Balance left</th>
-                  <th className="py-2 font-bold">Action</th>
+                  <th className="py-2 pr-3 font-bold">Left</th>
+                  <th className="py-2 font-bold">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -103,15 +104,29 @@ export default async function StaffPage() {
                       <p className="font-semibold">{t.name ?? t.email}</p>
                       <p className="text-xs text-muted">{t.productsAdded} products{t.lastPaidAt ? ` · last paid ${when(t.lastPaidAt)}` : ""}</p>
                     </td>
-                    <td className="py-3 pr-3 tabular-nums">
+                    <td className="py-3 pr-3 text-xs" data-testid="account">
+                      {t.bank ? (
+                        <>
+                          <p className="font-semibold">{t.bank.bankName}</p>
+                          <p className="font-mono">{t.bank.accountNumber}</p>
+                          <p className="text-muted">{t.bank.accountName}</p>
+                        </>
+                      ) : (
+                        <span className="font-semibold text-[#EA580C]">⚠️ Not added yet</span>
+                      )}
+                    </td>
+                    <td className="py-3 pr-3 tabular-nums text-[#2563EB]">
                       {naira(t.totalEarnings)}
                       {t.extraEarnings > 0 && <span className="block text-[11px] text-muted">incl. {naira(t.extraEarnings)} bonus/extra</span>}
                     </td>
-                    <td className="py-3 pr-3 font-semibold tabular-nums" data-testid="withdrawn">{naira(t.totalWithdrawn)}</td>
-                    <td className={`py-3 pr-3 font-extrabold tabular-nums ${t.balanceLeft < 0 ? "text-danger" : "text-success"}`} data-testid="balance">{naira(t.balanceLeft)}</td>
+                    <td className="py-3 pr-3 font-semibold tabular-nums text-[#EA580C]" data-testid="withdrawn">
+                      {naira(t.totalWithdrawn)}
+                      {t.pendingAmount > 0 && <span className="block text-[11px] font-normal text-muted" data-testid="pending">+ {naira(t.pendingAmount)} awaiting confirmation</span>}
+                    </td>
+                    <td className={`py-3 pr-3 font-extrabold tabular-nums ${t.balanceLeft < 0 ? "text-danger" : "text-[#16A34A]"}`} data-testid="balance">{naira(t.balanceLeft)}</td>
                     <td className="py-3">
                       <div className="flex flex-wrap items-center gap-2">
-                        <PayStaffButton staffId={t.userId} name={t.name ?? t.email} balanceLeft={t.balanceLeft} />
+                        <PayStaffButton staffId={t.userId} name={t.name ?? t.email} balanceLeft={t.balanceLeft} earned={t.totalEarnings} withdrawn={t.totalWithdrawn} pending={t.pendingAmount} bank={t.bank} />
                       </div>
                     </td>
                   </tr>
@@ -132,8 +147,14 @@ export default async function StaffPage() {
                       <span className="font-semibold">{who?.name ?? who?.email ?? "Former staff"}</span>
                       <span className="text-muted"> · {r.description ?? (r.type === "withdrawal" ? "Payout" : r.type)}</span>
                     </span>
-                    <span className="flex items-center gap-3">
+                    <span className="flex flex-wrap items-center gap-3">
                       <Badge tone={r.type === "withdrawal" ? "plum" : "success"}>{r.type === "withdrawal" ? "Withdrawal" : r.type === "bonus" ? "Bonus" : "Earning"}</Badge>
+                      {r.type === "withdrawal" && (
+                        <Badge tone={r.status === "confirmed" ? "success" : r.status === "pending" ? "warning" : "danger"}>
+                          {r.status === "confirmed" ? "✅ Received" : r.status === "pending" ? "⏳ Awaiting confirmation" : "❌ Not received"}
+                        </Badge>
+                      )}
+                      {r.status === "rejected" && r.staffNote && <span className="text-xs text-danger">“{r.staffNote}”</span>}
                       <span className="font-semibold tabular-nums">{r.type === "withdrawal" ? "−" : "+"}{naira(r.amount)}</span>
                       <span className="text-xs text-muted">{when(r.createdAt)}</span>
                     </span>
@@ -189,6 +210,7 @@ export default async function StaffPage() {
                     const earnedNaira = pay.get(s.user_id)?.totalEarnings ?? earningsFor(stats.get(s.user_id)?.products_added ?? 0).earnedKobo / 100;
                     const withdrawn = pay.get(s.user_id)?.totalWithdrawn ?? 0;
                     const left = pay.get(s.user_id)?.balanceLeft ?? earnedNaira - withdrawn;
+                    const t = pay.get(s.user_id);
                     return (
                       <div className="w-full space-y-2 text-xs text-muted">
                         <p>Products added: <strong className="text-plum">{stats.get(s.user_id)?.products_added ?? 0}</strong></p>
@@ -198,10 +220,20 @@ export default async function StaffPage() {
                           <span>Withdrawn: <strong className="font-extrabold text-[#EA580C]">{naira(withdrawn)}</strong></span>
                           <span aria-hidden>|</span>
                           <span>Left: <strong className={`font-extrabold ${left < 0 ? "text-danger" : "text-[#16A34A]"}`}>{naira(left)}</strong></span>
+                          <span aria-hidden>|</span>
+                          <span>
+                            Bank:{" "}
+                            {t?.bank ? (
+                              <strong className="text-plum">{t.bank.bankName.replace(/ Bank$/, "")} - {t.bank.accountNumber.slice(0, 7)}…</strong>
+                            ) : (
+                              <strong className="text-[#EA580C]">not added</strong>
+                            )}
+                          </span>
                         </p>
+                        {t && t.pendingAmount > 0 && <p className="text-xs text-muted">⏳ {naira(t.pendingAmount)} sent, waiting for them to confirm</p>}
                         {s.status === "active" && payReady && (
                           <div className="flex flex-wrap items-center gap-2">
-                            <PayStaffButton staffId={s.user_id} name={s.full_name ?? info?.name ?? s.email} balanceLeft={left} label="Pay Staff" testId={`team-pay-${s.user_id}`} />
+                            <PayStaffButton staffId={s.user_id} name={s.full_name ?? info?.name ?? s.email} balanceLeft={left} earned={earnedNaira} withdrawn={withdrawn} pending={t?.pendingAmount ?? 0} bank={t?.bank ?? null} label="Pay Staff" testId={`team-pay-${s.user_id}`} />
                           </div>
                         )}
                       </div>

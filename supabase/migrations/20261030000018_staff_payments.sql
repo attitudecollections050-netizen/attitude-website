@@ -31,7 +31,8 @@ create policy "staff_payments: own or owner read" on public.staff_payments
 -- No insert/update/delete policies: payments are only written by pay_staff().
 
 -- Totals per staff member. The owner gets everyone; a staff member only themselves.
-create or replace function public.staff_payment_totals(p_user_id uuid default null)
+drop function if exists public.staff_payment_totals(uuid);
+create function public.staff_payment_totals(p_user_id uuid default null)
 returns table (
   user_id uuid,
   full_name text,

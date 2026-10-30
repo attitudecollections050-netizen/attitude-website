@@ -39,9 +39,39 @@ run("database: staff payments (withdrawn and balance left)", () => {
   const totals = (who: string, target: string | null = null) =>
     as(db, user(who), () => db.query(`select * from staff_payment_totals($1)`, [target]));
 
-  it("the owner pays a staff member and gets the new totals back", async () => {
+  it("staff must add valid bank details before they can be paid", async () => {
+    await expect(as(db, user(owner), () => db.query(`select pay_staff($1, 1500)`, [staffA]))).rejects.toThrow(/no_bank_details/);
+    await expect(as(db, user(staffA), () => db.query(`select set_my_bank_details('Access Bank', '01234', 'Ada Test')`))).rejects.toThrow(/invalid_account_number/);
+    await expect(as(db, user(customer), () => db.query(`select set_my_bank_details('Access Bank', '0123456789', 'Someone')`))).rejects.toThrow(/forbidden/);
+    await as(db, user(staffA), () => db.query(`select set_my_bank_details('Access Bank', '012 345 6789', 'Ada Test')`));
+    const bank = (await as(db, user(staffA), () => db.query(`select * from staff_bank_details()`))).rows[0];
+    expect(bank).toMatchObject({ bank_name: "Access Bank", account_number: "0123456789", account_name: "ADA TEST" });
+    await expect(as(db, user(staffA), () => db.query(`select * from staff_bank_details($1)`, [staffB]))).rejects.toThrow(/forbidden/);
+    expect((await as(db, user(owner), () => db.query(`select * from staff_bank_details()`))).rowCount).toBe(2);
+  });
+
+  it("a payout copies their bank details and waits for them to confirm receipt", async () => {
     const r = await as(db, user(owner), () => db.query(`select pay_staff($1, 1500, 'October payout') as res`, [staffA]));
-    expect(r.rows[0].res).toMatchObject({ ok: true, total_earnings: 2000, total_withdrawn: 1500, balance_left: 500 });
+    expect(r.rows[0].res).toMatchObject({ ok: true, status: "pending", total_earnings: 2000, total_withdrawn: 0, pending_amount: 1500, balance_left: 500 });
+    const pay = (await db.query(`select * from staff_payments where id = $1`, [r.rows[0].res.payment_id])).rows[0];
+    expect(pay).toMatchObject({ status: "pending", bank_name: "Access Bank", account_number: "0123456789", account_name: "ADA TEST" });
+    // only the staff member can answer, once
+    await expect(as(db, user(staffB), () => db.query(`select confirm_my_payout($1, true)`, [pay.id]))).rejects.toThrow(/not_found/);
+    await expect(as(db, user(owner), () => db.query(`select confirm_my_payout($1, true)`, [pay.id]))).rejects.toThrow(/not_found/);
+    const c = await as(db, user(staffA), () => db.query(`select confirm_my_payout($1, true) as res`, [pay.id]));
+    expect(c.rows[0].res).toMatchObject({ status: "confirmed", total_withdrawn: 1500, pending_amount: 0, balance_left: 500 });
+    await expect(as(db, user(staffA), () => db.query(`select confirm_my_payout($1, false)`, [pay.id]))).rejects.toThrow(/already_answered/);
+  });
+
+  it("a payout they didn't receive goes back into their balance", async () => {
+    const r = await as(db, user(owner), () => db.query(`select pay_staff($1, 200, 'Test transfer') as res`, [staffA]));
+    expect(Number(r.rows[0].res.balance_left)).toBe(300);
+    const n = await as(db, user(staffA), () => db.query(`select confirm_my_payout($1, false, 'Nothing arrived') as res`, [r.rows[0].res.payment_id]));
+    expect(n.rows[0].res).toMatchObject({ status: "rejected", total_withdrawn: 1500, balance_left: 500 });
+    expect((await db.query(`select staff_note from staff_payments where id = $1`, [r.rows[0].res.payment_id])).rows[0].staff_note).toBe("Nothing arrived");
+  });
+
+  it("bonuses count straight away and totals add up", async () => {
     await as(db, user(owner), () => db.query(`select pay_staff($1, 300, 'Great week', 'bonus')`, [staffA]));
     const row = (await totals(owner)).rows.find((x) => x.user_id === staffA);
     expect(Number(row.product_earnings)).toBe(2000);
@@ -50,6 +80,8 @@ run("database: staff payments (withdrawn and balance left)", () => {
     expect(Number(row.total_withdrawn)).toBe(1500);
     expect(Number(row.balance_left)).toBe(800);
     expect(row.full_name).toBe("Ada");
+    expect(row.account_number).toBe("0123456789");
+    expect(Number(row.pending_amount)).toBe(0);
   });
 
   it("the owner sees every staff member, including ones never paid", async () => {
@@ -61,8 +93,8 @@ run("database: staff payments (withdrawn and balance left)", () => {
   });
 
   it("a staff member sees only their own payments and totals", async () => {
-    const mine = await as(db, user(staffA), () => db.query(`select amount, type, description from staff_payments order by created_at`));
-    expect(mine.rows.map((r) => [Number(r.amount), r.type])).toEqual([[1500, "withdrawal"], [300, "bonus"]]);
+    const mine = await as(db, user(staffA), () => db.query(`select amount, type, status from staff_payments order by created_at`));
+    expect(mine.rows.map((r) => [Number(r.amount), r.type, r.status])).toEqual([[1500, "withdrawal", "confirmed"], [200, "withdrawal", "rejected"], [300, "bonus", "confirmed"]]);
     const theirs = await as(db, user(staffB), () => db.query(`select * from staff_payments`));
     expect(theirs.rowCount).toBe(0);
     expect(Number((await totals(staffA, staffA)).rows[0].balance_left)).toBe(800);

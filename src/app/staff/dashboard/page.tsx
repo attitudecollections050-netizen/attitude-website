@@ -9,7 +9,8 @@ import { formatMoney } from "@/lib/money";
 import { earningsFor, PRODUCTS_PER_REWARD, REWARD_KOBO } from "@/lib/staff-earnings";
 import { buttonClasses } from "@/components/ui/Button";
 import { PaymentsLive } from "@/components/admin/PayStaff";
-import { naira, staffPaymentHistory, staffPaymentTotals, type StaffPayment } from "@/lib/staff-payments";
+import { NIGERIAN_BANKS, naira, staffPaymentHistory, staffPaymentTotals, type StaffPayment } from "@/lib/staff-payments";
+import { BankDetailsForm, PayoutAlert } from "@/components/admin/StaffBank";
 
 export const metadata = { title: "My Dashboard" };
 
@@ -52,12 +53,18 @@ export default async function StaffDashboardPage({ searchParams }: PageProps<"/s
   const withdrawn = payTotals?.totalWithdrawn ?? 0;
   const totalEarned = payTotals?.totalEarnings ?? earningsFor(0).earnedKobo / 100;
   const balanceLeft = payTotals?.balanceLeft ?? totalEarned - withdrawn;
-  const lastPayout = payments.find((p) => p.type === "withdrawal") ?? null;
+  const lastPayout = payments.find((p) => p.type === "withdrawal" && p.status === "confirmed") ?? null;
+  const pendingPayouts = payments.filter((p) => p.type === "withdrawal" && p.status === "pending");
+  const bank = payTotals?.bank ?? null;
   // Balance after each payment: product earnings + bonuses so far − payouts so far (oldest first).
   const balanceAfter = new Map<string, number>();
   {
     let running = payTotals?.productEarnings ?? 0;
     for (const p of [...payments].reverse()) {
+      if (p.status === "rejected") {
+        balanceAfter.set(p.id, running);
+        continue;
+      }
       running += p.type === "withdrawal" ? -p.amount : p.amount;
       balanceAfter.set(p.id, running);
     }
@@ -83,6 +90,10 @@ export default async function StaffDashboardPage({ searchParams }: PageProps<"/s
       </div>
 
       <PaymentsLive staffId={targetId} />
+      {pendingPayouts.map((p) => (
+        <PayoutAlert key={p.id} payout={{ id: p.id, amount: p.amount, createdAt: p.createdAt, bank: p.bank }} canAnswer={Boolean(bank)} readOnly={isOwner} />
+      ))}
+      <BankDetailsForm banks={NIGERIAN_BANKS} initial={bank} readOnly={isOwner} />
       {lastPayout && (
         <p className="border border-[#16A34A] bg-[#F0FDF4] px-4 py-3 text-sm font-semibold text-[#166534]" role="status" data-testid="paid-banner">
           You have been paid {naira(lastPayout.amount)} on {dateFmt.format(new Date(lastPayout.createdAt))}. Balance left {naira(balanceLeft)}.
@@ -97,7 +108,13 @@ export default async function StaffDashboardPage({ searchParams }: PageProps<"/s
         <div className="bg-white p-6">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/50">Total withdrawn</p>
           <p className="mt-3 text-4xl font-extrabold tracking-tight text-[#EA580C] sm:text-5xl" data-testid="total-withdrawn">{naira(withdrawn)}</p>
-          <p className="mt-1 text-xs text-black/60">{payTotals?.lastPaidAt ? `Last paid ${dateFmt.format(new Date(payTotals.lastPaidAt))}` : "Nothing paid out yet"}</p>
+          <p className="mt-1 text-xs text-black/60">
+            {payTotals && payTotals.pendingAmount > 0
+              ? `+ ${naira(payTotals.pendingAmount)} waiting for you to confirm`
+              : payTotals?.lastPaidAt
+                ? `Last paid ${dateFmt.format(new Date(payTotals.lastPaidAt))}`
+                : "Nothing paid out yet"}
+          </p>
         </div>
         <div className="bg-white p-6">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/50">Balance left</p>
@@ -177,9 +194,9 @@ export default async function StaffDashboardPage({ searchParams }: PageProps<"/s
           <p className="border border-dashed border-black/30 px-6 py-8 text-center text-sm text-black/60">No payments yet. When the owner pays you, it shows up here.</p>
         ) : (
           <div className="overflow-x-auto border border-black">
-            <table className="w-full min-w-[32rem] text-left text-sm" data-testid="payment-history">
+            <table className="w-full min-w-[40rem] text-left text-sm" data-testid="payment-history">
               <thead className="border-b border-black text-[11px] uppercase tracking-[0.16em]">
-                <tr><th className="px-4 py-3 font-bold">Date</th><th className="px-4 py-3 font-bold">Description</th><th className="px-4 py-3 font-bold">Amount</th><th className="px-4 py-3 font-bold">Type</th><th className="px-4 py-3 font-bold">Balance after</th></tr>
+                <tr><th className="px-4 py-3 font-bold">Date</th><th className="px-4 py-3 font-bold">Description</th><th className="px-4 py-3 font-bold">Amount</th><th className="px-4 py-3 font-bold">Type</th><th className="px-4 py-3 font-bold">Status</th><th className="px-4 py-3 font-bold">Balance after</th></tr>
               </thead>
               <tbody className="divide-y divide-black/10">
                 {payments.map((p) => (
@@ -191,6 +208,9 @@ export default async function StaffDashboardPage({ searchParams }: PageProps<"/s
                       <span className={`inline-block border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] ${p.type === "withdrawal" ? "border-black bg-black text-white" : "border-success text-success"}`}>
                         {p.type === "withdrawal" ? "Withdrawal" : p.type === "bonus" ? "Bonus" : "Earning"}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs font-semibold">
+                      {p.type !== "withdrawal" ? "—" : p.status === "confirmed" ? <span className="text-[#16A34A]">✅ Received</span> : p.status === "pending" ? <span className="text-[#EA580C]">⏳ Please confirm</span> : <span className="text-danger">❌ Not received</span>}
                     </td>
                     <td className="px-4 py-3 font-semibold tabular-nums">{naira(balanceAfter.get(p.id) ?? 0)}</td>
                   </tr>

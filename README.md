@@ -187,15 +187,17 @@ No supplier API is integrated, so supplier orders are never placed automatically
 
 Reviews are never published automatically: only product reviews where the customer ticked consent and an admin pressed **Publish review** appear on the site. Staff can mark feedback reviewed, add private notes, flag spam/abuse (hides it but keeps the record), reply publicly and export CSV. Ratings and customer wording can't be edited. Submissions are validated on the server, rate-limited, and protected by a hidden spam-trap field and a minimum fill time; link-stuffed text is flagged for moderation rather than discarded.
 
-## 7a. Staff payments (withdrawn & balance left)
+## 7a. Staff payouts (bank details → pay → they confirm)
 
-After you pay a staff member, record it in **Admin → Staff Management → Staff payments → Pay** (amount, type, optional description, then confirm). Types: **Payout (withdrawal)** — money you sent them; **Bonus** / **Extra earning** — money owed on top of product earnings.
-- **Your table:** Name · Total earned · Withdrawn · Balance left · Pay, plus Recent payments.
-- **Their dashboard** (`/admin` and `/staff/dashboard`): Total withdrawn and Balance left cards, and a Date | Description | Amount | Type history. Both pages update live (Supabase Realtime) and on returning to the tab.
-- **Maths:** total earned = ₦1,000 per 10 products added + bonuses/extra earnings; balance left = total earned − withdrawn. Totals are always calculated from the records, so they never drift. Payments can't be edited or deleted (add a bonus/extra earning to correct an over-payment).
-- **Rules:** only the owner can record payments or see everyone's; staff see only their own.
-- **API:** `POST /api/admin/pay-staff` `{ staff_id, amount, description?, type? }` → new totals; `GET /api/admin/staff-payments` → every staff member with total_earnings, total_withdrawn, balance_left; `GET /api/staff/my-payments` → your own history and totals.
-- **Database:** migration `20261030000018_staff_payments.sql` (run it once in the Supabase SQL Editor).
+1. **Staff add their bank details** on their dashboard (💳 My Account Details: bank from a list of Nigerian banks and wallets or "Other", a 10-digit account number, account name). Until then they see "⚠️ Add your bank details to receive payments", and you can't record a payout for them (bonuses still work).
+2. **You pay:** send the transfer from your bank app, then in **Admin → Staff Management** tap **Pay** / **Pay Staff**. The modal shows *Earned | Withdrawn | Left*, their account (Bank - number - name), the amount, then **Confirm & Pay**. Their bank details are copied onto the payment. Toast: "You paid [Name] ₦X".
+3. **They confirm:** their dashboard shows **🔔 PAYMENT ALERT** with the amount, bank, number, name and date: **✅ Yes, Confirm I Received ₦X** or **❌ No, I Did Not Receive** (with an optional note you'll see).
+- **Maths:** total earned = ₦1,000 per 10 products + bonuses/extra earnings. *Withdrawn* = confirmed payouts. A payout waiting for confirmation is shown as "awaiting confirmation" and is already taken off *Left*, so the same money can't be paid twice; if they say it didn't arrive, it goes back into *Left*.
+- **Your page:** each staff line reads *Earned (blue) | Withdrawn (orange) | Left (green) | Bank*, and the Staff payments table has Name · Account details · Total earned · Withdrawn · Left · Actions, plus Recent payments with ✅ Received / ⏳ Awaiting confirmation / ❌ Not received.
+- **Their page:** Total earned / Total withdrawn / Balance left cards, "You have been paid ₦X…", and history (Date · Description · Amount · Type · Status · Balance after). Both pages update live (Supabase Realtime).
+- **Rules:** only you can pay or see everyone's details; staff only see and change their own. Payments can't be edited or deleted.
+- **API:** `POST /api/admin/pay-staff`, `GET /api/admin/staff-payments`, `GET /api/staff/my-payments`, `POST /api/staff/bank-details`, `POST /api/staff/confirm-payout`.
+- **Database:** run `supabase/manual/live-staff-payouts.sql` once in the Supabase SQL Editor (migrations 18 + 19; safe to run twice).
 
 ## 7b. DJ ATTITUDE mini HARU & JIN (AI mascot assistants)
 
