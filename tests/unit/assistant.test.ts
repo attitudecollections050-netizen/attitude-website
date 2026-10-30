@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { FUN_QUESTIONS, JOKES, basicReply, linkify, speakable } from "@/lib/assistant/shared";
-import { PERSONA } from "@/lib/assistant/persona";
+import { persona } from "@/lib/assistant/persona";
+import { parseAction } from "@/lib/assistant/characters";
 
-describe("Dj Attitude Mini — basic mode", () => {
+describe("FAF Drip Guy — basic mode", () => {
   it("tells jokes and asks fun questions", () => {
     expect(JOKES.some((j) => basicReply("tell me a joke", 3).startsWith(j))).toBe(true);
     expect(FUN_QUESTIONS).toContain(basicReply("ask me a question", 1));
@@ -15,7 +16,7 @@ describe("Dj Attitude Mini — basic mode", () => {
     expect(basicReply("can I return this")).toContain("(/returns-policy)");
     expect(basicReply("I want to talk to a human")).toContain("(/contact)");
     expect(basicReply("I'm looking for a pink dress")).toContain("/search?q=pink%20dress");
-    expect(basicReply("asdfgh")).toMatch(/didn't quite catch/);
+    expect(basicReply("asdfgh")).toMatch(/I no catch that/);
   });
 });
 
@@ -36,9 +37,13 @@ describe("message formatting", () => {
 
 describe("persona guard rails", () => {
   it("forbids invented facts and payment secrets", () => {
-    expect(PERSONA).toMatch(/Never invent facts/);
-    expect(PERSONA).toMatch(/Never ask for or accept card numbers/);
-    expect(PERSONA).toMatch(/cannot see orders/);
+    for (const c of ["guy", "queen"] as const) {
+      const PERSONA = persona(c);
+      expect(PERSONA).toMatch(/Never invent facts/);
+      expect(PERSONA).toMatch(/Never ask for or accept card numbers/);
+      expect(PERSONA).toMatch(/cannot see orders/);
+      expect(PERSONA).toMatch(/never invent scarcity/);
+    }
   });
 });
 
@@ -80,5 +85,16 @@ describe("voice", () => {
     const policy = rules.flatMap((r) => r.headers).find((h) => h.key === "Permissions-Policy")!.value;
     expect(policy).toContain("microphone=(self)");
     expect(policy).toContain("camera=()");
+  });
+});
+
+describe("FAF Drip characters — action tags", () => {
+  it("splits a known action tag from the reply", () => {
+    expect(parseAction("[[fire]] Omo this drip too hard!")).toEqual({ action: "fire", text: "Omo this drip too hard!" });
+  });
+  it("drops unknown or stray tags", () => {
+    expect(parseAction("[[explode]] Hello")).toEqual({ action: null, text: "Hello" });
+    expect(parseAction("Hi [[dab]] there")).toEqual({ action: null, text: "Hi  there" });
+    expect(parseAction("No tag here")).toEqual({ action: null, text: "No tag here" });
   });
 });

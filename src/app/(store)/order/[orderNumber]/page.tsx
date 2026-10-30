@@ -13,6 +13,7 @@ import { buttonClasses } from "@/components/ui/Button";
 import { Reveal } from "@/components/ui/Reveal";
 import { WhatsAppLink } from "@/components/ui/WhatsAppLink";
 import { getSettings } from "@/lib/settings";
+import { OrderCelebration } from "@/components/assistant/OrderCelebration";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("order"))("metaTitle"), robots: { index: false } };
@@ -57,6 +58,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
         <p className="mx-auto mt-4 max-w-lg text-sm text-plum-soft">
           {paid ? t("confirmed", { email: order.email }) : verifying ? t("verifyingBody") : transfer ? t("transferNotYet") : t("notYetPaid")}
         </p>
+        <OrderCelebration paid={paid} verifying={verifying} />
         {!paid && order.status === "pending_payment" && (
           <div className="mt-6 flex flex-col items-center justify-center gap-3">
             {transfer ? (

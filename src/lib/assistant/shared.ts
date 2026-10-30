@@ -1,6 +1,7 @@
-// Dj Attitude Mini — shared between the chat widget and the server.
+// FAF Drip Guy / FAF Drip Queen — shared between the chat widget and the server.
+import type { DripAction } from "./characters";
 
-export const ASSISTANT_NAME = "Dj Attitude Mini";
+export const ASSISTANT_NAME = "FAF Drip Guy";
 export const MAX_MESSAGE_CHARS = 800;
 export const MAX_HISTORY = 16;
 
@@ -11,6 +12,9 @@ export interface ChatTurn {
 
 export interface ProductSuggestion {
   name: string;
+  slug?: string;
+  /** Sizes/colours that can go straight into the cart from the chat. */
+  variants?: { id: string; label: string; inStock: boolean }[];
   href: string;
   price: string;
   wasPrice: string | null;
@@ -24,6 +28,8 @@ export interface ProductSuggestion {
 export interface AssistantReply {
   reply: string;
   products: ProductSuggestion[];
+  /** Animation for the character to play (see characters.ts). */
+  action?: DripAction | null;
 }
 
 /** Clean, family-friendly jokes used by basic mode (no AI key needed). */
@@ -106,7 +112,7 @@ export function basicReply(input: string, seed = Date.now()): string {
   if (/feedback|review|complain/.test(t)) return "I'd love to hear it! Share your experience with hearts on our [Feedback page](/feedback). 💗";
   const shop = t.match(/(?:find|looking for|want|need|show me|buy)\s+(?:a |an |some )?(.{2,40})/);
   if (shop) return `Ooh, let's find it! 🛍️ Here are results for “${shop[1].replace(/[?.!]+$/, "")}”: [search the shop](/search?q=${encodeURIComponent(shop[1].replace(/[?.!]+$/, ""))})`;
-  if (/^(hi|hello|hey|good (morning|afternoon|evening))/.test(t)) return "Heyyy! 🎧 I'm Dj Attitude Mini. I can help you find outfits, explain delivery and returns, tell you a joke, or ask you a fun question. What are we doing today?";
+  if (/^(hi|hello|hey|good (morning|afternoon|evening))/.test(t)) return "Wetin dey sup! 😎 I'm FAF Drip Guy. I can find your fit, help with sizes, explain delivery and returns, or tell you a joke. Wetin we dey cop today?";
   if (/men|women|bag|shoe|sneaker|dress|shirt|top|jean/.test(t)) return `Let's shop! 🛍️ Try [this search](/search?q=${encodeURIComponent(input.slice(0, 40))}) or browse [the whole shop](/shop).`;
-  return "I'm still a mini DJ, so I didn't quite catch that 🙈 Try asking about delivery, returns, tracking an order, finding an outfit — or say “joke”!";
+  return "Omo, I no catch that one 🙈 Try asking about delivery, returns, tracking an order, finding an outfit — or say “joke”!";
 }

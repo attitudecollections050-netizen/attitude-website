@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useMemo, useState, useTransitio
 import { addToCart, applyDiscountCode, removeCartItem, removeDiscountCode, updateCartItem, type CartActionResult } from "@/app/actions/cart";
 import type { CartView } from "@/lib/cart/types";
 import { track } from "@/lib/analytics/client";
+import { emitDrip } from "@/lib/assistant/events";
 import { useTranslations } from "next-intl";
 
 interface CartContextValue {
@@ -66,7 +67,10 @@ export function CartProvider({ initialCart, children }: { initialCart: CartView;
       toast,
       add: (variantId, quantity = 1, opts) =>
         run(() => addToCart(variantId, quantity), { openDrawer: opts?.openDrawer ?? true }).then((r) => {
-          if (r.ok) track("add_to_cart", { variantId });
+          if (r.ok) {
+            track("add_to_cart", { variantId });
+            emitDrip({ type: "add_to_cart" });
+          }
           return r;
         }),
       update: (itemId, quantity) => run(() => updateCartItem(itemId, quantity)),

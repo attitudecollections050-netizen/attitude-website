@@ -3,8 +3,9 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { isSupabaseConfigured } from "@/lib/env";
 import { rateLimit } from "@/lib/rate-limit";
-import { PERSONA } from "@/lib/assistant/persona";
-import { searchProducts, storeKnowledge } from "@/lib/assistant/knowledge";
+import { persona } from "@/lib/assistant/persona";
+import { productDetails, searchProducts, storeKnowledge } from "@/lib/assistant/knowledge";
+import { parseAction } from "@/lib/assistant/characters";
 import { MAX_HISTORY, MAX_MESSAGE_CHARS, type AssistantReply, type ProductSuggestion } from "@/lib/assistant/shared";
 
 const MODEL = process.env.ASSISTANT_MODEL || "claude-opus-5-5";
@@ -15,7 +16,10 @@ const bodySchema = z.object({
     .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().trim().min(1).max(MAX_MESSAGE_CHARS * 2) }))
     .min(1)
     .max(MAX_HISTORY * 2),
+  character: z.enum(["guy", "queen"]).default("guy"),
 });
+
+const detailsInput = z.object({ slug: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).max(140) });
 
 const searchInput = z.object({
   query: z.string().max(80).nullish(),
@@ -40,16 +44,27 @@ const tools: Anthropic.Beta.BetaTool[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: "product_details",
+    description:
+      "Get one product's facts for support questions: description and details (fabric, care), weight, category, price, and each size/colour with in_stock and low_stock. Use the slug from search_products results.",
+    input_schema: {
+      type: "object",
+      properties: { slug: { type: "string", description: "The product slug, e.g. 'horse-baggy-pants'." } },
+      required: ["slug"],
+      additionalProperties: false,
+    },
+  },
 ];
 
 /**
- * Chat endpoint for Dj Attitude Mini. Returns 503 { offline: true } when no
+ * Chat endpoint for FAF Drip Guy / FAF Drip Queen. Returns 503 { offline: true } when no
  * Anthropic API key is configured so the widget can switch to basic mode.
  */
 export async function POST(request: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ offline: true }, { status: 503 });
   if (!(await rateLimit("assistant", 30, 600))) {
-    return NextResponse.json({ error: "Whoa, you're chatting faster than my beats! 🎧 Give me a minute and try again." }, { status: 429 });
+    return NextResponse.json({ error: "Omo, you dey chat faster than my fingers! 😅 Give me a minute and try again." }, { status: 429 });
   }
   let parsed;
   try {
@@ -77,13 +92,13 @@ export async function POST(request: NextRequest) {
         betas: ["server-side-fallback-2026-07-01"],
         fallbacks: "default",
         output_config: { effort: "low" },
-        system: [{ type: "text", text: `${PERSONA}\n\n${knowledge}`, cache_control: { type: "ephemeral" } }],
+        system: [{ type: "text", text: `${persona(parsed.data.character)}\n\n${knowledge}`, cache_control: { type: "ephemeral" } }],
         tools: isSupabaseConfigured() ? tools : [],
         messages,
       });
 
       if (response.stop_reason === "refusal") {
-        return NextResponse.json<AssistantReply>({ reply: "Hmm, I can't help with that one 🙈 — but I can help you find something fabulous to wear!", products: [] });
+        return NextResponse.json<AssistantReply>({ reply: "Hmm, I can't help with that one 🙈 — but I can help you find some fire drip!", products: [], action: "cross_arms" });
       }
       const toolUses = response.content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use");
       if (response.stop_reason !== "tool_use" || toolUses.length === 0 || round === MAX_TOOL_ROUNDS) {
@@ -92,12 +107,28 @@ export async function POST(request: NextRequest) {
           .map((b) => b.text)
           .join("")
           .trim();
-        return NextResponse.json<AssistantReply>({ reply: reply || "I'm here! 🎧 What can I help you with?", products: dedupe(products) });
+        const { action, text } = parseAction(reply);
+        return NextResponse.json<AssistantReply>({ reply: text || "I'm here! 😎 What can I help you with?", products: dedupe(products), action });
       }
 
       messages.push({ role: "assistant", content: response.content });
       const results: Anthropic.Beta.BetaToolResultBlockParam[] = [];
       for (const call of toolUses) {
+        if (call.name === "product_details") {
+          const input = detailsInput.safeParse(call.input);
+          if (!input.success) {
+            results.push({ type: "tool_result", tool_use_id: call.id, content: "Invalid tool input.", is_error: true });
+            continue;
+          }
+          try {
+            const found = await productDetails(input.data.slug);
+            results.push({ type: "tool_result", tool_use_id: call.id, content: found ? JSON.stringify(found) : "No published product with that slug." });
+          } catch (e) {
+            console.error("[assistant] details failed:", (e as Error).message);
+            results.push({ type: "tool_result", tool_use_id: call.id, content: "Product details are unavailable right now.", is_error: true });
+          }
+          continue;
+        }
         const input = searchInput.safeParse(call.input);
         if (call.name !== "search_products" || !input.success) {
           results.push({ type: "tool_result", tool_use_id: call.id, content: "Invalid tool input.", is_error: true });
@@ -106,7 +137,7 @@ export async function POST(request: NextRequest) {
         try {
           const found = await searchProducts({ query: input.data.query, maxPriceNaira: input.data.max_price_naira, onSale: input.data.on_sale, inStockOnly: input.data.in_stock_only });
           products.push(...found);
-          results.push({ type: "tool_result", tool_use_id: call.id, content: found.length ? JSON.stringify(found.map((p) => ({ name: p.name, link: p.href, price: p.price, was_price: p.wasPrice, in_stock: p.inStock }))) : "No matching products found." });
+          results.push({ type: "tool_result", tool_use_id: call.id, content: found.length ? JSON.stringify(found.map((p) => ({ name: p.name, slug: p.slug, link: p.href, price: p.price, was_price: p.wasPrice, in_stock: p.inStock, sizes: p.variants?.map((v) => v.label) }))) : "No matching products found." });
         } catch (e) {
           console.error("[assistant] search failed:", (e as Error).message);
           results.push({ type: "tool_result", tool_use_id: call.id, content: "Product search is unavailable right now.", is_error: true });

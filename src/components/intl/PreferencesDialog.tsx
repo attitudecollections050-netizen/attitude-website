@@ -6,7 +6,7 @@ import { AnimatePresence, m, useReducedMotion } from "motion/react";
 import { Check, Globe2, Search, X } from "lucide-react";
 import { savePreferences } from "@/app/actions/preferences";
 import { LOCALES } from "@/lib/intl/config";
-import { MiniAvatar } from "@/components/assistant/MiniAvatar";
+import { DripBaby } from "@/components/assistant/DripBaby";
 import { useDialog } from "@/components/ui/useDialog";
 import { cn } from "@/lib/cn";
 import { OPEN_PREFS_EVENT, usePreferences } from "./PreferencesProvider";
@@ -134,7 +134,7 @@ export function PreferencesDialog() {
                   <X className="size-5" />
                 </button>
                 <div className="relative flex items-center gap-4">
-                  {welcome ? <MiniAvatar className="size-14 shrink-0" /> : <Globe2 className="size-8 shrink-0 text-rose-light" aria-hidden />}
+                  {welcome ? <DripBaby variant="head" character="guy" className="size-14 shrink-0" /> : <Globe2 className="size-8 shrink-0 text-rose-light" aria-hidden />}
                   <div>
                     <h2 id={`${id}-title`} className="font-display text-3xl leading-tight">{welcome ? t("welcomeTitle") : t("title")}</h2>
                     <p className="mt-1 text-sm text-white/80">{welcome ? t("welcomeBody") : t("body")}</p>
@@ -176,7 +176,8 @@ export function PreferencesDialog() {
                               <span className="flex items-center gap-2">
                                 <input type="radio" name="country" value={c.code} checked={country === c.code} onChange={() => setCountry(c.code)} className="sr-only" />
                                 <span aria-hidden>{flag(c.code)}</span>
-                                {c.label}
+                                {/* The server and the browser can spell a few country names differently. */}
+                                <span suppressHydrationWarning>{c.label}</span>
                               </span>
                               <span className="flex items-center gap-2 text-[0.65rem] font-normal text-muted">
                                 {c.ships ? t("delivers") : t("browseOnly")}
