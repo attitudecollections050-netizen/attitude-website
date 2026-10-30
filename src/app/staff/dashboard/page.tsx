@@ -50,7 +50,18 @@ export default async function StaffDashboardPage({ searchParams }: PageProps<"/s
     staffPaymentHistory(targetId).catch((): StaffPayment[] => []),
   ]);
   const withdrawn = payTotals?.totalWithdrawn ?? 0;
-  const balanceLeft = payTotals?.balanceLeft ?? 0;
+  const totalEarned = payTotals?.totalEarnings ?? earningsFor(0).earnedKobo / 100;
+  const balanceLeft = payTotals?.balanceLeft ?? totalEarned - withdrawn;
+  const lastPayout = payments.find((p) => p.type === "withdrawal") ?? null;
+  // Balance after each payment: product earnings + bonuses so far − payouts so far (oldest first).
+  const balanceAfter = new Map<string, number>();
+  {
+    let running = payTotals?.productEarnings ?? 0;
+    for (const p of [...payments].reverse()) {
+      running += p.type === "withdrawal" ? -p.amount : p.amount;
+      balanceAfter.set(p.id, running);
+    }
+  }
   const row = (stats as { products_added: number; live_products: number }[] | null)?.[0];
   const added = row?.products_added ?? 0;
   const live = row?.live_products ?? 0;
@@ -72,16 +83,26 @@ export default async function StaffDashboardPage({ searchParams }: PageProps<"/s
       </div>
 
       <PaymentsLive staffId={targetId} />
-      <section className="grid gap-px border border-black bg-black sm:grid-cols-2" aria-label="My payments" data-testid="payment-cards">
+      {lastPayout && (
+        <p className="border border-[#16A34A] bg-[#F0FDF4] px-4 py-3 text-sm font-semibold text-[#166534]" role="status" data-testid="paid-banner">
+          You have been paid {naira(lastPayout.amount)} on {dateFmt.format(new Date(lastPayout.createdAt))}. Balance left {naira(balanceLeft)}.
+        </p>
+      )}
+      <section className="grid gap-px border border-black bg-black sm:grid-cols-3" aria-label="My payments" data-testid="payment-cards">
+        <div className="bg-white p-6">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/50">Total earned</p>
+          <p className="mt-3 text-4xl font-extrabold tracking-tight text-[#2563EB] sm:text-5xl" data-testid="total-earned">{naira(totalEarned)}</p>
+          <p className="mt-1 text-xs text-black/60">{payTotals && payTotals.extraEarnings > 0 ? `Includes ${naira(payTotals.extraEarnings)} bonus/extra` : "From the products you've added"}</p>
+        </div>
         <div className="bg-white p-6">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/50">Total withdrawn</p>
-          <p className="mt-3 text-4xl font-extrabold tracking-tight sm:text-5xl" data-testid="total-withdrawn">{naira(withdrawn)}</p>
+          <p className="mt-3 text-4xl font-extrabold tracking-tight text-[#EA580C] sm:text-5xl" data-testid="total-withdrawn">{naira(withdrawn)}</p>
           <p className="mt-1 text-xs text-black/60">{payTotals?.lastPaidAt ? `Last paid ${dateFmt.format(new Date(payTotals.lastPaidAt))}` : "Nothing paid out yet"}</p>
         </div>
         <div className="bg-white p-6">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/50">Balance left</p>
-          <p className={`mt-3 text-4xl font-extrabold tracking-tight sm:text-5xl ${balanceLeft < 0 ? "text-danger" : "text-success"}`} data-testid="balance-left">{naira(balanceLeft)}</p>
-          <p className="mt-1 text-xs text-black/60">Total earned {naira(payTotals?.totalEarnings ?? e.earnedKobo / 100)} − withdrawn {naira(withdrawn)}</p>
+          <p className={`mt-3 text-4xl font-extrabold tracking-tight sm:text-5xl ${balanceLeft < 0 ? "text-danger" : "text-[#16A34A]"}`} data-testid="balance-left">{naira(balanceLeft)}</p>
+          <p className="mt-1 text-xs text-black/60">Total earned {naira(totalEarned)} − withdrawn {naira(withdrawn)}</p>
         </div>
       </section>
 
@@ -158,7 +179,7 @@ export default async function StaffDashboardPage({ searchParams }: PageProps<"/s
           <div className="overflow-x-auto border border-black">
             <table className="w-full min-w-[32rem] text-left text-sm" data-testid="payment-history">
               <thead className="border-b border-black text-[11px] uppercase tracking-[0.16em]">
-                <tr><th className="px-4 py-3 font-bold">Date</th><th className="px-4 py-3 font-bold">Description</th><th className="px-4 py-3 font-bold">Amount</th><th className="px-4 py-3 font-bold">Type</th></tr>
+                <tr><th className="px-4 py-3 font-bold">Date</th><th className="px-4 py-3 font-bold">Description</th><th className="px-4 py-3 font-bold">Amount</th><th className="px-4 py-3 font-bold">Type</th><th className="px-4 py-3 font-bold">Balance after</th></tr>
               </thead>
               <tbody className="divide-y divide-black/10">
                 {payments.map((p) => (
@@ -171,6 +192,7 @@ export default async function StaffDashboardPage({ searchParams }: PageProps<"/s
                         {p.type === "withdrawal" ? "Withdrawal" : p.type === "bonus" ? "Bonus" : "Earning"}
                       </span>
                     </td>
+                    <td className="px-4 py-3 font-semibold tabular-nums">{naira(balanceAfter.get(p.id) ?? 0)}</td>
                   </tr>
                 ))}
               </tbody>

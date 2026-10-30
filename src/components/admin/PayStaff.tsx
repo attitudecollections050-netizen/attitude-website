@@ -11,7 +11,7 @@ import { cn } from "@/lib/cn";
 const naira = (n: number) => `₦${n.toLocaleString("en-NG", { maximumFractionDigits: 2 })}`;
 
 /** "Pay" button + modal: the owner records a payout (or a bonus) for a staff member. */
-export function PayStaffButton({ staffId, name, balanceLeft }: { staffId: string; name: string; balanceLeft: number }) {
+export function PayStaffButton({ staffId, name, balanceLeft, label = "Pay", testId }: { staffId: string; name: string; balanceLeft: number; label?: string; testId?: string }) {
   const router = useRouter();
   const id = useId();
   const panel = useRef<HTMLDivElement>(null);
@@ -23,6 +23,12 @@ export function PayStaffButton({ staffId, name, balanceLeft }: { staffId: string
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(t);
+  }, [toast]);
   const close = () => {
     setOpen(false);
     setConfirming(false);
@@ -50,6 +56,7 @@ export function PayStaffButton({ staffId, name, balanceLeft }: { staffId: string
         return;
       }
       setDone(`${type === "withdrawal" ? "Paid" : "Added"} ${naira(value)}${typeof data.balance_left === "number" ? ` — balance left ${naira(data.balance_left)}` : ""}`);
+      setToast(type === "withdrawal" ? `You paid ${name} ${naira(value)}` : `You added a ${naira(value)} ${type === "bonus" ? "bonus" : "extra earning"} for ${name}`);
       setOpen(false);
       setConfirming(false);
       setAmount("");
@@ -65,10 +72,17 @@ export function PayStaffButton({ staffId, name, balanceLeft }: { staffId: string
 
   return (
     <>
-      <button type="button" onClick={() => { setDone(null); setOpen(true); }} className={buttonClasses("primary", "sm")} data-testid={`pay-${staffId}`}>
-        <Banknote className="size-4" aria-hidden /> Pay
+      <button type="button" onClick={() => { setDone(null); setOpen(true); }} className={buttonClasses("primary", "sm")} data-testid={testId ?? `pay-${staffId}`}>
+        <Banknote className="size-4" aria-hidden /> {label}
       </button>
       {done && <p className="w-full text-xs font-semibold text-success" role="status">{done}</p>}
+      {toast && (
+        <div className="fixed inset-x-3 bottom-5 z-[95] mx-auto flex max-w-sm items-center gap-3 rounded-2xl bg-plum px-4 py-3 text-sm font-semibold text-white shadow-2xl" role="status" data-testid="pay-toast">
+          <Banknote className="size-5 shrink-0 text-[#4ADE80]" aria-hidden />
+          <span className="flex-1">{toast}</span>
+          <button type="button" onClick={() => setToast(null)} aria-label="Dismiss" className="-m-1 p-1 opacity-80 hover:opacity-100"><X className="size-4" /></button>
+        </div>
+      )}
       {open && (
         <div className="fixed inset-0 z-[90] flex items-end justify-center bg-plum/50 p-0 backdrop-blur-sm sm:items-center sm:p-6" onClick={close}>
           <div

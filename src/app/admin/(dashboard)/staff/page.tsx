@@ -2,7 +2,6 @@ import { requireStaffPage } from "@/lib/auth";
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { formatMoney } from "@/lib/money";
 import { earningsFor } from "@/lib/staff-earnings";
 import { serverSecrets } from "@/lib/env";
 import { ROLE_LABELS, type AppRole } from "@/lib/permissions";
@@ -58,6 +57,8 @@ export default async function StaffPage() {
     staffPaymentHistory(undefined, 20).catch((): StaffPayment[] => []),
   ]);
   const pay = new Map(payTotals.map((t) => [t.userId, t]));
+  // Until the payments migration has run on the database, show a clear note instead of Pay buttons.
+  const payReady = payTotals.length > 0 || staff.length === 0;
   // Last sign-in comes from Supabase Auth (server only).
   const authInfo = new Map(
     await Promise.all(
@@ -77,7 +78,11 @@ export default async function StaffPage() {
 
       <PaymentsLive />
       <Card title="Staff payments" description="What each person has earned, what you've paid them (withdrawn) and what's left. Tap Pay after you send money — it shows on their dashboard straight away.">
-        {payTotals.length === 0 ? (
+        {!payReady ? (
+          <Notice tone="warning">
+            Payments aren&apos;t switched on in your database yet. In Supabase → SQL Editor, run the file <code>supabase/migrations/20261030000018_staff_payments.sql</code> once, then reload this page.
+          </Notice>
+        ) : payTotals.length === 0 ? (
           <Empty>No staff yet.</Empty>
         ) : (
           <div className="overflow-x-auto">
@@ -180,16 +185,28 @@ export default async function StaffPage() {
                     {s.status === "invited" ? "Invited" : s.status === "active" ? "Active" : "Disabled"}
                   </Badge>
                   <span className="text-xs text-muted">Delete products: {s.can_delete_products ? "allowed" : "not allowed"}</span>
-                  <p className="w-full text-xs text-muted">
-                    Products added: <strong className="text-plum">{stats.get(s.user_id)?.products_added ?? 0}</strong>
-                    {" · "}Earned: <strong className="text-base font-extrabold text-success">{formatMoney(earningsFor(stats.get(s.user_id)?.products_added ?? 0).earnedKobo)}</strong>
-                    {pay.get(s.user_id) && (
-                      <>
-                        {" · "}Withdrawn: <strong className="text-plum">{naira(pay.get(s.user_id)!.totalWithdrawn)}</strong>
-                        {" · "}Balance left: <strong className="text-plum">{naira(pay.get(s.user_id)!.balanceLeft)}</strong>
-                      </>
-                    )}
-                  </p>
+                  {(() => {
+                    const earnedNaira = pay.get(s.user_id)?.totalEarnings ?? earningsFor(stats.get(s.user_id)?.products_added ?? 0).earnedKobo / 100;
+                    const withdrawn = pay.get(s.user_id)?.totalWithdrawn ?? 0;
+                    const left = pay.get(s.user_id)?.balanceLeft ?? earnedNaira - withdrawn;
+                    return (
+                      <div className="w-full space-y-2 text-xs text-muted">
+                        <p>Products added: <strong className="text-plum">{stats.get(s.user_id)?.products_added ?? 0}</strong></p>
+                        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm" data-testid={`money-line-${s.user_id}`}>
+                          <span>Earned: <strong className="font-extrabold text-[#2563EB]">{naira(earnedNaira)}</strong></span>
+                          <span aria-hidden>|</span>
+                          <span>Withdrawn: <strong className="font-extrabold text-[#EA580C]">{naira(withdrawn)}</strong></span>
+                          <span aria-hidden>|</span>
+                          <span>Left: <strong className={`font-extrabold ${left < 0 ? "text-danger" : "text-[#16A34A]"}`}>{naira(left)}</strong></span>
+                        </p>
+                        {s.status === "active" && payReady && (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <PayStaffButton staffId={s.user_id} name={s.full_name ?? info?.name ?? s.email} balanceLeft={left} label="Pay Staff" testId={`team-pay-${s.user_id}`} />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                   <Link href={`/staff/dashboard?as=${s.user_id}`} className="text-xs font-semibold underline underline-offset-4 hover:text-rose-deep">View as staff</Link>
