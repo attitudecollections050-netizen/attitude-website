@@ -22,7 +22,7 @@ import { Footer } from "@/components/layout/Footer";
 import { AnalyticsTracker } from "@/components/analytics/AnalyticsTracker";
 import { CookieConsent } from "@/components/analytics/CookieConsent";
 import { FeedbackInvite } from "@/components/feedback/FeedbackInvite";
-import { AssistantWidget } from "@/components/assistant/AssistantWidget";
+import { AttitudeAI } from "@/components/assistant/AttitudeAI";
 import { NavigationTracker } from "@/components/product/BackButton";
 
 // Cart, session and stock are per-request: never prerender these routes.
@@ -77,7 +77,7 @@ export default async function StoreLayout({ children }: LayoutProps<"/">) {
         <NavigationTracker />
         <CookieConsent />
         <FeedbackInvite />
-        <AssistantWidget />
+        <AttitudeAI whatsapp={settings.store.whatsapp} />
         <PreferencesDialog />
       </CartProvider>
     </MotionProvider>

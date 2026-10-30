@@ -3,6 +3,7 @@ import { useCallback, useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import type { CartLine } from "@/lib/cart/assess";
 import { useColorName } from "./useColorName";
+import { FREE_SIZE_LABEL } from "@/lib/catalog/free-size";
 
 /** Shopper-language text for bag lines: product name, colour/size label and stock warnings. */
 export function useCartText() {
@@ -11,7 +12,7 @@ export function useCartText() {
   const colorName = useColorName();
   const name = useCallback((l: Pick<CartLine, "name" | "translations">) => l.translations?.[locale]?.name?.trim() || l.name, [locale]);
   const variant = useCallback(
-    (size: string | null, color: string | null) => [color ? colorName(color) : null, size ? t("sizeLabel", { size }) : null].filter(Boolean).join(" · "),
+    (size: string | null, color: string | null) => [color ? colorName(color) : null, size ? (size === FREE_SIZE_LABEL ? t("freeSize") : t("sizeLabel", { size })) : null].filter(Boolean).join(" · "),
     [t, colorName],
   );
   const warning = useCallback(

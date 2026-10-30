@@ -121,7 +121,14 @@
     "saveError": "无法保存您的偏好设置，请重试。",
     "close": "关闭",
     "skip": "保留推荐设置",
-    "switcherLabel": "语言 {language}，国家/地区 {country}，货币 {currency}。更改偏好设置"
+    "switcherLabel": "语言 {language}，国家/地区 {country}，货币 {currency}。更改偏好设置",
+    "hearUs": "听听 Haru 和 Jin",
+    "whichLanguage": "你更喜欢哪种语言？",
+    "default": "默认",
+    "mascotsEnglish": "无论你选择哪种语言，Haru 和 Jin 都会用英语聊天（带一点可爱的韩国口音）。",
+    "moreLanguages": "更多语言",
+    "deliveryAndCurrency": "配送国家和货币",
+    "startShopping": "和我们一起购物 💕"
   },
   "product": {
     "caption": "大胆 • 摩登 • 经典",
@@ -176,7 +183,8 @@
     "galleryHint": "双击或双指缩放 · 左右滑动浏览 · 向下滑动关闭",
     "goBack": "返回",
     "morePhotos": "{count, plural, other {还有 # 张照片}}",
-    "lastPhoto": "已看完所有照片"
+    "lastPhoto": "已看完所有照片",
+    "freeSizeBadge": "✨ 均码 - 适合 S 到 XL"
   },
   "colors": {
     "black": "黑色",
@@ -503,7 +511,8 @@
       "sold_out": "已售罄。请移除此商品以继续。",
       "reduce": "库存仅剩 {count} 件，请减少数量。",
       "low_stock": "仅剩 {count} 件"
-    }
+    },
+    "freeSize": "均码"
   },
   "cartErrors": {
     "notConnected": "商店尚未连接到数据库。",
@@ -1008,7 +1017,10 @@
     "addToCart": "加入购物车",
     "pickSize": "选择尺码",
     "added": "已加入购物车 ✓",
-    "view": "查看"
+    "view": "查看",
+    "switchToJin": "切换到 JIN？",
+    "switchToHaru": "切换到 HARU？",
+    "whatsappConnect": "在 WhatsApp 上联系我们"
   },
   "store": {
     "skip": "跳至主要内容",

@@ -121,7 +121,14 @@
     "saveError": "Não foi possível salvar suas preferências. Tente novamente.",
     "close": "Fechar",
     "skip": "Manter as configurações sugeridas",
-    "switcherLabel": "Idioma {language}, país {country}, moeda {currency}. Alterar preferências"
+    "switcherLabel": "Idioma {language}, país {country}, moeda {currency}. Alterar preferências",
+    "hearUs": "Ouvir Haru e Jin",
+    "whichLanguage": "Qual idioma você prefere?",
+    "default": "Padrão",
+    "mascotsEnglish": "Haru e Jin sempre conversam em inglês (com um sotaque coreano fofo), seja qual for o idioma escolhido.",
+    "moreLanguages": "Mais idiomas",
+    "deliveryAndCurrency": "País de entrega e moeda",
+    "startShopping": "Compre com a gente 💕"
   },
   "product": {
     "caption": "Ousado • Moderno • Atemporal",
@@ -176,7 +183,8 @@
     "galleryHint": "Toque duas vezes ou faça pinça para ampliar · deslize para navegar · deslize para baixo para fechar",
     "goBack": "Voltar",
     "morePhotos": "{count, plural, one {Mais # foto} other {Mais # fotos}}",
-    "lastPhoto": "Já viu todas as fotos"
+    "lastPhoto": "Já viu todas as fotos",
+    "freeSizeBadge": "✨ TAMANHO ÚNICO - Do P ao GG"
   },
   "colors": {
     "black": "Preto",
@@ -503,7 +511,8 @@
       "sold_out": "Esgotado. Remova este item para continuar.",
       "reduce": "Restam apenas {count} em estoque. Reduza a quantidade.",
       "low_stock": "Restam apenas {count}"
-    }
+    },
+    "freeSize": "Tamanho único"
   },
   "cartErrors": {
     "notConnected": "A loja ainda não está conectada ao banco de dados.",
@@ -1008,7 +1017,10 @@
     "addToCart": "Adicionar ao carrinho",
     "pickSize": "Escolha seu tamanho",
     "added": "Adicionado ao carrinho ✓",
-    "view": "Ver"
+    "view": "Ver",
+    "switchToJin": "Mudar para JIN?",
+    "switchToHaru": "Mudar para HARU?",
+    "whatsappConnect": "Fale conosco no WhatsApp"
   },
   "store": {
     "skip": "Pular para o conteúdo",

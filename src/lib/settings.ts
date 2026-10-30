@@ -73,7 +73,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   promotion: { enabled: false, code: "", min_subtotal: 0, free_delivery: false, label: "" },
   intl: {
     default_locale: "en",
-    enabled_locales: ["en", "fr", "es", "pt", "ar", "de", "zh"],
+    enabled_locales: ["en", "fr", "es", "pt", "ar", "de", "zh", "ko"],
     default_country: "NG",
     rate_provider: "open_er_api",
     auto_update: true,

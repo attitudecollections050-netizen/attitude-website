@@ -1,7 +1,8 @@
-// FAF Drip Guy / FAF Drip Queen — shared between the chat widget and the server.
+// ATTITUDE mini HARU / JIN — shared between the chat widget and the server.
 import type { DripAction } from "./characters";
+import { STORE_FAQ } from "./faq";
 
-export const ASSISTANT_NAME = "FAF Drip Guy";
+export const ASSISTANT_NAME = "ATTITUDE mini HARU";
 export const MAX_MESSAGE_CHARS = 800;
 export const MAX_HISTORY = 16;
 
@@ -104,15 +105,15 @@ export function basicReply(input: string, seed = Date.now()): string {
   if (/joke|funny|laugh|make me (smile|happy)/.test(t)) return `${pick(JOKES)}\n\nWant another one? Just say “joke” again! 😄`;
   if (/question|quiz|ask me|bored|play/.test(t)) return pick(FUN_QUESTIONS);
   if (/track|where is my order|order status|my order/.test(t)) return "You can check your order anytime on [Track your order](/track-order) — you'll need your order number and the email you used. 📦";
-  if (/deliver|shipping|ship|dispatch|how long/.test(t)) return "Delivery fees and timelines are calculated for your exact address at checkout, so you'll always see the real price before paying. More details on our [Shipping policy](/shipping-policy). 🚚";
+  if (/deliver|shipping|ship|dispatch|how long/.test(t)) return `${STORE_FAQ.delivery} 🚚 More details on our [Shipping policy](/shipping-policy).`;
   if (/return|refund|exchange/.test(t)) return "No stress! Our [Returns & refunds](/returns-policy) page explains how returns and exchanges work. 💗";
-  if (/pay|paystack|card|transfer/.test(t)) return "Payments are made securely through Paystack at checkout. We never see or store your card details. 🔒";
+  if (/pay|paystack|card|transfer/.test(t)) return `${STORE_FAQ.payment} 🔒`;
   if (/contact|phone|email|whatsapp|human|talk to/.test(t)) return "You can reach the Attitude Collections team on our [Contact page](/contact). 💌";
-  if (/size|fit/.test(t)) return "Each product page lists its available sizes. If you're between sizes, send us a message on the [Contact page](/contact) and we'll help. 📏";
+  if (/size|fit/.test(t)) return `${STORE_FAQ.size} 📏`;
   if (/feedback|review|complain/.test(t)) return "I'd love to hear it! Share your experience with hearts on our [Feedback page](/feedback). 💗";
   const shop = t.match(/(?:find|looking for|want|need|show me|buy)\s+(?:a |an |some )?(.{2,40})/);
   if (shop) return `Ooh, let's find it! 🛍️ Here are results for “${shop[1].replace(/[?.!]+$/, "")}”: [search the shop](/search?q=${encodeURIComponent(shop[1].replace(/[?.!]+$/, ""))})`;
-  if (/^(hi|hello|hey|good (morning|afternoon|evening))/.test(t)) return "Wetin dey sup! 😎 I'm FAF Drip Guy. I can find your fit, help with sizes, explain delivery and returns, or tell you a joke. Wetin we dey cop today?";
+  if (/^(hi|hello|hey|good (morning|afternoon|evening))/.test(t)) return "Hi I'm Haru! 💖 I can find your fit, help with sizes, explain delivery and returns, or tell you a joke. What are we shopping for today, cutie?";
   if (/men|women|bag|shoe|sneaker|dress|shirt|top|jean/.test(t)) return `Let's shop! 🛍️ Try [this search](/search?q=${encodeURIComponent(input.slice(0, 40))}) or browse [the whole shop](/shop).`;
-  return "Omo, I no catch that one 🙈 Try asking about delivery, returns, tracking an order, finding an outfit — or say “joke”!";
+  return `Aigoo, I didn't quite catch that 🙈 ${STORE_FAQ.fallback}`;
 }

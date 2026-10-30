@@ -12,6 +12,7 @@ import { useColorName } from "@/components/intl/useColorName";
 import { useCart } from "@/components/cart/CartProvider";
 import { SmartImage } from "@/components/ui/SmartImage";
 import { cn } from "@/lib/cn";
+import { isFreeSize } from "@/lib/catalog/free-size";
 import { ProductLightbox } from "@/components/product/ProductLightbox";
 import { CoverflowGallery } from "@/components/product/CoverflowGallery";
 import { BackButton } from "@/components/product/BackButton";
@@ -124,8 +125,10 @@ export function Showcase({ products, mode, maxPerItem, headline, caption, footer
   const coverflow = mode === "product" && images.length >= 6;
 
   const forColor = product.variants.filter((v) => !color || v.color === color);
-  const sizes = sortSizes([...new Set(forColor.map((v) => v.size).filter(Boolean))] as string[]);
-  const variant = sizes.length === 0 ? forColor[0] ?? null : forColor.find((v) => v.size === size) ?? null;
+  // Free-size items skip the size picker: one size fits S to XL.
+  const freeSize = isFreeSize(product, product.variants.map((v) => v.size));
+  const sizes = freeSize ? [] : sortSizes([...new Set(forColor.map((v) => v.size).filter(Boolean))] as string[]);
+  const variant = sizes.length === 0 ? (forColor.find(available) ?? forColor[0] ?? null) : forColor.find((v) => v.size === size) ?? null;
   const anyAvailable = product.variants.some(available);
   const maxQty = variant ? (product.allow_backorder ? maxPerItem : Math.max(1, Math.min(maxPerItem, variant.on_hand))) : maxPerItem;
 
@@ -350,6 +353,11 @@ export function Showcase({ products, mode, maxPerItem, headline, caption, footer
                 </div>
               )}
 
+              {freeSize && (
+                <p className="mt-7 inline-flex items-center gap-1.5 rounded-full border-2 border-[#FFB6D9] bg-[#FFF0F7] px-4 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-[#C2185B] shadow-[0_0_16px_rgba(255,182,217,0.8)]" data-testid="free-size-badge">
+                  {t("freeSizeBadge")}
+                </p>
+              )}
               {sizes.length > 0 && (
                 <fieldset className="mt-7">
                   <legend className="eyebrow text-[0.65rem]">{t("size")}{size ? ` · ${size}` : ""}</legend>

@@ -121,7 +121,14 @@
     "saveError": "We couldn't save your preferences. Please try again.",
     "close": "Close",
     "skip": "Keep suggested settings",
-    "switcherLabel": "Language {language}, country {country}, currency {currency}. Change preferences"
+    "switcherLabel": "Language {language}, country {country}, currency {currency}. Change preferences",
+    "hearUs": "Hear Haru & Jin",
+    "whichLanguage": "What language do you prefer?",
+    "default": "Default",
+    "mascotsEnglish": "Haru and Jin always chat in English (with a cute Korean accent), whatever language you pick.",
+    "moreLanguages": "More languages",
+    "deliveryAndCurrency": "Delivery country & currency",
+    "startShopping": "Start Shopping With Us 💕"
   },
   "product": {
     "caption": "Bold • Modern • Timeless",
@@ -176,7 +183,8 @@
     "galleryHint": "Double-tap or pinch to zoom · swipe to browse · swipe down to close",
     "goBack": "Go back",
     "morePhotos": "{count, plural, one {# more photo} other {# more photos}}",
-    "lastPhoto": "That's every photo"
+    "lastPhoto": "That's every photo",
+    "freeSizeBadge": "✨ FREE SIZE - Fits S to XL"
   },
   "colors": {
     "black": "Black",
@@ -503,7 +511,8 @@
       "sold_out": "Sold out. Please remove this item to continue.",
       "reduce": "Only {count} left in stock. Please reduce the quantity.",
       "low_stock": "Only {count} left"
-    }
+    },
+    "freeSize": "Free Size"
   },
   "cartErrors": {
     "notConnected": "The store is not connected to its database yet.",
@@ -1008,7 +1017,10 @@
     "addToCart": "Add to Cart",
     "pickSize": "Pick your size",
     "added": "Added to cart ✓",
-    "view": "View"
+    "view": "View",
+    "switchToJin": "Switch to JIN?",
+    "switchToHaru": "Switch to HARU?",
+    "whatsappConnect": "Chat with us on WhatsApp"
   },
   "store": {
     "skip": "Skip to content",

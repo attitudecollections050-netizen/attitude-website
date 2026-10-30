@@ -121,7 +121,14 @@
     "saveError": "No hemos podido guardar tus preferencias. Inténtalo de nuevo.",
     "close": "Cerrar",
     "skip": "Mantener la configuración sugerida",
-    "switcherLabel": "Idioma {language}, país {country}, moneda {currency}. Cambiar preferencias"
+    "switcherLabel": "Idioma {language}, país {country}, moneda {currency}. Cambiar preferencias",
+    "hearUs": "Escuchar a Haru y Jin",
+    "whichLanguage": "¿Qué idioma prefieres?",
+    "default": "Predeterminado",
+    "mascotsEnglish": "Haru y Jin siempre chatean en inglés (con un tierno acento coreano), elijas el idioma que elijas.",
+    "moreLanguages": "Más idiomas",
+    "deliveryAndCurrency": "País de entrega y moneda",
+    "startShopping": "Compra con nosotros 💕"
   },
   "product": {
     "caption": "Audaz • Moderno • Atemporal",
@@ -176,7 +183,8 @@
     "galleryHint": "Toca dos veces o pellizca para ampliar · desliza para ver más · desliza hacia abajo para cerrar",
     "goBack": "Volver",
     "morePhotos": "{count, plural, one {# foto más} other {# fotos más}}",
-    "lastPhoto": "Ya viste todas las fotos"
+    "lastPhoto": "Ya viste todas las fotos",
+    "freeSizeBadge": "✨ TALLA ÚNICA - De la S a la XL"
   },
   "colors": {
     "black": "Negro",
@@ -503,7 +511,8 @@
       "sold_out": "Agotado. Quita este artículo para continuar.",
       "reduce": "Solo quedan {count} en stock. Reduce la cantidad.",
       "low_stock": "Solo quedan {count}"
-    }
+    },
+    "freeSize": "Talla única"
   },
   "cartErrors": {
     "notConnected": "La tienda aún no está conectada a su base de datos.",
@@ -1008,7 +1017,10 @@
     "addToCart": "Añadir al carrito",
     "pickSize": "Elige tu talla",
     "added": "Añadido al carrito ✓",
-    "view": "Ver"
+    "view": "Ver",
+    "switchToJin": "¿Cambiar a JIN?",
+    "switchToHaru": "¿Cambiar a HARU?",
+    "whatsappConnect": "Escríbenos por WhatsApp"
   },
   "store": {
     "skip": "Saltar al contenido",

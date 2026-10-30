@@ -16,6 +16,7 @@ const loaders: Record<Locale, () => Promise<{ default: unknown }>> = {
   ar: () => import("@/messages/ar.json"),
   de: () => import("@/messages/de.json"),
   zh: () => import("@/messages/zh.json"),
+  ko: () => import("@/messages/ko.json"),
 };
 
 /** Deep-merges b onto a (b wins) for keys English has, ignoring empty strings so English shows instead of blanks. */

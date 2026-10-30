@@ -36,7 +36,7 @@ export interface CartLine extends Omit<RawCartLine, "onHand" | "variantActive" |
 }
 
 export function variantLabel(size: string | null, color: string | null): string {
-  return [color, size ? `Size ${size}` : null].filter(Boolean).join(" · ");
+  return [color, size ? (size === "Free Size" ? size : `Size ${size}`) : null].filter(Boolean).join(" · ");
 }
 
 export function assessLine(line: RawCartLine, maxPerItem: number): CartLine {

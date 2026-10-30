@@ -121,7 +121,14 @@
     "saveError": "Deine Einstellungen konnten nicht gespeichert werden. Bitte versuche es erneut.",
     "close": "Schließen",
     "skip": "Vorgeschlagene Einstellungen behalten",
-    "switcherLabel": "Sprache {language}, Land {country}, Währung {currency}. Einstellungen ändern"
+    "switcherLabel": "Sprache {language}, Land {country}, Währung {currency}. Einstellungen ändern",
+    "hearUs": "Haru & Jin anhören",
+    "whichLanguage": "Welche Sprache bevorzugst du?",
+    "default": "Standard",
+    "mascotsEnglish": "Haru und Jin chatten immer auf Englisch (mit süßem koreanischem Akzent) – egal, welche Sprache du wählst.",
+    "moreLanguages": "Weitere Sprachen",
+    "deliveryAndCurrency": "Lieferland & Währung",
+    "startShopping": "Jetzt mit uns shoppen 💕"
   },
   "product": {
     "caption": "Mutig • Modern • Zeitlos",
@@ -176,7 +183,8 @@
     "galleryHint": "Doppelt tippen oder mit zwei Fingern zoomen · wischen zum Blättern · nach unten wischen zum Schließen",
     "goBack": "Zurück",
     "morePhotos": "{count, plural, one {Noch # Foto} other {Noch # Fotos}}",
-    "lastPhoto": "Das waren alle Fotos"
+    "lastPhoto": "Das waren alle Fotos",
+    "freeSizeBadge": "✨ EINHEITSGRÖSSE - Passt S bis XL"
   },
   "colors": {
     "black": "Schwarz",
@@ -503,7 +511,8 @@
       "sold_out": "Ausverkauft. Bitte entferne diesen Artikel, um fortzufahren.",
       "reduce": "Nur noch {count} auf Lager. Bitte verringere die Menge.",
       "low_stock": "Nur noch {count}"
-    }
+    },
+    "freeSize": "Einheitsgröße"
   },
   "cartErrors": {
     "notConnected": "Der Shop ist noch nicht mit seiner Datenbank verbunden.",
@@ -1008,7 +1017,10 @@
     "addToCart": "In den Warenkorb",
     "pickSize": "Wähle deine Größe",
     "added": "Im Warenkorb ✓",
-    "view": "Ansehen"
+    "view": "Ansehen",
+    "switchToJin": "Zu JIN wechseln?",
+    "switchToHaru": "Zu HARU wechseln?",
+    "whatsappConnect": "Schreib uns auf WhatsApp"
   },
   "store": {
     "skip": "Zum Inhalt springen",

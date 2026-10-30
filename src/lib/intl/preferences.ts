@@ -18,11 +18,14 @@ export interface Preferences {
 }
 
 const COUNTRY_RE = /^[A-Z]{2}$/;
+const ORIGINAL_LOCALES: Locale[] = ["en", "fr", "es", "pt", "ar", "de", "zh"];
 
 export const getPreferences = cache(async (): Promise<Preferences> => {
   const [jar, h, settings] = await Promise.all([cookies(), headers(), getSettings()]);
   const intl = settings.intl;
   const enabledLocales = intl.enabled_locales.filter(isLocale) as Locale[];
+  // Korean was added later: stores still on the original seven languages get it too.
+  if (ORIGINAL_LOCALES.every((l) => enabledLocales.includes(l)) && enabledLocales.length === ORIGINAL_LOCALES.length) enabledLocales.push("ko");
   if (!enabledLocales.includes(DEFAULT_LOCALE)) enabledLocales.unshift(DEFAULT_LOCALE);
   const fallbackLocale = (isLocale(intl.default_locale) && enabledLocales.includes(intl.default_locale) ? intl.default_locale : DEFAULT_LOCALE) as Locale;
 

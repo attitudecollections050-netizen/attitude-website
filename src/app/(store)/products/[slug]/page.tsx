@@ -8,6 +8,8 @@ import { listEnabledCountries, listRegionsByCountry } from "@/lib/shipping/servi
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import Link from "next/link";
 import { Showcase } from "@/components/showcase/Showcase";
+import { MascotContext } from "@/components/assistant/MascotContext";
+import { audienceOf, isFreeSize } from "@/lib/catalog/free-size";
 import { DeliveryEstimator } from "@/components/product/DeliveryEstimator";
 import { ProductReviews, getReviewSummary } from "@/components/feedback/ProductReviews";
 import { TrackEvent } from "@/components/analytics/AnalyticsTracker";
@@ -66,6 +68,11 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
   return (
     <div className="pb-24">
       <TrackEvent type="product_view" productId={product.id} />
+      <MascotContext
+        audience={audienceOf(`${top.slug} ${product.category.slug} ${product.category.name} ${product.name} ${product.tags.join(" ")}`)}
+        freeSize={isFreeSize(product, product.variants.map((v) => v.size))}
+        product={product.name}
+      />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
       <div className="container-luxe pt-6">
         <Breadcrumbs

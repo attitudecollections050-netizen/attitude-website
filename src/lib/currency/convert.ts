@@ -57,7 +57,7 @@ export function formatNgn(minorNgn: number, locale = "en"): string {
 
 /** Number formatting locale (Arabic uses Latin digits so prices match checkout and receipts). */
 export function intlLocale(locale: string): string {
-  return locale === "ar" ? "ar-u-nu-latn" : locale === "zh" ? "zh-CN" : locale;
+  return locale === "ar" ? "ar-u-nu-latn" : locale === "zh" ? "zh-CN" : locale === "ko" ? "ko-KR" : locale;
 }
 
 /** True when the display currency differs from what the customer will be charged. */

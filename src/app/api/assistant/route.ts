@@ -16,7 +16,7 @@ const bodySchema = z.object({
     .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().trim().min(1).max(MAX_MESSAGE_CHARS * 2) }))
     .min(1)
     .max(MAX_HISTORY * 2),
-  character: z.enum(["guy", "queen"]).default("guy"),
+  character: z.preprocess((v) => (v === "guy" ? "jin" : v === "queen" ? "haru" : v), z.enum(["haru", "jin"]).default("haru")),
 });
 
 const detailsInput = z.object({ slug: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).max(140) });
@@ -58,13 +58,13 @@ const tools: Anthropic.Beta.BetaTool[] = [
 ];
 
 /**
- * Chat endpoint for FAF Drip Guy / FAF Drip Queen. Returns 503 { offline: true } when no
+ * Chat endpoint for ATTITUDE mini HARU / ATTITUDE mini JIN. Returns 503 { offline: true } when no
  * Anthropic API key is configured so the widget can switch to basic mode.
  */
 export async function POST(request: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ offline: true }, { status: 503 });
   if (!(await rateLimit("assistant", 30, 600))) {
-    return NextResponse.json({ error: "Omo, you dey chat faster than my fingers! 😅 Give me a minute and try again." }, { status: 429 });
+    return NextResponse.json({ error: "Whoa, you're typing faster than my beats! 🎧 Give me a minute and try again." }, { status: 429 });
   }
   let parsed;
   try {
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       });
 
       if (response.stop_reason === "refusal") {
-        return NextResponse.json<AssistantReply>({ reply: "Hmm, I can't help with that one 🙈 — but I can help you find some fire drip!", products: [], action: "cross_arms" });
+        return NextResponse.json<AssistantReply>({ reply: "Aigoo, I can't help with that one 🙈 — but I can help you find a super cute fit!", products: [], action: "cross_arms" });
       }
       const toolUses = response.content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use");
       if (response.stop_reason !== "tool_use" || toolUses.length === 0 || round === MAX_TOOL_ROUNDS) {
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
           .join("")
           .trim();
         const { action, text } = parseAction(reply);
-        return NextResponse.json<AssistantReply>({ reply: text || "I'm here! 😎 What can I help you with?", products: dedupe(products), action });
+        return NextResponse.json<AssistantReply>({ reply: text || "Annyeong! 💖 What can I help you with?", products: dedupe(products), action });
       }
 
       messages.push({ role: "assistant", content: response.content });

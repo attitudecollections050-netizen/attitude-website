@@ -9,7 +9,7 @@ export const LINES: { who: 0 | 1 | 2; text: string }[] = [
   { who: 0, text: "Hey bestie! Have you heard? Attitude Collections launches TONIGHT at 10PM! 💖" },
   { who: 1, text: "Wait, for real? The new fashion store everyone is talking about?" },
   { who: 0, text: "Yes! Clothes for guys and girls, fresh sneakers and cute bags!" },
-  { who: 1, text: "Omo! I need new sneakers and a bag for the weekend!" },
+  { who: 1, text: "Wow! I need new sneakers and a bag for the weekend!" },
   { who: 0, text: "Ordering is easy too. Pay by bank transfer and chat them on WhatsApp." },
   { who: 1, text: "Say less! I'm setting my alarm for 10PM tonight." },
   { who: 2, text: "Don't miss it! Check out Attitude Collections tonight! ✨" },

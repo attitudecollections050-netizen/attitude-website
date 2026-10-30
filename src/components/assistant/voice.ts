@@ -54,7 +54,7 @@ export function canSpeak(): boolean {
   return typeof window !== "undefined" && "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined";
 }
 
-// Natural-sounding female English voices, US/UK accents first. Male voices are skipped.
+// Natural-sounding English voices, US accent first.
 const PREFERRED = [
   /Jenny|Aria|Ava|Emma|Michelle|Ana\b/i, // Microsoft Edge "Online (Natural)" voices
   /Samantha|Allison|Susan|Zoe|Nicky/i, // Apple (US)
@@ -63,10 +63,17 @@ const PREFERRED = [
   /Zira|Hazel|Karen|Tessa|Moira|Fiona|Victoria|Catherine/i,
   /female|woman|girl/i,
 ];
-const MALE = /\b(David|Mark|Guy|Ryan|Daniel|Alex|Fred|Thomas|George|James|Brian|Christopher|Eric|Roger|Steffan|William|Oliver|Arthur|Rishi|Aaron|Tom|Reed|Rocko|Grandpa|Male|Google UK English Male)\b/i;
+const PREFERRED_MALE = [
+  /Andrew|Brian|Christopher|Eric|Guy|Roger|Steffan/i, // Microsoft Edge "Online (Natural)" voices
+  /Aaron|Alex|Tom|Reed|Evan|Nathan/i, // Apple (US)
+  /Google US English/i,
+  /David|Mark|Daniel|Ryan|Google UK English Male/i,
+  /male|man|boy/i,
+];
+const MALE = /\b(David|Mark|Guy|Ryan|Daniel|Alex|Fred|Thomas|George|James|Brian|Christopher|Eric|Roger|Steffan|William|Oliver|Arthur|Rishi|Aaron|Tom|Reed|Rocko|Andrew|Evan|Nathan|Grandpa|Male|Google UK English Male)\b/i;
 const QUALITY = /Natural|Neural|Online|Enhanced|Premium/i;
 const ACCENT_RANK = (lang: string) => (/en[-_]US/i.test(lang) ? 0 : /en[-_]GB/i.test(lang) ? 1 : /en[-_](AU|CA|IE|NZ)/i.test(lang) ? 2 : 3);
-const VOICE_PREF_KEY = "ac_mini_voice_name";
+const VOICE_PREF_KEY = "ac_mascot_voice";
 
 let cachedVoices: SpeechSynthesisVoice[] = [];
 
@@ -96,53 +103,65 @@ function voicesReady(timeoutMs = 1500): Promise<SpeechSynthesisVoice[]> {
   });
 }
 
-/** Female English voices on this device, best first (for the voice picker). */
-export function englishVoices(voices: SpeechSynthesisVoice[] = cachedVoices): SpeechSynthesisVoice[] {
+/** English voices on this device for a character (female for Haru, male for Jin), best first. */
+export function englishVoices(voices: SpeechSynthesisVoice[] = cachedVoices, gender: "female" | "male" = "female"): SpeechSynthesisVoice[] {
   const rank = (v: SpeechSynthesisVoice) => {
-    const pref = PREFERRED.findIndex((re) => re.test(v.name));
+    const prefs = gender === "female" ? PREFERRED : PREFERRED_MALE;
+    const pref = prefs.findIndex((re) => re.test(v.name));
     return (pref === -1 ? 50 : pref * 4) + ACCENT_RANK(v.lang) - (QUALITY.test(v.name) ? 3 : 0);
   };
-  return voices.filter((v) => /^en([-_]|$)/i.test(v.lang) && !MALE.test(v.name)).sort((a, b) => rank(a) - rank(b));
+  const english = voices.filter((v) => /^en([-_]|$)/i.test(v.lang));
+  const matching = english.filter((v) => (gender === "female" ? !MALE.test(v.name) : MALE.test(v.name)));
+  return (matching.length ? matching : english).sort((a, b) => rank(a) - rank(b));
 }
 
-export function pickVoice(voices: SpeechSynthesisVoice[], preferredName?: string | null): SpeechSynthesisVoice | null {
+export function pickVoice(voices: SpeechSynthesisVoice[], preferredName?: string | null, gender: "female" | "male" = "female"): SpeechSynthesisVoice | null {
   const english = voices.filter((v) => /^en([-_]|$)/i.test(v.lang));
   if (preferredName) {
     const chosen = english.find((v) => v.name === preferredName);
     if (chosen) return chosen;
   }
-  return englishVoices(voices)[0] ?? english[0] ?? null;
+  return englishVoices(voices, gender)[0] ?? english[0] ?? null;
 }
 
-export function savedVoiceName(): string | null {
+const voiceKey = (who: VoiceWho) => `${VOICE_PREF_KEY}_${who}`;
+export function savedVoiceName(who: VoiceWho = "haru"): string | null {
   try {
-    return localStorage.getItem(VOICE_PREF_KEY);
+    return localStorage.getItem(voiceKey(who));
   } catch {
     return null;
   }
 }
-export function saveVoiceName(name: string) {
+export function saveVoiceName(name: string, who: VoiceWho = "haru") {
   try {
-    localStorage.setItem(VOICE_PREF_KEY, name);
+    localStorage.setItem(voiceKey(who), name);
   } catch {}
 }
 
-/** A cute, light voice: a little higher and brighter than normal, but still natural English. */
-export const CUTE_VOICE = { pitch: 1.35, rate: 1.02 };
+export type VoiceWho = "haru" | "jin";
+/**
+ * Cute voices in US English, a touch slower for a soft Korean-accent feel:
+ * Haru sweet and high, Jin cool and a little lower.
+ */
+export const VOICES: Record<VoiceWho, { pitch: number; rate: number; gender: "female" | "male" }> = {
+  haru: { pitch: 1.3, rate: 0.95, gender: "female" },
+  jin: { pitch: 0.9, rate: 0.95, gender: "male" },
+};
 
-/** Reads a reply aloud in English with Dj Attitude Mini's cute voice. */
-export async function speak(text: string, handlers: { onStart?: () => void; onEnd?: () => void } = {}) {
+/** Reads a reply aloud in the character's cute voice. */
+export async function speak(text: string, handlers: { onStart?: () => void; onEnd?: () => void } = {}, who: VoiceWho = "haru") {
   if (!canSpeak()) return;
   const say = speakable(text);
   if (!say) return;
   window.speechSynthesis.cancel();
   const voices = await voicesReady();
+  const settings = VOICES[who];
   const u = new SpeechSynthesisUtterance(say);
-  const voice = pickVoice(voices, savedVoiceName());
+  const voice = pickVoice(voices, savedVoiceName(who), settings.gender);
   if (voice) u.voice = voice;
   u.lang = voice?.lang ?? "en-US";
-  u.pitch = CUTE_VOICE.pitch;
-  u.rate = CUTE_VOICE.rate;
+  u.pitch = settings.pitch;
+  u.rate = settings.rate;
   u.onstart = () => handlers.onStart?.();
   u.onend = () => handlers.onEnd?.();
   u.onerror = () => handlers.onEnd?.();

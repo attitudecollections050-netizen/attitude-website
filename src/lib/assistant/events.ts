@@ -1,5 +1,12 @@
-// Store events the chat characters react to (dab on add to cart, celebrate on a paid order…).
-export type DripEvent = { type: "add_to_cart" } | { type: "order_confirmed" };
+import type { Audience } from "@/lib/catalog/free-size";
+
+// Store events the mascots react to (a kiss on add to cart, a party on a paid order,
+// switching to Haru or Jin for women's / men's products, the free-size announcement…).
+export type DripEvent =
+  | { type: "add_to_cart" }
+  | { type: "order_confirmed" }
+  | { type: "context"; audience: Audience; freeSize?: boolean; product?: string }
+  | { type: "open_chat"; character: "haru" | "jin" };
 
 export function emitDrip(event: DripEvent) {
   if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent<DripEvent>("drip", { detail: event }));

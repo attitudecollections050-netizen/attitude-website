@@ -4,6 +4,7 @@ import { getCategoryTree } from "@/lib/catalog/queries";
 import { getSettings } from "@/lib/settings";
 import { formatMoney } from "@/lib/money";
 import type { ProductSuggestion } from "./shared";
+import { STORE_FAQ } from "./faq";
 
 const POLICY_PAGES = ["about", "faq", "shipping-policy", "returns-policy", "size-guide"];
 const PAGE_LIMIT = 3000;
@@ -38,6 +39,12 @@ Delivery: fees and delivery times are calculated for the customer's address at c
 ${delivery ? `Delivery options confirmed by the store (quote only these; anything else shows at checkout):\n${delivery}` : "No confirmed delivery prices or times are published yet: do not quote any — say they show at checkout."}
 ${settings.promotion.enabled ? `Current offer (applied automatically at checkout, no code needed): ${settings.promotion.label} — when the item total is ${formatMoney(settings.promotion.min_subtotal, "NGN")} or more.` : "There is no store-wide offer running right now."}
 Contact details published by the store: ${contact.length ? contact.join(" · ") : "none yet — send people to /contact"}.
+
+# Owner-confirmed quick answers (use these; they override the general delivery note above)
+- Size: ${STORE_FAQ.size}
+- Delivery: ${STORE_FAQ.delivery}
+- Payment: ${STORE_FAQ.payment}
+- If you can't answer something from these facts, say exactly: "${STORE_FAQ.fallback}" (the chat then shows a WhatsApp button).
 
 # Useful pages
 /shop (all products), /search?q=..., /collections, /cart, /checkout, /track-order (needs order number + email), /contact, /faq, /feedback (rate us with hearts), /account, /shipping-policy, /returns-policy, /privacy-policy, /terms.

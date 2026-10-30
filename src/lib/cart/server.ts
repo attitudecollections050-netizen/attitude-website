@@ -1,6 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { FREE_SIZE_LABEL, isFreeSize } from "@/lib/catalog/free-size";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getSettings } from "@/lib/settings";
 import { applyPromotion, evaluateDiscount, normalizeDiscountCode, subtotalOf, type DiscountEvaluation, type DiscountRecord } from "@/lib/pricing";
@@ -50,12 +51,15 @@ interface CartItemRow {
       id: string;
       slug: string;
       name: string;
+      description: string | null;
+      tags: string[] | null;
       price: number;
       sale_price: number | null;
       status: string;
       allow_backorder: boolean;
       weight_grams: number;
       product_images: { url: string; alt: string; sort_order: number; color: string | null }[];
+      product_variants: { size: string | null }[] | null;
     };
   } | null;
 }
@@ -76,8 +80,8 @@ export async function loadRawLines(cartId: string): Promise<{ lines: RawCartLine
          variant:product_variants (
            id, sku, size, color, is_active,
            inventory ( on_hand ),
-           product:products ( id, slug, name, price, sale_price, status, allow_backorder, weight_grams, translations,
-             product_images ( url, alt, sort_order, color ) )
+           product:products ( id, slug, name, description, tags, price, sale_price, status, allow_backorder, weight_grams, translations,
+             product_images ( url, alt, sort_order, color ), product_variants ( size ) )
          )`,
       )
       .eq("cart_id", cartId)
@@ -99,7 +103,7 @@ export async function loadRawLines(cartId: string): Promise<{ lines: RawCartLine
       imageUrl: image?.url ?? null,
       imageAlt: image?.alt ?? null,
       sku: v.sku,
-      size: v.size,
+      size: isFreeSize(v.product, (v.product.product_variants ?? []).map((x) => x.size)) ? FREE_SIZE_LABEL : v.size,
       color: v.color,
       price: v.product.price,
       salePrice: v.product.sale_price,

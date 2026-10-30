@@ -14,8 +14,11 @@ import { DripBaby } from "./DripBaby";
 import { DripStage } from "./DripStage";
 import { useCart } from "@/components/cart/CartProvider";
 import { onDrip } from "@/lib/assistant/events";
-import { CHARACTERS, DEFAULT_LOOK, SKIN_TONES, actionLine, type CharacterId, type DripAction, type ModelLook } from "@/lib/assistant/characters";
-import { RECOGNITION_LANG, canSpeak, englishVoices, getRecognitionCtor, pickVoice, primeVoices, requestMicrophone, saveVoiceName, savedVoiceName, speak, stopSpeaking, type Recognition } from "./voice";
+import { audienceOf } from "@/lib/catalog/free-size";
+import { WHATSAPP_HANDOFF } from "@/lib/assistant/faq";
+import { WhatsAppLink } from "@/components/ui/WhatsAppLink";
+import { CHARACTERS, DEFAULT_LOOK, actionLine, asCharacter, sweetWord, type CharacterId, type DripAction, type ModelLook } from "@/lib/assistant/characters";
+import { RECOGNITION_LANG, VOICES, canSpeak, englishVoices, getRecognitionCtor, pickVoice, primeVoices, requestMicrophone, saveVoiceName, savedVoiceName, speak, stopSpeaking, type Recognition } from "./voice";
 
 interface Message extends ChatTurn {
   id: string;
@@ -31,18 +34,28 @@ const welcome = (c: CharacterId): Message => ({
   id: "welcome",
   role: "assistant",
   content:
-    c === "queen"
-      ? "Heyy baddie! 💗 I'm FAF Drip Queen. Tell me your size, vibe and budget and I'll find your fit, match your top with your pants, and answer anything about the store."
-      : "Wetin dey sup, drip lord! 😎 I'm FAF Drip Guy. Tell me your height, fit (baggy, slim, vintage) and budget — I'll find your drip, check your size and match the fit.",
+    c === "haru"
+      ? "Hi I'm Haru! 💖 Welcome to Attitude Collections, cutie. Tell me your size, style and budget and I'll find your perfect fit, match your top with your pants, and answer anything about the store!"
+      : "Yo, I'm Jin! 😎 Welcome to Attitude Collections, fam. Tell me your height, fit (baggy, slim, vintage) and budget — I'll find your fit, check your size and match the whole look.",
 });
 const CHIPS = [
-  { label: "Style me 🔥", text: "Style me! Ask me what you need to know to pick my fit." },
-  { label: "Baggy pants 👖", text: "Show me baggy pants" },
-  { label: "Shirts & jerseys 👕", text: "Show me shirts and jerseys" },
+  { label: "Style me ✨", text: "Style me! Ask me what you need to know to pick my fit." },
+  { label: "Baggy & cargo pants 👖", text: "Show me baggy and cargo pants" },
+  { label: "Hoodies & shirts 👕", text: "Show me hoodies, shirts and jerseys" },
   { label: "My size? 📏", text: "Help me find my size" },
   { label: "Delivery to Lagos/Abuja 🚚", text: "How long does delivery take to Lagos and Abuja?" },
-  { label: "Roast my combo 😂", text: "I want to wear a yellow pant with a red shirt. Roast my combo and fix it." },
+  { label: "Check my combo 😂", text: "I want to wear yellow pants with a red shirt. Be honest and fix my combo!" },
 ];
+const GREET: Record<CharacterId, string> = {
+  haru: "Hey bestie, I'm Haru! Let's find your slay fit 💖",
+  jin: "Yo bro, I'm Jin! Let's get your drip right 🔥",
+};
+const FREE_SIZE_LINE: Record<CharacterId, string> = {
+  haru: "Bestie, good news! This one is FREE SIZE 💖 It fits S, M, L, XL (UK 6–14) because it's super stretchy. It will hug your body perfectly!",
+  jin: "Bro, this one is ONE SIZE, free size — stretchy so it fits you, no stress on size!",
+};
+/** Browsers only allow speech once the visitor has tapped or typed on the page. */
+const hasBeenActive = () => (typeof navigator !== "undefined" && (navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation?.hasBeenActive) ?? false;
 /** How long a one-off action plays before the character relaxes again. */
 const ACTION_MS = 3600;
 
@@ -64,22 +77,26 @@ function save(key: string, value: unknown) {
 }
 const uid = () => Math.random().toString(36).slice(2, 10);
 
-export function AssistantWidget() {
+export function AssistantWidget({ whatsapp = null }: { whatsapp?: string | null }) {
   const pathname = usePathname();
   const reduce = useReducedMotion();
   // Window labels follow the shopper's language; Dj Attitude Mini herself chats in English.
   const t = useTranslations("assistant");
   const [open, setOpen] = useState(false);
-  const [character, setCharacter] = useState<CharacterId>("guy");
+  const [character, setCharacter] = useState<CharacterId>("haru");
   const [looks, setLooks] = useState<Record<CharacterId, ModelLook>>(DEFAULT_LOOK);
   const [customize, setCustomize] = useState(false);
   const [stage, setStage] = useState<{ action: DripAction; key: number; caption: string | null; images: (string | null)[] }>({ action: "pose", key: 0, caption: null, images: [] });
   const [popup, setPopup] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([welcome("guy")]);
+  const [messages, setMessages] = useState<Message[]>([welcome("haru")]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
   const [mode, setMode] = useState<"ai" | "basic" | "unknown">("unknown");
   const [voiceOn, setVoiceOn] = useState(false);
+  // null = never chosen (then short announcements like "free size!" are read aloud), false = muted.
+  const [voicePref, setVoicePref] = useState<boolean | null>(null);
+  const [manualPick, setManualPick] = useState(false);
+  const swapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [talking, setTalking] = useState(false);
   const [listening, setListening] = useState(false);
   const [micSupported, setMicSupported] = useState(false);
@@ -98,11 +115,13 @@ export function AssistantWidget() {
   // Restore the conversation for this browser tab.
   useEffect(() => {
     const t = setTimeout(() => {
-      const c = load<CharacterId>(CHAR_KEY, "guy") === "queen" ? "queen" : "guy";
+      const c = asCharacter(load<string>(CHAR_KEY, "haru"));
       setCharacter(c);
       setLooks({ ...DEFAULT_LOOK, ...load<Partial<Record<CharacterId, ModelLook>>>(LOOK_KEY, {}) });
       setMessages(load<Message[]>(STORE_KEY, [welcome(c)]));
-      setVoiceOn(load<boolean>(VOICE_KEY, false));
+      const pref = load<boolean | null>(VOICE_KEY, null);
+      setVoicePref(pref);
+      setVoiceOn(Boolean(pref));
       setMicSupported(Boolean(getRecognitionCtor()));
       setSpeechSupported(canSpeak());
       primeVoices();
@@ -114,9 +133,11 @@ export function AssistantWidget() {
   useEffect(() => {
     if (restored) save(STORE_KEY, messages.slice(-30));
   }, [messages, restored]);
-  useEffect(() => {
-    if (restored) save(VOICE_KEY, voiceOn);
-  }, [voiceOn, restored]);
+  const toggleVoice = (next: boolean) => {
+    setVoiceOn(next);
+    setVoicePref(next);
+    save(VOICE_KEY, next);
+  };
   useEffect(() => {
     if (!restored) return;
     save(CHAR_KEY, character);
@@ -146,16 +167,81 @@ export function AssistantWidget() {
     const t = setTimeout(() => setPopup(false), ACTION_MS);
     return () => clearTimeout(t);
   }, [popup, stage.key]);
+  const say = useCallback(
+    (text: string, who?: CharacterId) => {
+      speak(text, { onStart: () => setTalking(true), onEnd: () => setTalking(false) }, who ?? character);
+    },
+    [character],
+  );
+
+  /** Swaps mascots with a little hand-off: the current one waves "Jin got you!", then the other says hi. Returns the delay. */
+  const autoSwitch = useCallback(
+    (next: CharacterId, quiet = false) => {
+      if (next === character) return 0;
+      if (swapTimer.current) clearTimeout(swapTimer.current);
+      if (quiet) {
+        setCharacter(next);
+        return 0;
+      }
+      const handoff = next === "jin" ? "Jin got you! 👋" : "Haru got you! 👋";
+      if (open) perform("wave", handoff);
+      else flash("wave", handoff);
+      swapTimer.current = setTimeout(() => {
+        setCharacter(next);
+        if (open) perform("wave", GREET[next]);
+        else flash("wave", GREET[next]);
+        if (voiceOn) speak(GREET[next], { onStart: () => setTalking(true), onEnd: () => setTalking(false) }, next);
+      }, 1500);
+      return 1500;
+    },
+    [character, open, perform, flash, voiceOn],
+  );
+
   useEffect(
     () =>
       onDrip((e) => {
-        const action: DripAction = e.type === "add_to_cart" ? (character === "queen" ? "blow_kiss" : "dab") : "celebrate";
+        if (e.type === "open_chat") {
+          setCharacter(e.character);
+          setManualPick(true);
+          setOpen(true);
+          perform("wave", GREET[e.character]);
+          return;
+        }
+        if (e.type === "context") {
+          const next: CharacterId | null = e.audience === "women" ? "haru" : e.audience === "men" ? "jin" : null;
+          const who = next ?? character;
+          const delay = next && next !== character ? autoSwitch(next) : 0;
+          if (e.freeSize) {
+            setTimeout(() => {
+              const line = FREE_SIZE_LINE[who];
+              if (open) perform("celebrate", line);
+              else flash("celebrate", line);
+              if (voiceOn || (voicePref === null && hasBeenActive())) say(line, who);
+            }, delay + (delay ? 2600 : 0));
+          }
+          return;
+        }
+        const action: DripAction = e.type === "add_to_cart" ? (character === "haru" ? "blow_kiss" : "dab") : "celebrate";
         const line = e.type === "add_to_cart" ? actionLine("dab", character) : actionLine("celebrate", character);
         if (open) perform(action, line);
         else flash(action, line);
       }),
-    [flash, perform, open, character],
+    [flash, perform, open, character, voiceOn, voicePref, autoSwitch, say],
   );
+
+  // Women's pages get Haru, men's pages get Jin; elsewhere Haru (unless the shopper picked Jin).
+  // Product pages report their side through a "context" event instead.
+  useEffect(() => {
+    if (!restored || pathname.startsWith("/products/")) return;
+    const side = audienceOf(pathname);
+    const t = setTimeout(() => {
+      if (side === "women") autoSwitch("haru");
+      else if (side === "men") autoSwitch("jin");
+      else if (!manualPick && character !== "haru") autoSwitch("haru", true);
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- react to page changes only
+  }, [pathname, restored]);
 
   // A one-time hello bubble, after the cookie question has been answered.
   useEffect(() => {
@@ -204,9 +290,6 @@ export function AssistantWidget() {
   }, [open, stopAll]);
 
 
-  const say = useCallback((text: string) => {
-    speak(text, { onStart: () => setTalking(true), onEnd: () => setTalking(false) });
-  }, []);
 
   const send = useCallback(
     async (raw: string, opts: { spoken?: boolean } = {}) => {
@@ -254,7 +337,9 @@ export function AssistantWidget() {
       setMessages((prev) => [...prev, { id: uid(), role: "assistant", content: result.reply, products: result.products }]);
       setPending(false);
       const act = result.action ?? (result.products.length ? "strut" : "pose");
-      perform(act, null, result.products.slice(0, 2).map((p) => p.image));
+      // Now and then the mascot adds a sweet thank-you in her speech bubble.
+      const sweet = act !== "think" && act !== "roast" && Math.random() < 0.3 ? sweetWord(character, Date.now()) : null;
+      perform(act, sweet, result.products.slice(0, 2).map((p) => p.image));
       if (speakReply) say(result.reply);
     },
     [messages, mode, pending, say, voiceOn, character, perform],
@@ -297,7 +382,7 @@ export function AssistantWidget() {
     rec.onend = () => {
       setListening(false);
       if (finalText.trim()) {
-        setVoiceOn(true); // a voice chat gets voice replies
+        toggleVoice(true); // a voice chat gets voice replies
         void send(finalText, { spoken: true });
       }
     };
@@ -356,12 +441,24 @@ export function AssistantWidget() {
         aria-expanded={open}
         aria-controls="dj-mini-panel"
         aria-label={open ? t("closeNamed", { name: CHARACTERS[character].name }) : t("chatWith", { name: CHARACTERS[character].name })}
-        className="fixed bottom-4 right-4 z-[52] size-16 rounded-full bg-gradient-to-br from-[#FF8CC6] to-[#FF1493] p-0.5 shadow-[0_14px_34px_-8px_rgba(255,20,147,0.85)] ring-2 ring-white transition hover:ring-[#FFD1E8] sm:right-6"
+        className={cn(
+          "fixed bottom-4 right-4 z-[52] size-16 rounded-full bg-white p-[3px] transition sm:right-6",
+          character === "haru" ? "shadow-[0_0_0_3px_#FFB6D9,0_0_24px_6px_rgba(255,182,217,0.9)]" : "shadow-[0_0_0_3px_#E94E8A,0_0_24px_6px_rgba(233,78,138,0.7)]",
+        )}
+        data-testid="mascot-launcher"
         animate={reduce || open ? undefined : { y: [0, -5, 0] }}
         transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
         whileTap={{ scale: 0.92 }}
       >
-        <DripBaby variant="head" character={character} look={looks[character]} talking={talking && !open} className="size-full" />
+        {!reduce && !open && (
+          <m.span aria-hidden className="absolute inset-0 rounded-full" style={{ boxShadow: `0 0 0 3px ${CHARACTERS[character].color}` }} animate={{ scale: [1, 1.35], opacity: [0.9, 0] }} transition={{ duration: 1.8, repeat: Infinity, ease: "easeOut" }} />
+        )}
+        {/* Haru is the head assistant; Jin takes the circle on men's pages or when chosen. */}
+        <AnimatePresence mode="wait" initial={false}>
+          <m.span key={character} className="block size-full" initial={{ rotateY: 90, opacity: 0 }} animate={{ rotateY: 0, opacity: 1 }} exit={{ rotateY: -90, opacity: 0 }} transition={{ duration: 0.3 }}>
+            <DripBaby variant="head" character={character} talking={talking && !open} className="size-full" />
+          </m.span>
+        </AnimatePresence>
         {!open && <span className="absolute -right-0.5 -top-0.5 grid size-5 place-items-center rounded-full bg-rose text-[0.6rem] font-bold text-white shadow" aria-hidden>AI</span>}
       </m.button>
 
@@ -380,54 +477,22 @@ export function AssistantWidget() {
             style={{ transformOrigin: "bottom right" }}
             className="fixed inset-x-2 bottom-[5.5rem] top-16 z-[53] flex flex-col overflow-hidden rounded-3xl border border-pale bg-white shadow-[0_30px_80px_-24px_rgba(37,25,35,0.45)] sm:inset-x-auto sm:right-6 sm:top-auto sm:h-[min(38rem,calc(100dvh-8rem))] sm:w-[24rem]"
           >
-            <header className="flex items-center gap-2 bg-gradient-to-br from-[#FF3EA5] to-[#9C1666] px-3 py-2.5 text-white">
+            <header className={cn("flex items-center gap-2 px-3 py-2", character === "haru" ? "bg-gradient-to-br from-[#FFE3F1] to-[#FFB6D9] text-plum" : "bg-gradient-to-br from-[#E94E8A] to-[#8E1B54] text-white")} data-theme-character={character}>
+              <span className="size-12 shrink-0 rounded-full bg-white p-0.5 shadow-[0_0_0_2px_rgba(255,255,255,0.8)]">
+                <DripBaby variant="head" character={character} talking={talking} className="size-full" />
+              </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-display text-xl font-semibold leading-tight">{CHARACTERS[character].name}</p>
-                <p className="flex items-center gap-1.5 text-[0.7rem] text-white/70">
+                <p className="truncate text-[0.8rem] font-extrabold leading-tight tracking-wide" data-testid="mascot-name">
+                  {CHARACTERS[character].name}
+                  {character === "haru" ? " 💖" : " 🔥"}
+                </p>
+                <p className="truncate text-[0.62rem] font-semibold leading-tight opacity-90">{CHARACTERS[character].tagline}</p>
+                <p className="flex items-center gap-1.5 text-[0.68rem] opacity-80">
                   <span className={cn("size-1.5 rounded-full", mode === "basic" ? "bg-amber-300" : "bg-emerald-400")} aria-hidden />
                   {listening ? t("listening") : talking ? t("talking") : mode === "basic" ? t("basicMode") : t("aiMode")}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setCustomize((v) => !v)}
-                aria-expanded={customize}
-                aria-label={t("modelLook")}
-                title={t("modelLook")}
-                className="grid size-9 place-items-center rounded-full text-white/85 transition hover:bg-white/10 hover:text-white"
-              >
-                <Palette className="size-4" />
-              </button>
-              {speechSupported && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (voicePicker) return setVoicePicker(null);
-                    const voices = window.speechSynthesis.getVoices();
-                    setVoiceName(pickVoice(voices, savedVoiceName())?.name ?? null);
-                    setVoicePicker(englishVoices(voices).slice(0, 8).map((v) => ({ name: v.name, lang: v.lang })));
-                  }}
-                  aria-expanded={Boolean(voicePicker)}
-                  aria-label={t("chooseVoice")}
-                  title={t("chooseVoice")}
-                  className="grid size-9 place-items-center rounded-full text-white/80 transition hover:bg-white/10 hover:text-white"
-                >
-                  <AudioLines className="size-4" />
-                </button>
-              )}
-              {speechSupported && (
-                <button
-                  type="button"
-                  onClick={() => { if (voiceOn) stopSpeaking(); setVoiceOn((v) => !v); }}
-                  aria-pressed={voiceOn}
-                  aria-label={voiceOn ? t("voiceStop") : t("voiceStart")}
-                  title={voiceOn ? t("voiceOn") : t("voiceOff")}
-                  className="grid size-9 place-items-center rounded-full text-white/80 transition hover:bg-white/10 hover:text-white"
-                >
-                  {voiceOn ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
-                </button>
-              )}
-              <button type="button" onClick={closePanel} aria-label={t("close")} className="grid size-9 place-items-center rounded-full text-white/80 transition hover:bg-white/10 hover:text-white">
+              <button type="button" onClick={closePanel} aria-label={t("close")} className="grid size-9 place-items-center rounded-full opacity-80 transition hover:bg-white/20 hover:opacity-100">
                 <X className="size-5" />
               </button>
             </header>
@@ -443,9 +508,9 @@ export function AssistantWidget() {
                         <button
                           type="button"
                           onClick={() => {
-                            saveVoiceName(v.name);
+                            saveVoiceName(v.name, character);
                             setVoiceName(v.name);
-                            void speak(`Hi! I'm ${CHARACTERS[character].name}. You like my voice?`, { onStart: () => setTalking(true), onEnd: () => setTalking(false) });
+                            void speak(`${CHARACTERS[character].intro} Do you like my voice?`, { onStart: () => setTalking(true), onEnd: () => setTalking(false) }, character);
                           }}
                           aria-pressed={voiceName === v.name}
                           className={cn("flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs transition", voiceName === v.name ? "border-rose bg-pale font-semibold text-rose-deep" : "border-line hover:border-rose")}
@@ -462,23 +527,69 @@ export function AssistantWidget() {
             )}
 
             <div className="relative shrink-0">
-              <div className="absolute right-2 top-2 z-10 flex rounded-full bg-black/20 p-0.5 text-[0.65rem] font-bold backdrop-blur" role="group" aria-label={t("character")}>
-                {(["guy", "queen"] as const).map((c) => (
+              {/* Switch mascot, model look and voice controls sit on the stage, so the full name fits in the header. */}
+              <div className={cn("absolute right-1.5 top-1.5 z-10 flex items-center gap-0.5 rounded-2xl px-1 py-0.5 backdrop-blur", character === "haru" ? "bg-white/50 text-plum" : "bg-black/20 text-white")}>
+              {(() => {
+                const other: CharacterId = character === "haru" ? "jin" : "haru";
+                return (
                   <button
-                    key={c}
                     type="button"
-                    aria-pressed={character === c}
                     onClick={() => {
-                      if (c === character) return;
-                      setCharacter(c);
-                      perform("strut", c === "queen" ? "Drip Queen don land! 💅 Your turn, sis." : "Drip Guy in the building! 😎 Wetin we dey cop?");
+                      setCharacter(other);
+                      setManualPick(true);
+                      perform("wave", other === "jin" ? "Yo, I'm Jin! 😎 Haru sent me — let's find your fit." : "Hi I'm Haru! 💖 I'm back, cutie!");
+                      if (voiceOn) speak(other === "jin" ? "Yo, I'm Jin! Let's find your fit." : "Hi I'm Haru! I'm back, cutie!", { onStart: () => setTalking(true), onEnd: () => setTalking(false) }, other);
                     }}
-                    className={cn("rounded-full px-2.5 py-1 transition", character === c ? "bg-white text-[#C2185B]" : "text-white/85 hover:text-white")}
-                    data-testid={`char-${c}`}
+                    className="flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-1 py-0.5 transition hover:bg-white/20"
+                    data-testid={`switch-to-${other}`}
                   >
-                    {c === "guy" ? t("guy") : t("queen")}
+                    <span className="size-8 rounded-full bg-white p-px opacity-90">
+                      <DripBaby variant="head" character={other} className="size-full" />
+                    </span>
+                    <span className="whitespace-nowrap text-[0.58rem] font-bold leading-none">{other === "jin" ? t("switchToJin") : t("switchToHaru")}</span>
                   </button>
-                ))}
+                );
+              })()}
+              <button
+                type="button"
+                onClick={() => setCustomize((v) => !v)}
+                aria-expanded={customize}
+                aria-label={t("modelLook")}
+                title={t("modelLook")}
+                className="grid size-9 place-items-center rounded-full opacity-85 transition hover:bg-white/20 hover:opacity-100"
+              >
+                <Palette className="size-4" />
+              </button>
+              {speechSupported && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (voicePicker) return setVoicePicker(null);
+                    const voices = window.speechSynthesis.getVoices();
+                    const gender = VOICES[character].gender;
+                    setVoiceName(pickVoice(voices, savedVoiceName(character), gender)?.name ?? null);
+                    setVoicePicker(englishVoices(voices, gender).slice(0, 8).map((v) => ({ name: v.name, lang: v.lang })));
+                  }}
+                  aria-expanded={Boolean(voicePicker)}
+                  aria-label={t("chooseVoice")}
+                  title={t("chooseVoice")}
+                  className="grid size-9 place-items-center rounded-full opacity-80 transition hover:bg-white/20 hover:opacity-100"
+                >
+                  <AudioLines className="size-4" />
+                </button>
+              )}
+              {speechSupported && (
+                <button
+                  type="button"
+                  onClick={() => { if (voiceOn) stopSpeaking(); toggleVoice(!voiceOn); }}
+                  aria-pressed={voiceOn}
+                  aria-label={voiceOn ? t("voiceStop") : t("voiceStart")}
+                  title={voiceOn ? t("voiceOn") : t("voiceOff")}
+                  className="grid size-9 place-items-center rounded-full opacity-80 transition hover:bg-white/20 hover:opacity-100"
+                >
+                  {voiceOn ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
+                </button>
+              )}
               </div>
               <DripStage character={character} look={looks[character]} action={stage.action} playKey={stage.key} caption={stage.caption} images={stage.images} talking={talking} listening={listening} className="h-36 border-b-2 border-white" />
             </div>
@@ -487,16 +598,17 @@ export function AssistantWidget() {
                 look={looks[character]}
                 onChange={(look) => {
                   setLooks((l) => ({ ...l, [character]: look }));
-                  perform("spin", "New look, who dis? 😎");
+                  perform("spin", character === "haru" ? "New look! Do you like it, cutie? 💖" : "New look, who's this? 😎");
                 }}
               />
             )}
 
-            <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto bg-[#FFF0F7] px-3 py-4" aria-live="polite" aria-relevant="additions">
+            <div ref={listRef} className={cn("flex-1 space-y-3 overflow-y-auto px-3 py-4", character === "haru" ? "bg-[#FFF5FA]" : "bg-[#FFE6EF]")} aria-live="polite" aria-relevant="additions">
               {messages.map((msg) => (
                 <MessageBubble
                   key={msg.id}
                   msg={msg}
+                  whatsapp={whatsapp}
                   character={character}
                   look={looks[character]}
                   onListen={speechSupported ? () => say(msg.content) : undefined}
@@ -513,7 +625,9 @@ export function AssistantWidget() {
               ))}
               {pending && (
                 <div className="flex items-end gap-2" role="status">
-                  <span className="size-7 shrink-0"><DripBaby variant="head" character={character} look={looks[character]} className="size-full" /></span>
+                  <m.span className="size-9 shrink-0" animate={reduce ? undefined : { y: [0, -7, 0], rotate: [0, -6, 6, 0] }} transition={{ duration: 0.6, repeat: Infinity }} data-testid="typing-mascot">
+                    <DripBaby variant="head" character={character} className="size-full" />
+                  </m.span>
                   <span className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-white px-3.5 py-3 shadow-sm">
                     <span className="sr-only">{t("typing", { name: CHARACTERS[character].name })}</span>
                     {[0, 1, 2].map((i) => (
@@ -568,7 +682,7 @@ export function AssistantWidget() {
                   placeholder={listening ? t("speakNow") : t("placeholder")}
                   className="max-h-28 min-h-11 flex-1 resize-none rounded-2xl border border-line bg-neutral px-3.5 py-2.5 text-sm outline-none transition focus:border-rose focus:bg-white"
                 />
-                <button type="submit" disabled={!input.trim() || pending} aria-label={t("send")} className="grid size-11 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#FF3EA5] to-[#C2185B] text-white transition hover:brightness-110 disabled:opacity-40">
+                <button type="submit" disabled={!input.trim() || pending} aria-label={t("send")} className={cn("grid size-11 shrink-0 place-items-center rounded-full text-white transition hover:brightness-110 disabled:opacity-40", character === "haru" ? "bg-gradient-to-br from-[#FFB6D9] to-[#F06AA8]" : "bg-gradient-to-br from-[#E94E8A] to-[#A3195B]")}>
                   <SendHorizontal className="size-5" />
                 </button>
               </div>
@@ -586,6 +700,7 @@ export function AssistantWidget() {
 
 function MessageBubble({
   msg,
+  whatsapp,
   character,
   look,
   onListen,
@@ -594,6 +709,7 @@ function MessageBubble({
   onMatch,
 }: {
   msg: Message;
+  whatsapp: string | null;
   character: CharacterId;
   look: ModelLook;
   onListen?: () => void;
@@ -607,7 +723,7 @@ function MessageBubble({
     <div className={cn("flex items-end gap-2", mine && "justify-end")}>
       {!mine && <span className="size-7 shrink-0"><DripBaby variant="head" character={character} look={look} className="size-full" /></span>}
       <div className={cn("max-w-[82%]", mine && "text-right")}>
-        <div className={cn("inline-block whitespace-pre-line rounded-2xl px-3.5 py-2.5 text-left text-sm leading-relaxed shadow-sm", mine ? "rounded-br-sm bg-gradient-to-br from-[#FF3EA5] to-[#C2185B] text-white" : "rounded-bl-sm border border-[#FFD1E8] bg-white text-plum")}>
+        <div className={cn("inline-block whitespace-pre-line rounded-2xl px-3.5 py-2.5 text-left text-sm leading-relaxed shadow-sm", mine ? cn("rounded-br-sm text-white", character === "haru" ? "bg-gradient-to-br from-[#FF9CCB] to-[#E5609F]" : "bg-gradient-to-br from-[#E94E8A] to-[#A3195B]") : "rounded-bl-sm border border-[#FFD1E8] bg-white text-plum")}>
           {mine
             ? msg.content
             : linkify(msg.content).map((part, i) =>
@@ -620,6 +736,17 @@ function MessageBubble({
                 ),
               )}
         </div>
+        {!mine && WHATSAPP_HANDOFF.test(msg.content) && (
+          <div className="mt-2" data-testid="whatsapp-handoff">
+            {whatsapp ? (
+              <WhatsAppLink number={whatsapp} variant="pill" label={t("whatsappConnect")} message="Hi Attitude Collections! Haru sent me — I have a question 💖" />
+            ) : (
+              <Link href="/contact" className="inline-flex items-center gap-1.5 rounded-full bg-[#25D366] px-3.5 py-2 text-xs font-bold text-white">
+                {t("whatsappConnect")}
+              </Link>
+            )}
+          </div>
+        )}
         {!mine && msg.products && msg.products.length > 0 && (
           <ul className="mt-2 flex gap-2 overflow-x-auto pb-1">
             {msg.products.map((p) => (
@@ -712,20 +839,12 @@ function ProductCard({ p, onTryOn, onSize, onMatch }: { p: ProductSuggestion; on
   );
 }
 
-/** The shopper can change the character's skin tone, build and height (virtual model look). */
+/** The shopper can change the character's build and height (virtual model look). */
 function ModelCustomizer({ look, onChange }: { look: ModelLook; onChange: (look: ModelLook) => void }) {
   const t = useTranslations("assistant");
   const chip = (on: boolean) => cn("rounded-full border px-2.5 py-1 text-[0.65rem] font-semibold transition", on ? "border-[#FF1493] bg-[#FFE3F1] text-[#C2185B]" : "border-line hover:border-[#FF8CC6]");
   return (
     <div className="space-y-2 border-b border-[#FFD1E8] bg-white px-3 py-2.5 text-xs" data-testid="model-customizer">
-      <div className="flex items-center gap-2">
-        <span className="w-14 shrink-0 font-semibold">{t("skin")}</span>
-        <div className="flex gap-1.5">
-          {SKIN_TONES.map((c) => (
-            <button key={c} type="button" onClick={() => onChange({ ...look, skin: c })} aria-pressed={look.skin === c} aria-label={`${t("skin")} ${c}`} className={cn("size-6 rounded-full border-2 transition", look.skin === c ? "border-[#FF1493] scale-110" : "border-white shadow")} style={{ background: c }} />
-          ))}
-        </div>
-      </div>
       <div className="flex items-center gap-2">
         <span className="w-14 shrink-0 font-semibold">{t("build")}</span>
         <div className="flex flex-wrap gap-1">

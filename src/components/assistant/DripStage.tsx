@@ -38,7 +38,7 @@ export function DripStage({
     const a = ((v % 360) + 360) % 360;
     return a > 90 && a < 270 ? 1 : 0;
   });
-  const queen = character === "queen";
+  const haru = character === "haru";
 
   // 360° spins (spin, hair flip, try-on twirl).
   useEffect(() => {
@@ -73,14 +73,20 @@ export function DripStage({
   return (
     <div className={cn("relative isolate flex items-end gap-2 overflow-hidden", compact && "h-28", className)} data-testid="drip-stage" data-action={action}>
       {/* flashy pink backdrop */}
-      <div aria-hidden className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_30%_70%,#FF8CC6_0%,#FF3EA5_35%,#7A1550_100%)]" />
+      <div
+        aria-hidden
+        className={cn(
+          "absolute inset-0 -z-10",
+          haru ? "bg-[radial-gradient(circle_at_30%_70%,#FFF0F7_0%,#FFB6D9_40%,#F07AB4_100%)]" : "bg-[radial-gradient(circle_at_30%_70%,#FF9CC4_0%,#E94E8A_40%,#8E1B54_100%)]",
+        )}
+      />
       <Sparkles reduce={Boolean(reduce)} />
 
       <div className={cn("relative shrink-0 self-stretch py-1.5", compact ? "w-24" : "w-28")} style={{ perspective: 600 }}>
         <m.div key={`root-${action}-${playKey}`} className="absolute inset-x-0 inset-y-1.5" animate={root} style={{ rotateY: rot, originX: 0.5, originY: 1 }}>
           <DripBaby character={character} look={look} action={action} playKey={playKey} talking={talking} listening={listening} outfitImage={worn} backness={backness} className="size-full" />
         </m.div>
-        <Effects action={action} playKey={playKey} queen={queen} pose={STREET_POSES[poseIdx]} images={images} reduce={Boolean(reduce)} />
+        <Effects action={action} playKey={playKey} haru={haru} pose={STREET_POSES[poseIdx]} images={images} reduce={Boolean(reduce)} />
       </div>
 
       <AnimatePresence mode="wait">
@@ -142,7 +148,7 @@ function Burst({ x, y, delay, color }: { x: string; y: string; delay: number; co
   );
 }
 
-function Effects({ action, playKey, queen, pose, images, reduce }: { action: DripAction; playKey: number; queen: boolean; pose: string; images: (string | null)[]; reduce: boolean }) {
+function Effects({ action, playKey, haru, pose, images, reduce }: { action: DripAction; playKey: number; haru: boolean; pose: string; images: (string | null)[]; reduce: boolean }) {
   if (reduce) return null;
   const float = (glyph: string, i: number, base = 50) => (
     <m.span
@@ -160,7 +166,7 @@ function Effects({ action, playKey, queen, pose, images, reduce }: { action: Dri
     <div aria-hidden className="pointer-events-none absolute inset-0">
       {action === "fire" && [0, 1, 2, 3].map((i) => float("🔥", i))}
       {action === "blow_kiss" && [0, 1, 2].map((i) => float(i % 2 ? "💋" : "💗", i, 70))}
-      {action === "dab" && (queen ? [0, 1, 2].map((i) => float("💋", i, 70)) : [0, 1].map((i) => float("💥", i, 75)))}
+      {action === "dab" && (haru ? [0, 1, 2].map((i) => float("💋", i, 70)) : [0, 1].map((i) => float("💥", i, 75)))}
       {action === "beg" && [0, 1].map((i) => float("🥺", i))}
       {action === "faint" && [0, 1, 2].map((i) => float("💫", i, 30))}
       {action === "whisper" && float("🤫", 0, 80)}
@@ -193,7 +199,7 @@ function Effects({ action, playKey, queen, pose, images, reduce }: { action: Dri
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.3, type: "spring", stiffness: 300 }}
           >
-            {queen ? "Drip Queen approved!" : "Drip approved!"}
+            {haru ? "Haru approved! 💖" : "Jin approved!"}
           </m.span>
         </>
       )}

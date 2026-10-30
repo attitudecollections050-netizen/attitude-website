@@ -8,6 +8,7 @@ export const LOCALES = [
   { code: "ar", name: "Arabic", native: "العربية", dir: "rtl" },
   { code: "de", name: "German", native: "Deutsch", dir: "ltr" },
   { code: "zh", name: "Chinese (Simplified)", native: "简体中文", dir: "ltr" },
+  { code: "ko", name: "Korean", native: "한국어", dir: "ltr" },
 ] as const;
 export type Locale = (typeof LOCALES)[number]["code"];
 export const DEFAULT_LOCALE: Locale = "en";

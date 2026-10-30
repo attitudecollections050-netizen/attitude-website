@@ -1,15 +1,25 @@
 "use client";
-import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { AnimatePresence, m, useReducedMotion } from "motion/react";
-import { Check, Globe2, Search, X } from "lucide-react";
+import { Check, ChevronDown, Globe2, Search, Volume2, X } from "lucide-react";
 import { savePreferences } from "@/app/actions/preferences";
 import { LOCALES } from "@/lib/intl/config";
 import { DripBaby } from "@/components/assistant/DripBaby";
+import { canSpeak, speak, stopSpeaking } from "@/components/assistant/voice";
+import { playChime } from "@/components/assistant/chime";
 import { useDialog } from "@/components/ui/useDialog";
 import { cn } from "@/lib/cn";
 import { OPEN_PREFS_EVENT, usePreferences } from "./PreferencesProvider";
+
+// What Haru and Jin say on the welcome screen (they always speak English).
+const WELCOME_BOTH = "Welcome to Attitude Collections! 💖 We appreciate you! You make our drip special!";
+const WELCOME_HARU = "Hi cutie! I'm HARU, thanks for visiting Attitude Collections. We appreciate your love. What language do you prefer? English? We're here to make you slay!";
+const WELCOME_JIN = "Yo, welcome! I'm JIN, thanks for checking us out. Choose your language and let's find your perfect fit!";
+/** The three languages shown as big buttons; the rest stay in "More languages". */
+const FEATURED = ["en", "ko", "fr"];
+const noSubscribe = () => () => {};
 
 /** Pages where we never pop up the welcome screen (payment, order and account flows). */
 const quiet = (p: string) => /^\/(checkout|order|account|admin)(\/|$)/.test(p);
@@ -64,6 +74,16 @@ export function PreferencesDialog() {
   const [country, setCountry] = useState(initial.country);
   const [currency, setCurrency] = useState(initial.currency);
   const [query, setQuery] = useState("");
+  const [talker, setTalker] = useState<"haru" | "jin" | null>(null);
+  // Only known in the browser, so the server and first client render agree (no hydration mismatch).
+  const speechOk = useSyncExternalStore(noSubscribe, canSpeak, () => false);
+  const spoken = useRef(false);
+  // Haru, then Jin, read their welcome aloud (browsers allow it after the first tap).
+  const greet = () => {
+    if (spoken.current || !canSpeak()) return;
+    spoken.current = true;
+    speak(WELCOME_HARU, { onStart: () => setTalker("haru"), onEnd: () => speak(WELCOME_JIN, { onStart: () => setTalker("jin"), onEnd: () => setTalker(null) }, "jin") }, "haru");
+  };
   const [lastInitial, setLastInitial] = useState(initial);
   if (lastInitial !== initial) {
     setLastInitial(initial);
@@ -80,6 +100,10 @@ export function PreferencesDialog() {
 
   const submit = () => {
     setError(null);
+    if (welcome) {
+      stopSpeaking();
+      playChime();
+    }
     start(async () => {
       const r = await savePreferences({ locale, country, currency });
       if (!r.ok) {
@@ -107,6 +131,7 @@ export function PreferencesDialog() {
   }, [prefs, query, displayLocale]);
 
   if (!prefs) return null;
+  const canSpeakNow = speechOk;
   const selectedCountry = prefs.countries.find((c) => c.code === country);
   const shipsHere = selectedCountry?.ships ?? false;
 
@@ -128,19 +153,57 @@ export function PreferencesDialog() {
               transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
               className="relative flex max-h-[94dvh] w-full flex-col overflow-hidden rounded-t-[2rem] bg-white shadow-2xl outline-none sm:max-w-xl sm:rounded-[2rem] sm:rounded-tr-[5rem]"
             >
-              <div className="relative overflow-hidden bg-gradient-to-br from-plum via-[#4a2140] to-rose-deep px-6 pb-6 pt-7 text-white sm:px-8">
-                <div className="pointer-events-none absolute -right-10 -top-10 size-44 rounded-full bg-rose/30 blur-2xl" aria-hidden />
-                <button type="button" onClick={close} className="absolute right-4 top-4 grid size-9 place-items-center rounded-full text-white/80 hover:bg-white/10" aria-label={welcome ? t("skip") : t("close")}>
-                  <X className="size-5" />
-                </button>
-                <div className="relative flex items-center gap-4">
-                  {welcome ? <DripBaby variant="head" character="guy" className="size-14 shrink-0" /> : <Globe2 className="size-8 shrink-0 text-rose-light" aria-hidden />}
-                  <div>
-                    <h2 id={`${id}-title`} className="font-display text-3xl leading-tight">{welcome ? t("welcomeTitle") : t("title")}</h2>
-                    <p className="mt-1 text-sm text-white/80">{welcome ? t("welcomeBody") : t("body")}</p>
+              {welcome ? (
+                <div className="relative overflow-hidden bg-[radial-gradient(circle_at_50%_80%,#FFF0F7_0%,#FFB6D9_45%,#E94E8A_100%)] px-5 pb-4 pt-5 text-plum sm:px-8" onPointerDownCapture={greet} data-testid="mascot-welcome">
+                  <button type="button" onClick={close} className="absolute right-3 top-3 z-10 grid size-9 place-items-center rounded-full text-plum/70 hover:bg-white/40" aria-label={t("skip")}>
+                    <X className="size-5" />
+                  </button>
+                  <h2 id={`${id}-title`} className="sr-only">{t("welcomeTitle")}</h2>
+                  <m.p
+                    initial={{ opacity: 0, y: -8, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="relative mx-auto max-w-sm rounded-2xl border-2 border-white bg-white/90 px-4 py-2 text-center text-sm font-extrabold text-[#C2185B] shadow-lg"
+                  >
+                    {WELCOME_BOTH}
+                  </m.p>
+                  <div className="relative mt-2 flex items-end justify-center gap-2">
+                    <div className="flex w-1/2 flex-col items-center">
+                      <m.p initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 }} className={cn("mb-1 rounded-2xl rounded-br-sm bg-white px-3 py-2 text-[0.68rem] font-semibold leading-snug text-plum shadow", talker === "haru" && "ring-2 ring-[#FFB6D9]")}>
+                        {WELCOME_HARU}
+                      </m.p>
+                      <DripBaby character="haru" action="wave" playKey={talker === "haru" ? 1 : 0} talking={talker === "haru"} className="h-36 w-24 sm:h-44 sm:w-28" />
+                      <p className="mt-1 text-[0.62rem] font-extrabold tracking-wide text-plum">DJ ATTITUDE mini HARU 💖</p>
+                    </div>
+                    <div className="flex w-1/2 flex-col items-center">
+                      <m.p initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1 }} className={cn("mb-1 rounded-2xl rounded-bl-sm bg-white px-3 py-2 text-[0.68rem] font-semibold leading-snug text-plum shadow", talker === "jin" && "ring-2 ring-[#E94E8A]")}>
+                        {WELCOME_JIN}
+                      </m.p>
+                      <DripBaby character="jin" action="wave" playKey={talker === "jin" ? 1 : 0} talking={talker === "jin"} className="h-36 w-24 sm:h-44 sm:w-28" />
+                      <p className="mt-1 text-[0.62rem] font-extrabold tracking-wide text-white drop-shadow">DJ ATTITUDE mini JIN</p>
+                    </div>
+                  </div>
+                  {canSpeakNow && (
+                    <button type="button" onClick={greet} className="relative mx-auto mt-2 flex items-center gap-1 rounded-full bg-white/85 px-3 py-1 text-[0.65rem] font-bold text-[#C2185B] shadow" data-testid="hear-mascots">
+                      <Volume2 className="size-3" aria-hidden /> {t("hearUs")}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="relative overflow-hidden bg-gradient-to-br from-plum via-[#4a2140] to-rose-deep px-6 pb-6 pt-7 text-white sm:px-8">
+                  <div className="pointer-events-none absolute -right-10 -top-10 size-44 rounded-full bg-rose/30 blur-2xl" aria-hidden />
+                  <button type="button" onClick={close} className="absolute right-4 top-4 grid size-9 place-items-center rounded-full text-white/80 hover:bg-white/10" aria-label={t("close")}>
+                    <X className="size-5" />
+                  </button>
+                  <div className="relative flex items-center gap-4">
+                    <Globe2 className="size-8 shrink-0 text-rose-light" aria-hidden />
+                    <div>
+                      <h2 id={`${id}-title`} className="font-display text-3xl leading-tight">{t("title")}</h2>
+                      <p className="mt-1 text-sm text-white/80">{t("body")}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               <form
                 className="flex min-h-0 flex-1 flex-col"
@@ -150,8 +213,34 @@ export function PreferencesDialog() {
                 }}
               >
                 <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-6 sm:px-8">
+                  {welcome && (
+                    <div role="radiogroup" aria-label={t("language")}>
+                      <span className="text-sm font-semibold">{t("whichLanguage")}</span>
+                      <div className="mt-2 grid grid-cols-3 gap-2">
+                        {LOCALES.filter((l) => FEATURED.includes(l.code) && prefs.enabledLocales.includes(l.code)).map((l) => (
+                          <button
+                            key={l.code}
+                            type="button"
+                            role="radio"
+                            aria-checked={locale === l.code}
+                            onClick={() => setLocale(l.code)}
+                            lang={l.code}
+                            className={cn(
+                              "rounded-2xl border-2 px-2 py-2.5 text-sm font-bold transition",
+                              locale === l.code ? "border-[#E94E8A] bg-[#FFE3F1] text-[#C2185B] shadow-[0_0_0_3px_rgba(255,182,217,0.6)]" : "border-line hover:border-[#FFB6D9]",
+                            )}
+                            data-testid={`lang-${l.code}`}
+                          >
+                            {l.native}
+                            {l.code === "en" && <span className="block text-[0.6rem] font-semibold text-muted">{t("default")}</span>}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="mt-1.5 text-[0.68rem] leading-snug text-muted">{t("mascotsEnglish")}</p>
+                    </div>
+                  )}
                   <label className="block">
-                    <span className="text-sm font-semibold">{t("language")}</span>
+                    <span className="text-sm font-semibold">{welcome ? t("moreLanguages") : t("language")}</span>
                     <select value={locale} onChange={(e) => setLocale(e.target.value)} className="field mt-1.5 !py-2.5 !text-sm" lang={locale}>
                       {LOCALES.filter((l) => prefs.enabledLocales.includes(l.code)).map((l) => (
                         <option key={l.code} value={l.code} lang={l.code}>
@@ -161,6 +250,14 @@ export function PreferencesDialog() {
                     </select>
                   </label>
 
+                  <details open={!welcome} className="group rounded-2xl [&>summary::-webkit-details-marker]:hidden">
+                    <summary className={cn("flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold", !welcome && "hidden")}>
+                      <span>
+                        {t("deliveryAndCurrency")} <span className="font-normal text-muted">· {flag(country)} <span suppressHydrationWarning>{regionName(country, locale)}</span> · {currency}</span>
+                      </span>
+                      <ChevronDown className="size-4 transition group-open:rotate-180" aria-hidden />
+                    </summary>
+                    <div className="space-y-5 pt-3">
                   <div>
                     <span id={`${id}-country`} className="text-sm font-semibold">{t("country")}</span>
                     <div className="mt-1.5 rounded-2xl border border-line">
@@ -207,11 +304,21 @@ export function PreferencesDialog() {
                     </select>
                     <span className="mt-1.5 block text-[0.7rem] leading-snug text-muted">{t("currencyNote", { charge: prefs.chargeCurrency })}</span>
                   </label>
+                    </div>
+                  </details>
                   {error && <p className="text-sm text-danger" role="alert">{error}</p>}
                 </div>
                 <div className="border-t border-line bg-neutral/60 px-6 py-4 sm:px-8">
-                  <button type="submit" disabled={pending} className="flex h-12 w-full items-center justify-center rounded-full bg-plum text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-rose-deep disabled:opacity-60">
-                    {pending ? t("saving") : welcome ? t("continueShopping") : t("save")}
+                  <button
+                    type="submit"
+                    disabled={pending}
+                    className={cn(
+                      "flex h-12 w-full items-center justify-center rounded-full text-xs font-bold uppercase tracking-[0.16em] text-white transition disabled:opacity-60",
+                      welcome ? "bg-gradient-to-r from-[#FF8CC6] via-[#E94E8A] to-[#C2185B] shadow-[0_10px_24px_-10px_rgba(233,78,138,0.9)] hover:brightness-110" : "bg-plum hover:bg-rose-deep",
+                    )}
+                    data-testid="prefs-submit"
+                  >
+                    {pending ? t("saving") : welcome ? t("startShopping") : t("save")}
                   </button>
                   <p className="mt-2 text-center text-[0.68rem] text-muted">{t("changeLater")}</p>
                 </div>

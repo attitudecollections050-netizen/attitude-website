@@ -1,13 +1,16 @@
-// FAF Drip Guy and FAF Drip Queen — the store's two chat characters (shared by the
-// widget and the server). Each reply starts with one action tag, e.g. "[[dab]]", that
-// the widget plays as an animation; the tag is stripped before the text is shown.
+// DJ ATTITUDE mini HARU (the main assistant, baby pink #FFB6D9) and DJ ATTITUDE mini JIN (hot pink #E94E8A),
+// two Korean anime-style DJ mascots, shared by the widget and the server. Each reply starts
+// with one action tag, e.g. "[[spin]]", that the widget plays; the tag is stripped first.
 
-export type CharacterId = "guy" | "queen";
+export type CharacterId = "haru" | "jin";
 
-export const CHARACTERS: Record<CharacterId, { name: string; short: string; fan: string }> = {
-  guy: { name: "FAF Drip Guy", short: "Drip Guy", fan: "drip lord" },
-  queen: { name: "FAF Drip Queen", short: "Drip Queen", fan: "baddie" },
+export const CHARACTERS: Record<CharacterId, { name: string; short: string; tagline: string; intro: string; color: string; art: string; face: string; fan: string }> = {
+  haru: { name: "DJ ATTITUDE mini HARU", short: "Haru", tagline: "Your Drip Bestie", intro: "Hi I'm Haru!", color: "#FFB6D9", art: "/mascots/girl.png", face: "/mascots/girl-face.png", fan: "cutie" },
+  jin: { name: "DJ ATTITUDE mini JIN", short: "Jin", tagline: "Your Fit Buddy", intro: "Yo, I'm Jin!", color: "#E94E8A", art: "/mascots/boy.png", face: "/mascots/boy-face.png", fan: "fam" },
 };
+
+/** Older saved values (from the previous characters) map onto the new ones. */
+export const asCharacter = (v: unknown): CharacterId => (v === "jin" || v === "guy" ? "jin" : "haru");
 
 export const ACTIONS = [
   "idle",
@@ -33,42 +36,41 @@ export const ACTIONS = [
 ] as const;
 export type DripAction = (typeof ACTIONS)[number];
 
-/** Short caption the character says while doing an action (when there's no chat text for it). */
+/** Short caption the character says while doing an action. Clean, cute English only. */
 export function actionLine(action: DripAction, c: CharacterId): string {
-  const q = c === "queen";
+  const h = c === "haru";
   switch (action) {
     case "dab":
-      return q ? "Mwah! 💋 Added to cart — your wardrobe said thank you." : "Dab! 💥 Added to cart — the drip is loading.";
     case "blow_kiss":
-      return "Mwah! 💋 Good choice, sis.";
+      return h ? "Mwah! 💋 Added to your bag — great choice, cutie!" : "Nice! 💥 Added to your bag. That fit is going to hit.";
     case "spin":
-      return q ? "Front, side, yansh — check am! 🔄" : "Let me spin am make you see the back 🔄";
+      return h ? "Front, side, back — let me show you! 🔄" : "Let me spin so you can see the back 🔄";
     case "fire":
-      return q ? "Sis, this one na IG baddie fit, no be for house! 🔥" : "Omo this drip too hard! 🔥";
+      return h ? "Daebak! This outfit is so fire! 🔥" : "Whoa, this drip is way too hard! 🔥";
     case "faint":
-      return "I'm dead, this drip kill me 😵";
+      return "Aigoo, this outfit is too cute, I can't! 😵";
     case "dance":
-      return q ? "Amapiano for your order! 💃" : "Shaku shaku for your order! 🕺";
+      return h ? "Yay! Happy dance for your order! 💃" : "Victory dance for your order! 🕺";
     case "measure":
-      return q ? "Abeg breathe in, make I measure waist 📏" : "Hold am, make I measure your waist small 📏";
+      return h ? "Okay, take a deep breath — let me measure! 📏" : "Hold still, let me check your size 📏";
     case "try_on":
-      return q ? "*snap* ✨ Is this my size? Let me check… 💃" : "*snap* ✨ Magic try-on — e don enter body!";
+      return h ? "*snap* ✨ Is this my size? Let me try it on!" : "*snap* ✨ Magic try-on, check it out!";
     case "boxing":
       return "In this corner… 🥊 and in THIS corner… 🥊";
     case "roast":
-      return q ? "Girl, if you wear this with slippers, we go fight 😤" : "Baba, that combo no fit work abeg, try this one 😤";
+      return h ? "Hmm, that combo is a little bit much, bestie. Try this one! 😤" : "Bro, that combo won't work. Let's fix it! 😤";
     case "celebrate":
-      return q ? "Drip Queen approved! 🎉" : "Drip approved! 🎆";
+      return h ? "Haru approved! 🎉 You're officially Attitude fam!" : "Jin approved! 🎆 Your drip is locked in!";
     case "wave":
-      return q ? "Bye baddie, see you when your package land 🛍️" : "Catch you later, drip lord ✌️";
+      return h ? "Bye bye, cutie! See you when your package arrives 🛍️" : "Catch you later, fam ✌️";
     case "strut":
-      return q ? "New drop just landed — watch the walk 💅" : "New drop alert — walk with me 😎";
+      return h ? "New drop just landed — watch me walk 💅" : "New drop alert — walk with me 😎";
     case "pose":
-      return q ? "Me sef I dey find what to wear 📱" : "Just chilling with the drip 🛹";
+      return h ? "Hmm, what should I wear today? 📱" : "Just chilling in my fit 🛹";
     case "cross_arms":
-      return q ? "Hmm… you sure say you no want the black one too? 🤨" : "Hmm, you sure say you no want the matching shirt? 🤨";
+      return h ? "Are you sure you don't want the black one too? 🤨" : "You sure you don't want the matching top? 🤨";
     case "beg":
-      return q ? "Buy 2 na, make I follow you go party 🥺" : "Cop the pair na, make the fit complete 🥺";
+      return h ? "Get two, please? Then we can match! 🥺" : "Grab the pair and complete the fit 🥺";
     case "hair_flip":
       return "Hair flip for the back design 💁‍♀️";
     case "whisper":
@@ -76,8 +78,35 @@ export function actionLine(action: DripAction, c: CharacterId): string {
     case "think":
       return "Hmm, let me check… 🤔";
     default:
-      return q ? "Heyy baddie! 💗" : "Wetin dey sup, drip lord? 😎";
+      return h ? "Annyeong, cutie! 💖" : "Yo, what's up, fam? 😎";
   }
+}
+
+/** Sweet appreciation lines the mascots drop into the chat now and then. */
+export const SWEET_WORDS: Record<CharacterId, string[]> = {
+  haru: [
+    "We appreciate you so much, bestie! 💖",
+    "Thanks for being part of Attitude fam! 🫶",
+    "You have amazing taste, period! ✨",
+    "We love having you here! 💕",
+    "You make our drip special, cutie! 🌸",
+    "Saranghae! Thank you for shopping with us 💗",
+    "You make our brand shine! 🌟",
+  ],
+  jin: [
+    "Real talk, we appreciate you, fam! 🙌",
+    "Thanks for being part of Attitude fam! 🫶",
+    "You've got amazing taste, no cap! ✨",
+    "We love having you here! 💯",
+    "You make our drip special, for real! 🔥",
+    "Respect! Thanks for rolling with us 😎",
+    "You make our brand shine! 🌟",
+  ],
+};
+
+export function sweetWord(c: CharacterId, seed = Date.now()): string {
+  const list = SWEET_WORDS[c];
+  return list[Math.abs(seed) % list.length];
 }
 
 /** Splits a leading "[[action]]" tag from the reply text (unknown tags are dropped). */
@@ -88,17 +117,15 @@ export function parseAction(text: string): { action: DripAction | null; text: st
   return { action: (ACTIONS as readonly string[]).includes(name) ? name : null, text: text.slice(m[0].length).replace(/\[\[[a-z_ ]+\]\]/gi, "").trim() };
 }
 
-// ---------- the virtual model's look (changeable by the shopper) ----------
+// ---------- the virtual model's shape (changeable by the shopper) ----------
 
-export const SKIN_TONES = ["#F3C9A8", "#D9A178", "#B47A50", "#8D5A3B", "#5E3A24"] as const;
 export type Build = "slim" | "regular" | "thick";
 export type Height = "short" | "average" | "tall";
 export interface ModelLook {
-  skin: string;
   build: Build;
   height: Height;
 }
 export const DEFAULT_LOOK: Record<CharacterId, ModelLook> = {
-  guy: { skin: "#8D5A3B", build: "regular", height: "average" },
-  queen: { skin: "#B47A50", build: "regular", height: "average" },
+  haru: { build: "regular", height: "average" },
+  jin: { build: "regular", height: "average" },
 };

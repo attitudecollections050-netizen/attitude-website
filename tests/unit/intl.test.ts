@@ -11,6 +11,7 @@ import pt from "@/messages/pt.json";
 import ar from "@/messages/ar.json";
 import de from "@/messages/de.json";
 import zh from "@/messages/zh.json";
+import ko from "@/messages/ko.json";
 
 type Tree = { [k: string]: string | Tree };
 const flat = (t: Tree, p = ""): [string, string][] =>
@@ -32,7 +33,7 @@ function argNames(message: string, locale: string): string {
 
 describe("translation files", () => {
   const english = new Map(flat(en as Tree));
-  const files = { fr, es, pt, ar, de, zh } as Record<string, Tree>;
+  const files = { fr, es, pt, ar, de, zh, ko } as Record<string, Tree>;
 
   it("every supported language has a file", () => {
     expect(Object.keys(files).sort()).toEqual(LOCALES.map((l) => l.code).filter((c) => c !== "en").sort());
