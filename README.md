@@ -187,6 +187,16 @@ No supplier API is integrated, so supplier orders are never placed automatically
 
 Reviews are never published automatically: only product reviews where the customer ticked consent and an admin pressed **Publish review** appear on the site. Staff can mark feedback reviewed, add private notes, flag spam/abuse (hides it but keeps the record), reply publicly and export CSV. Ratings and customer wording can't be edited. Submissions are validated on the server, rate-limited, and protected by a hidden spam-trap field and a minimum fill time; link-stuffed text is flagged for moderation rather than discarded.
 
+## 7a. Staff payments (withdrawn & balance left)
+
+After you pay a staff member, record it in **Admin → Staff Management → Staff payments → Pay** (amount, type, optional description, then confirm). Types: **Payout (withdrawal)** — money you sent them; **Bonus** / **Extra earning** — money owed on top of product earnings.
+- **Your table:** Name · Total earned · Withdrawn · Balance left · Pay, plus Recent payments.
+- **Their dashboard** (`/admin` and `/staff/dashboard`): Total withdrawn and Balance left cards, and a Date | Description | Amount | Type history. Both pages update live (Supabase Realtime) and on returning to the tab.
+- **Maths:** total earned = ₦1,000 per 10 products added + bonuses/extra earnings; balance left = total earned − withdrawn. Totals are always calculated from the records, so they never drift. Payments can't be edited or deleted (add a bonus/extra earning to correct an over-payment).
+- **Rules:** only the owner can record payments or see everyone's; staff see only their own.
+- **API:** `POST /api/admin/pay-staff` `{ staff_id, amount, description?, type? }` → new totals; `GET /api/admin/staff-payments` → every staff member with total_earnings, total_withdrawn, balance_left; `GET /api/staff/my-payments` → your own history and totals.
+- **Database:** migration `20261030000018_staff_payments.sql` (run it once in the Supabase SQL Editor).
+
 ## 7b. DJ ATTITUDE mini HARU & JIN (AI mascot assistants)
 
 `<AttitudeAI />` (mounted in the store layout) adds two Korean anime-style DJ mascots, drawn from the brand artwork in `public/mascots/` (`girl.png`, `boy.png` and the `-face.png` crops):

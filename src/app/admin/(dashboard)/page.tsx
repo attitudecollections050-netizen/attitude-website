@@ -7,6 +7,8 @@ import { isEmailConfigured } from "@/lib/groundmail";
 import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { naira, staffPaymentTotals } from "@/lib/staff-payments";
+import { PaymentsLive } from "@/components/admin/PayStaff";
 import { requireStaffPage } from "@/lib/auth";
 import { formatMoney } from "@/lib/money";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
@@ -38,9 +40,25 @@ export default async function AdminOverview({ searchParams }: PageProps<"/admin"
   const owner = isStoreOwner(user.email, roles);
   if (!owner) {
     const canAdd = permissions.includes("products:write");
-    const [{ data: mine }, categories] = await Promise.all([db.rpc("get_my_stats"), canAdd ? categoryOptions() : Promise.resolve([])]);
+    const [{ data: mine }, categories, [payTotals]] = await Promise.all([
+      db.rpc("get_my_stats"),
+      canAdd ? categoryOptions() : Promise.resolve([]),
+      staffPaymentTotals(user.id).catch(() => []),
+    ]);
     const m = (Array.isArray(mine) ? mine[0] : mine) as { product_count: number | string; earnings: number; remaining: number } | null;
-    return <MyStats count={Number(m?.product_count ?? 0)} earnings={m?.earnings ?? 0} remaining={m?.remaining ?? 10} categories={categories} canAdd={canAdd} forbidden={sp.error === "forbidden"} />;
+    return (
+      <MyStats
+        count={Number(m?.product_count ?? 0)}
+        earnings={m?.earnings ?? 0}
+        remaining={m?.remaining ?? 10}
+        withdrawn={payTotals?.totalWithdrawn ?? 0}
+        balanceLeft={payTotals?.balanceLeft ?? m?.earnings ?? 0}
+        userId={user.id}
+        categories={categories}
+        canAdd={canAdd}
+        forbidden={sp.error === "forbidden"}
+      />
+    );
   }
   const canVerify = permissions.includes("payments:verify");
   const canAddProducts = permissions.includes("products:write");
@@ -172,12 +190,44 @@ export default async function AdminOverview({ searchParams }: PageProps<"/admin"
 }
 
 /** The team's view of /admin: their own products and earnings (₦1,000 for every 10 products added). */
-function MyStats({ count, earnings, remaining, categories, canAdd, forbidden }: { count: number; earnings: number; remaining: number; categories: Awaited<ReturnType<typeof categoryOptions>>; canAdd: boolean; forbidden: boolean }) {
+function MyStats({
+  count,
+  earnings,
+  remaining,
+  withdrawn,
+  balanceLeft,
+  userId,
+  categories,
+  canAdd,
+  forbidden,
+}: {
+  count: number;
+  earnings: number;
+  remaining: number;
+  withdrawn: number;
+  balanceLeft: number;
+  userId: string;
+  categories: Awaited<ReturnType<typeof categoryOptions>>;
+  canAdd: boolean;
+  forbidden: boolean;
+}) {
   const progress = (10 - remaining) % 10;
   return (
     <div className="space-y-8">
       <PageHeader title="My dashboard" description="Your products and earnings. ₦1,000 for every 10 products you add." />
       {forbidden && <Notice tone="error">You don&apos;t have permission to open that section.</Notice>}
+      <PaymentsLive staffId={userId} />
+      <ul className="grid gap-3 sm:grid-cols-2" data-testid="my-payments">
+        <li className="border border-line bg-white p-5">
+          <p className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-muted">Total withdrawn</p>
+          <p className="mt-2 text-4xl font-extrabold tabular-nums" data-testid="my-withdrawn">{naira(withdrawn)}</p>
+          <Link href="/staff/dashboard#pay-history" className="mt-1 inline-block text-xs underline">See payment history</Link>
+        </li>
+        <li className="border border-line bg-white p-5">
+          <p className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-muted">Balance left</p>
+          <p className={`mt-2 text-4xl font-extrabold tabular-nums ${balanceLeft < 0 ? "text-danger" : "text-success"}`} data-testid="my-balance">{naira(balanceLeft)}</p>
+        </li>
+      </ul>
       <ul className="grid gap-3 sm:grid-cols-3" data-testid="my-stats">
         <li className="border border-line bg-white p-5">
           <p className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-muted">My products added</p>

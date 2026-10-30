@@ -8,6 +8,8 @@ import { adminHome } from "@/lib/permissions";
 import { formatMoney } from "@/lib/money";
 import { earningsFor, PRODUCTS_PER_REWARD, REWARD_KOBO } from "@/lib/staff-earnings";
 import { buttonClasses } from "@/components/ui/Button";
+import { PaymentsLive } from "@/components/admin/PayStaff";
+import { naira, staffPaymentHistory, staffPaymentTotals, type StaffPayment } from "@/lib/staff-payments";
 
 export const metadata = { title: "My Dashboard" };
 
@@ -42,6 +44,13 @@ export default async function StaffDashboardPage({ searchParams }: PageProps<"/s
   if (statsError) redirect(isOwner ? "/admin/staff" : adminHome(permissions));
   if (isOwner && !staff) redirect("/admin/staff");
 
+  // Payments: their own totals and history (the database only returns their own rows).
+  const [[payTotals], payments] = await Promise.all([
+    staffPaymentTotals(targetId).catch(() => []),
+    staffPaymentHistory(targetId).catch((): StaffPayment[] => []),
+  ]);
+  const withdrawn = payTotals?.totalWithdrawn ?? 0;
+  const balanceLeft = payTotals?.balanceLeft ?? 0;
   const row = (stats as { products_added: number; live_products: number }[] | null)?.[0];
   const added = row?.products_added ?? 0;
   const live = row?.live_products ?? 0;
@@ -61,6 +70,20 @@ export default async function StaffDashboardPage({ searchParams }: PageProps<"/s
         <h1 className="mt-2 font-display text-4xl sm:text-5xl">Welcome back, {name}</h1>
         <p className="mt-1 text-sm text-black/60">{email}</p>
       </div>
+
+      <PaymentsLive staffId={targetId} />
+      <section className="grid gap-px border border-black bg-black sm:grid-cols-2" aria-label="My payments" data-testid="payment-cards">
+        <div className="bg-white p-6">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/50">Total withdrawn</p>
+          <p className="mt-3 text-4xl font-extrabold tracking-tight sm:text-5xl" data-testid="total-withdrawn">{naira(withdrawn)}</p>
+          <p className="mt-1 text-xs text-black/60">{payTotals?.lastPaidAt ? `Last paid ${dateFmt.format(new Date(payTotals.lastPaidAt))}` : "Nothing paid out yet"}</p>
+        </div>
+        <div className="bg-white p-6">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/50">Balance left</p>
+          <p className={`mt-3 text-4xl font-extrabold tracking-tight sm:text-5xl ${balanceLeft < 0 ? "text-danger" : "text-success"}`} data-testid="balance-left">{naira(balanceLeft)}</p>
+          <p className="mt-1 text-xs text-black/60">Total earned {naira(payTotals?.totalEarnings ?? e.earnedKobo / 100)} − withdrawn {naira(withdrawn)}</p>
+        </div>
+      </section>
 
       {!isOwner && (
         <section aria-labelledby="quick-add-h" className="border border-black p-6">
@@ -118,6 +141,35 @@ export default async function StaffDashboardPage({ searchParams }: PageProps<"/s
                     <td className="px-4 py-3 text-black/60">{dateFmt.format(new Date(p.created_at))}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-block border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] ${p.status === "published" ? "border-black bg-black text-white" : "border-black/30 text-black/60"}`}>{STATUS[p.status] ?? p.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section aria-labelledby="pay-history">
+        <h2 id="pay-history" className="mb-4 font-display text-3xl">Payment history</h2>
+        {payments.length === 0 ? (
+          <p className="border border-dashed border-black/30 px-6 py-8 text-center text-sm text-black/60">No payments yet. When the owner pays you, it shows up here.</p>
+        ) : (
+          <div className="overflow-x-auto border border-black">
+            <table className="w-full min-w-[32rem] text-left text-sm" data-testid="payment-history">
+              <thead className="border-b border-black text-[11px] uppercase tracking-[0.16em]">
+                <tr><th className="px-4 py-3 font-bold">Date</th><th className="px-4 py-3 font-bold">Description</th><th className="px-4 py-3 font-bold">Amount</th><th className="px-4 py-3 font-bold">Type</th></tr>
+              </thead>
+              <tbody className="divide-y divide-black/10">
+                {payments.map((p) => (
+                  <tr key={p.id}>
+                    <td className="px-4 py-3 text-black/60">{dateFmt.format(new Date(p.createdAt))}</td>
+                    <td className="px-4 py-3">{p.description ?? (p.type === "withdrawal" ? "Payout" : "—")}</td>
+                    <td className="px-4 py-3 font-semibold tabular-nums">{p.type === "withdrawal" ? "−" : "+"}{naira(p.amount)}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-block border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] ${p.type === "withdrawal" ? "border-black bg-black text-white" : "border-success text-success"}`}>
+                        {p.type === "withdrawal" ? "Withdrawal" : p.type === "bonus" ? "Bonus" : "Earning"}
+                      </span>
                     </td>
                   </tr>
                 ))}

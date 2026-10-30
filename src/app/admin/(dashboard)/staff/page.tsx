@@ -11,6 +11,8 @@ import { ActionForm } from "@/components/admin/ActionForm";
 import { ResendInviteButton, StaffInviteForm } from "@/components/admin/StaffForms";
 import { Badge, Card, Empty, PageHeader } from "@/components/admin/ui";
 import { Notice } from "@/components/ui/Notice";
+import { PayStaffButton, PaymentsLive } from "@/components/admin/PayStaff";
+import { naira, staffPaymentHistory, staffPaymentTotals, type StaffPayment, type StaffPaymentTotals } from "@/lib/staff-payments";
 
 export const metadata = { title: "Staff Management" };
 
@@ -50,6 +52,12 @@ export default async function StaffPage() {
   // Counts come from the owner's own session: the database only gives everyone's numbers to the owner.
   const { data: statRows } = await (await createClient()).rpc("staff_product_stats");
   const stats = new Map(((statRows ?? []) as { user_id: string; products_added: number; live_products: number }[]).map((r) => [r.user_id, r]));
+  // Payments: totals per staff member and the latest payouts (owner's session; the database checks it).
+  const [payTotals, recentPayments] = await Promise.all([
+    staffPaymentTotals().catch((): StaffPaymentTotals[] => []),
+    staffPaymentHistory(undefined, 20).catch((): StaffPayment[] => []),
+  ]);
+  const pay = new Map(payTotals.map((t) => [t.userId, t]));
   // Last sign-in comes from Supabase Auth (server only).
   const authInfo = new Map(
     await Promise.all(
@@ -66,6 +74,71 @@ export default async function StaffPage() {
         title="Staff Management"
         description="Invite people to help run the store with their own login. They never need your password, and they only see what their role allows."
       />
+
+      <PaymentsLive />
+      <Card title="Staff payments" description="What each person has earned, what you've paid them (withdrawn) and what's left. Tap Pay after you send money — it shows on their dashboard straight away.">
+        {payTotals.length === 0 ? (
+          <Empty>No staff yet.</Empty>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[40rem] text-left text-sm" data-testid="staff-payments-table">
+              <thead className="border-b border-line text-[11px] uppercase tracking-[0.14em] text-muted">
+                <tr>
+                  <th className="py-2 pr-3 font-bold">Name</th>
+                  <th className="py-2 pr-3 font-bold">Total earned</th>
+                  <th className="py-2 pr-3 font-bold">Withdrawn</th>
+                  <th className="py-2 pr-3 font-bold">Balance left</th>
+                  <th className="py-2 font-bold">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {payTotals.map((t) => (
+                  <tr key={t.userId} data-testid={`pay-row-${t.userId}`}>
+                    <td className="py-3 pr-3">
+                      <p className="font-semibold">{t.name ?? t.email}</p>
+                      <p className="text-xs text-muted">{t.productsAdded} products{t.lastPaidAt ? ` · last paid ${when(t.lastPaidAt)}` : ""}</p>
+                    </td>
+                    <td className="py-3 pr-3 tabular-nums">
+                      {naira(t.totalEarnings)}
+                      {t.extraEarnings > 0 && <span className="block text-[11px] text-muted">incl. {naira(t.extraEarnings)} bonus/extra</span>}
+                    </td>
+                    <td className="py-3 pr-3 font-semibold tabular-nums" data-testid="withdrawn">{naira(t.totalWithdrawn)}</td>
+                    <td className={`py-3 pr-3 font-extrabold tabular-nums ${t.balanceLeft < 0 ? "text-danger" : "text-success"}`} data-testid="balance">{naira(t.balanceLeft)}</td>
+                    <td className="py-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <PayStaffButton staffId={t.userId} name={t.name ?? t.email} balanceLeft={t.balanceLeft} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {recentPayments.length > 0 && (
+          <div className="mt-6">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted">Recent payments</p>
+            <ul className="mt-2 divide-y divide-line text-sm" data-testid="recent-payments">
+              {recentPayments.map((r) => {
+                const who = pay.get(r.staffId);
+                return (
+                  <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                    <span>
+                      <span className="font-semibold">{who?.name ?? who?.email ?? "Former staff"}</span>
+                      <span className="text-muted"> · {r.description ?? (r.type === "withdrawal" ? "Payout" : r.type)}</span>
+                    </span>
+                    <span className="flex items-center gap-3">
+                      <Badge tone={r.type === "withdrawal" ? "plum" : "success"}>{r.type === "withdrawal" ? "Withdrawal" : r.type === "bonus" ? "Bonus" : "Earning"}</Badge>
+                      <span className="font-semibold tabular-nums">{r.type === "withdrawal" ? "−" : "+"}{naira(r.amount)}</span>
+                      <span className="text-xs text-muted">{when(r.createdAt)}</span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+      </Card>
 
       <Card title="Invite a staff member" description="They receive a private link to choose their own password. The link works once and expires.">
         <StaffInviteForm />
@@ -110,6 +183,12 @@ export default async function StaffPage() {
                   <p className="w-full text-xs text-muted">
                     Products added: <strong className="text-plum">{stats.get(s.user_id)?.products_added ?? 0}</strong>
                     {" · "}Earned: <strong className="text-base font-extrabold text-success">{formatMoney(earningsFor(stats.get(s.user_id)?.products_added ?? 0).earnedKobo)}</strong>
+                    {pay.get(s.user_id) && (
+                      <>
+                        {" · "}Withdrawn: <strong className="text-plum">{naira(pay.get(s.user_id)!.totalWithdrawn)}</strong>
+                        {" · "}Balance left: <strong className="text-plum">{naira(pay.get(s.user_id)!.balanceLeft)}</strong>
+                      </>
+                    )}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
