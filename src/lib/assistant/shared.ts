@@ -1,5 +1,5 @@
 // ATTITUDE mini HARU / JIN — shared between the chat widget and the server.
-import type { DripAction } from "./characters";
+import type { CharacterId, DripAction } from "./characters";
 import { STORE_FAQ } from "./faq";
 
 export const ASSISTANT_NAME = "ATTITUDE mini HARU";
@@ -99,7 +99,8 @@ export function linkify(text: string): ({ type: "text"; value: string } | { type
  * (or the AI is unavailable). It only states things that are always true
  * about this site and points to the right page.
  */
-export function basicReply(input: string, seed = Date.now()): string {
+export function basicReply(input: string, seed = Date.now(), character: CharacterId = "haru"): string {
+  const jin = character === "jin";
   const t = input.toLowerCase();
   const pick = <T,>(arr: T[]) => arr[Math.abs(seed) % arr.length];
   if (/joke|funny|laugh|make me (smile|happy)/.test(t)) return `${pick(JOKES)}\n\nWant another one? Just say “joke” again! 😄`;
@@ -113,7 +114,14 @@ export function basicReply(input: string, seed = Date.now()): string {
   if (/feedback|review|complain/.test(t)) return "I'd love to hear it! Share your experience with hearts on our [Feedback page](/feedback). 💗";
   const shop = t.match(/(?:find|looking for|want|need|show me|buy)\s+(?:a |an |some )?(.{2,40})/);
   if (shop) return `Ooh, let's find it! 🛍️ Here are results for “${shop[1].replace(/[?.!]+$/, "")}”: [search the shop](/search?q=${encodeURIComponent(shop[1].replace(/[?.!]+$/, ""))})`;
-  if (/^(hi|hello|hey|good (morning|afternoon|evening))/.test(t)) return "Hi I'm Haru! 💖 I can find your fit, help with sizes, explain delivery and returns, or tell you a joke. What are we shopping for today, cutie?";
+  if (/who are you|what('s| is) your name|are you (haru|jin)|your name/.test(t))
+    return jin
+      ? "I am Jin! 😎 DJ ATTITUDE mini JIN, your fit buddy for the Attitude men's collection. I'm not Haru — she's my teammate for the women's side."
+      : "I am Haru! 💖 DJ ATTITUDE mini HARU, your drip bestie for the Attitude women's collection. I'm not Jin — he's my teammate for the men's side.";
+  if (/^(hi|hello|hey|yo|good (morning|afternoon|evening))/.test(t))
+    return jin
+      ? "I am Jin! 😎 I can find your fit from the men's collection, help with sizes, explain delivery and returns, or tell you a joke. What are we shopping for today, fam?"
+      : "I am Haru! 💖 I can find your fit from the women's collection, help with sizes, explain delivery and returns, or tell you a joke. What are we shopping for today, cutie?";
   if (/men|women|bag|shoe|sneaker|dress|shirt|top|jean/.test(t)) return `Let's shop! 🛍️ Try [this search](/search?q=${encodeURIComponent(input.slice(0, 40))}) or browse [the whole shop](/shop).`;
   return `Aigoo, I didn't quite catch that 🙈 ${STORE_FAQ.fallback}`;
 }

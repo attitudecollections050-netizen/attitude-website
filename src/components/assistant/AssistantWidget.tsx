@@ -25,7 +25,9 @@ interface Message extends ChatTurn {
   products?: ProductSuggestion[];
 }
 
-const STORE_KEY = "ac_drip_chat";
+// Haru and Jin each keep their own conversation (v2: older shared chats are cleared).
+const chatKey = (c: CharacterId) => `ac_mascot_chat_v2_${c}`;
+const OLD_CHAT_KEYS = ["ac_drip_chat", "ac_mini_chat"];
 const CHAR_KEY = "ac_drip_character";
 const LOOK_KEY = "ac_drip_look";
 const GREETED_KEY = "ac_mini_greeted";
@@ -88,7 +90,9 @@ export function AssistantWidget({ whatsapp = null }: { whatsapp?: string | null 
   const [customize, setCustomize] = useState(false);
   const [stage, setStage] = useState<{ action: DripAction; key: number; caption: string | null; images: (string | null)[] }>({ action: "pose", key: 0, caption: null, images: [] });
   const [popup, setPopup] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([welcome("haru")]);
+  const [chats, setChats] = useState<Record<CharacterId, Message[]>>({ haru: [welcome("haru")], jin: [welcome("jin")] });
+  const messages = chats[character];
+  const setChat = useCallback((who: CharacterId, update: (prev: Message[]) => Message[]) => setChats((all) => ({ ...all, [who]: update(all[who]) })), []);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
   const [mode, setMode] = useState<"ai" | "basic" | "unknown">("unknown");
@@ -118,7 +122,10 @@ export function AssistantWidget({ whatsapp = null }: { whatsapp?: string | null 
       const c = asCharacter(load<string>(CHAR_KEY, "haru"));
       setCharacter(c);
       setLooks({ ...DEFAULT_LOOK, ...load<Partial<Record<CharacterId, ModelLook>>>(LOOK_KEY, {}) });
-      setMessages(load<Message[]>(STORE_KEY, [welcome(c)]));
+      setChats({ haru: load<Message[]>(chatKey("haru"), [welcome("haru")]), jin: load<Message[]>(chatKey("jin"), [welcome("jin")]) });
+      try {
+        OLD_CHAT_KEYS.forEach((k) => sessionStorage.removeItem(k));
+      } catch {}
       const pref = load<boolean | null>(VOICE_KEY, null);
       setVoicePref(pref);
       setVoiceOn(Boolean(pref));
@@ -131,8 +138,10 @@ export function AssistantWidget({ whatsapp = null }: { whatsapp?: string | null 
   }, []);
   // Save only after restoring, so the first render can't overwrite the saved chat.
   useEffect(() => {
-    if (restored) save(STORE_KEY, messages.slice(-30));
-  }, [messages, restored]);
+    if (!restored) return;
+    save(chatKey("haru"), chats.haru.slice(-30));
+    save(chatKey("jin"), chats.jin.slice(-30));
+  }, [chats, restored]);
   const toggleVoice = (next: boolean) => {
     setVoiceOn(next);
     setVoicePref(next);
@@ -297,15 +306,17 @@ export function AssistantWidget({ whatsapp = null }: { whatsapp?: string | null 
       if (!text || pending) return;
       stopSpeaking();
       const userMsg: Message = { id: uid(), role: "user", content: text };
+      // The reply belongs to whoever was asked, even if the shopper switches mascots meanwhile.
+      const who = character;
       const next = [...messages, userMsg];
-      setMessages(next);
+      setChat(who, () => next);
       setInput("");
       setPending(true);
       perform("think", "");
       const speakReply = voiceOn || opts.spoken;
 
       const answerBasic = () => {
-        const reply = basicReply(text, Date.now());
+        const reply = basicReply(text, Date.now(), who);
         setMode("basic");
         return { reply, products: [] as ProductSuggestion[] };
       };
@@ -319,7 +330,7 @@ export function AssistantWidget({ whatsapp = null }: { whatsapp?: string | null 
           const res = await fetch("/api/assistant", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ character, messages: next.filter((m) => m.id !== "welcome").map(({ role, content }) => ({ role, content })) }),
+            body: JSON.stringify({ character: who, messages: next.filter((m) => m.id !== "welcome").map(({ role, content }) => ({ role, content })) }),
           });
           const data = (await res.json().catch(() => ({}))) as Partial<AssistantReply> & { offline?: boolean; error?: string };
           if (res.ok && typeof data.reply === "string") {
@@ -334,15 +345,15 @@ export function AssistantWidget({ whatsapp = null }: { whatsapp?: string | null 
           result = answerBasic();
         }
       }
-      setMessages((prev) => [...prev, { id: uid(), role: "assistant", content: result.reply, products: result.products }]);
+      setChat(who, (prev) => [...prev, { id: uid(), role: "assistant", content: result.reply, products: result.products }]);
       setPending(false);
       const act = result.action ?? (result.products.length ? "strut" : "pose");
       // Now and then the mascot adds a sweet thank-you in her speech bubble.
-      const sweet = act !== "think" && act !== "roast" && Math.random() < 0.3 ? sweetWord(character, Date.now()) : null;
+      const sweet = act !== "think" && act !== "roast" && Math.random() < 0.3 ? sweetWord(who, Date.now()) : null;
       perform(act, sweet, result.products.slice(0, 2).map((p) => p.image));
-      if (speakReply) say(result.reply);
+      if (speakReply) say(result.reply, who);
     },
-    [messages, mode, pending, say, voiceOn, character, perform],
+    [messages, mode, pending, say, voiceOn, character, perform, setChat],
   );
 
   const toggleMic = async () => {

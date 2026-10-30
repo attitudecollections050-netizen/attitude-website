@@ -5,12 +5,14 @@ import { getSettings } from "@/lib/settings";
 import { formatMoney } from "@/lib/money";
 import type { ProductSuggestion } from "./shared";
 import { STORE_FAQ } from "./faq";
+import { CHARACTERS, type CharacterId } from "./characters";
+import { collectionFor, ownerOf } from "./collections";
 
 const POLICY_PAGES = ["about", "faq", "shipping-policy", "returns-policy", "size-guide"];
 const PAGE_LIMIT = 3000;
 
 /** Facts the assistant is allowed to rely on, read from the store's own database. */
-export async function storeKnowledge(): Promise<string> {
+export async function storeKnowledge(character: CharacterId): Promise<string> {
   const [settings, categories, pages, delivery] = await Promise.all([
     getSettings(),
     getCategoryTree(),
@@ -24,9 +26,12 @@ export async function storeKnowledge(): Promise<string> {
     s.whatsapp && `WhatsApp: ${s.whatsapp}`,
     s.business_hours && `Hours: ${s.business_hours}`,
   ].filter(Boolean);
-  const cats = categories
-    .map((c) => `- ${c.name} (${c.href})${c.children.length ? `: ${c.children.map((x) => `${x.name} (${x.href})`).join(", ")}` : ""}`)
-    .join("\n");
+  // Only this mascot's own collection is listed; the other one belongs to the other mascot.
+  const other: CharacterId = character === "haru" ? "jin" : "haru";
+  const list = (cs: typeof categories) =>
+    cs.map((c) => `- ${c.name} (${c.href})${c.children.length ? `: ${c.children.map((x) => `${x.name} (${x.href})`).join(", ")}` : ""}`).join("\n");
+  const cats = list(collectionFor(character, categories));
+  const otherCats = collectionFor(other, categories).map((c) => c.name).join(", ");
   const policyText = (pages.data ?? [])
     .map((p) => `### ${p.title} (/${p.slug})\n${String(p.body).slice(0, PAGE_LIMIT)}`)
     .join("\n\n");
@@ -49,27 +54,53 @@ Contact details published by the store: ${contact.length ? contact.join(" · ") 
 # Useful pages
 /shop (all products), /search?q=..., /collections, /cart, /checkout, /track-order (needs order number + email), /contact, /faq, /feedback (rate us with hearts), /account, /shipping-policy, /returns-policy, /privacy-policy, /terms.
 
-# Categories
+# Your collection (${CHARACTERS[character].short}'s collection — the only products you search, recommend or describe)
 ${cats || "(none yet)"}
+
+# Not yours
+${CHARACTERS[other].short}'s collection (${otherCats || "the other side of the shop"}) belongs to ${CHARACTERS[other].short}. You cannot see those products. If the shopper asks for them, say that's ${CHARACTERS[other].short}'s collection and tell them to tap "Switch to ${CHARACTERS[other].short.toUpperCase()}?" at the top of the chat.
 
 # Store pages (written by the owner). Text in [square brackets] is an unfinished placeholder: never present it as fact — say the team can confirm via /contact.
 ${policyText || "(not available)"}`;
 }
 
 /** Live product search over published products only (same rules as the shop). */
-export async function searchProducts(input: { query?: string | null; maxPriceNaira?: number | null; onSale?: boolean | null; inStockOnly?: boolean | null }): Promise<ProductSuggestion[]> {
-  const { data, error } = await createPublicClient().rpc("catalog_search", {
-    p_query: input.query?.slice(0, 80) || null,
-    p_max_price: input.maxPriceNaira ? Math.round(input.maxPriceNaira * 100) : null,
-    p_on_sale: Boolean(input.onSale),
-    p_availability: input.inStockOnly ? "in_stock" : null,
-    p_sort: input.query ? "popular" : "newest",
-    p_limit: 4,
-    p_offset: 0,
-  });
-  if (error) throw new Error(error.message);
+export async function searchProducts(
+  input: { query?: string | null; maxPriceNaira?: number | null; onSale?: boolean | null; inStockOnly?: boolean | null },
+  character: CharacterId,
+): Promise<ProductSuggestion[]> {
+  // Search only inside this mascot's collection (each category includes its sub-categories).
+  const scope = collectionFor(character, await getCategoryTree());
+  type Row = { id: string; slug: string; name: string; price: number; sale_price: number | null; image_url: string | null; in_stock: boolean };
+  const results = await Promise.all(
+    scope.map(async (cat) => {
+      const { data, error } = await createPublicClient().rpc("catalog_search", {
+        p_query: input.query?.slice(0, 80) || null,
+        p_category_id: cat.id,
+        p_max_price: input.maxPriceNaira ? Math.round(input.maxPriceNaira * 100) : null,
+        p_on_sale: Boolean(input.onSale),
+        p_availability: input.inStockOnly ? "in_stock" : null,
+        p_sort: input.query ? "popular" : "newest",
+        p_limit: 4,
+        p_offset: 0,
+      });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as Row[];
+    }),
+  );
+  // Take turns across the collection's categories so one category doesn't crowd out the rest.
+  const seen = new Set<string>();
+  const rows: Row[] = [];
+  for (let i = 0; rows.length < 4 && results.some((r) => r[i]); i++) {
+    for (const r of results) {
+      const row = r[i];
+      if (row && !seen.has(row.id) && rows.length < 4) {
+        seen.add(row.id);
+        rows.push(row);
+      }
+    }
+  }
   const currency = "NGN";
-  const rows = (data ?? []) as { id: string; slug: string; name: string; price: number; sale_price: number | null; image_url: string | null; in_stock: boolean }[];
   const variants = await variantOptions(rows.map((r) => r.id));
   return rows.map((p) => ({
     slug: p.slug,
@@ -106,16 +137,20 @@ async function deliveryFacts(): Promise<string> {
 }
 
 /** One product's facts for customer support questions (published products only). */
-export async function productDetails(slug: string) {
+export async function productDetails(slug: string, character: CharacterId) {
   const { data } = await createPublicClient()
     .from("products")
-    .select("name, slug, description, details, weight_grams, price, sale_price, allow_backorder, tags, categories(name), product_variants(size, color, is_active, sort_order, inventory(on_hand, low_stock_threshold))")
+    .select("name, slug, description, details, weight_grams, price, sale_price, allow_backorder, tags, categories(name, slug, parent:categories!parent_id(slug)), product_variants(size, color, is_active, sort_order, inventory(on_hand, low_stock_threshold))")
     .eq("slug", slug)
     .eq("status", "published")
     .maybeSingle();
   if (!data) return null;
   type V = { size: string | null; color: string | null; is_active: boolean; sort_order: number; inventory: { on_hand: number; low_stock_threshold: number } | null };
-  const p = data as unknown as { name: string; slug: string; description: string; details: string | null; weight_grams: number; price: number; sale_price: number | null; allow_backorder: boolean; tags: string[]; categories: { name: string } | null; product_variants: V[] };
+  const p = data as unknown as { name: string; slug: string; description: string; details: string | null; weight_grams: number; price: number; sale_price: number | null; allow_backorder: boolean; tags: string[]; categories: { name: string; slug: string; parent: { slug: string } | null } | null; product_variants: V[] };
+  const owner = p.categories ? ownerOf(p.categories.slug, p.categories.parent?.slug) : character;
+  if (owner !== character) {
+    return { name: p.name, not_in_your_collection: true, belongs_to: CHARACTERS[owner].short, note: `This is in ${CHARACTERS[owner].short}'s collection. Tell the shopper to switch to ${CHARACTERS[owner].short.toUpperCase()} for it.` };
+  }
   return {
     name: p.name,
     link: `/products/${p.slug}`,

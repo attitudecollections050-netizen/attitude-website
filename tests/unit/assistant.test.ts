@@ -102,3 +102,24 @@ describe("mascots — action tags", () => {
     expect(parseAction("No tag here")).toEqual({ action: null, text: "No tag here" });
   });
 });
+
+describe("Haru and Jin are separate", () => {
+  it("each prompt starts with the right identity", async () => {
+    const { persona } = await import("@/lib/assistant/persona");
+    expect(persona("jin").startsWith("You are Jin, a male AI assistant for Attitude Collections. You are NOT Haru. Never call yourself Haru. If someone calls you Haru, correct them and say you are Jin.")).toBe(true);
+    expect(persona("haru").startsWith("You are Haru, a female AI assistant for Attitude Collections. You are NOT Jin.")).toBe(true);
+    expect(persona("jin")).not.toMatch(/You are Haru/);
+    expect(persona("haru")).not.toMatch(/You are Jin/);
+  });
+  it("corrects a reply that uses the other mascot's name", async () => {
+    const { fixIdentity } = await import("@/lib/assistant/persona");
+    expect(fixIdentity("Hi, I'm Haru! Haru is my friend.", "jin")).toBe("Hi, I'm Jin! Haru is my friend.");
+    expect(fixIdentity("I am DJ ATTITUDE mini Jin", "haru")).toBe("I am DJ ATTITUDE mini HARU");
+    expect(fixIdentity("I am Jin, your fit buddy", "jin")).toBe("I am Jin, your fit buddy");
+  });
+  it("answers 'Who are you?' with the right name (basic mode)", () => {
+    expect(basicReply("Who are you?", 1, "jin")).toMatch(/^I am Jin/);
+    expect(basicReply("Who are you?", 1, "haru")).toMatch(/^I am Haru/);
+    expect(basicReply("hello", 1, "jin")).not.toMatch(/Haru!/);
+  });
+});

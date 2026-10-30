@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { isSupabaseConfigured } from "@/lib/env";
 import { rateLimit } from "@/lib/rate-limit";
-import { persona } from "@/lib/assistant/persona";
+import { fixIdentity, persona } from "@/lib/assistant/persona";
 import { productDetails, searchProducts, storeKnowledge } from "@/lib/assistant/knowledge";
 import { parseAction } from "@/lib/assistant/characters";
 import { MAX_HISTORY, MAX_MESSAGE_CHARS, type AssistantReply, type ProductSuggestion } from "@/lib/assistant/shared";
@@ -79,7 +79,8 @@ export async function POST(request: NextRequest) {
   while (history.length && history[0].role !== "user") history = history.slice(1);
   if (!history.length || history[history.length - 1].role !== "user") return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
-  const knowledge = isSupabaseConfigured() ? await storeKnowledge().catch(() => "Store facts are temporarily unavailable.") : "Store facts are not available yet.";
+  const character = parsed.data.character;
+  const knowledge = isSupabaseConfigured() ? await storeKnowledge(character).catch(() => "Store facts are temporarily unavailable.") : "Store facts are not available yet.";
   const client = new Anthropic();
   const messages: Anthropic.Beta.BetaMessageParam[] = history.map((m) => ({ role: m.role, content: m.content }));
   const products: ProductSuggestion[] = [];
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
         betas: ["server-side-fallback-2026-07-01"],
         fallbacks: "default",
         output_config: { effort: "low" },
-        system: [{ type: "text", text: `${persona(parsed.data.character)}\n\n${knowledge}`, cache_control: { type: "ephemeral" } }],
+        system: [{ type: "text", text: `${persona(character)}\n\n${knowledge}`, cache_control: { type: "ephemeral" } }],
         tools: isSupabaseConfigured() ? tools : [],
         messages,
       });
@@ -108,7 +109,8 @@ export async function POST(request: NextRequest) {
           .join("")
           .trim();
         const { action, text } = parseAction(reply);
-        return NextResponse.json<AssistantReply>({ reply: text || "Annyeong! 💖 What can I help you with?", products: dedupe(products), action });
+        const fallback = character === "haru" ? "I am Haru! 💖 What can I help you with?" : "I am Jin! 😎 What can I help you with?";
+        return NextResponse.json<AssistantReply>({ reply: fixIdentity(text, character) || fallback, products: dedupe(products), action });
       }
 
       messages.push({ role: "assistant", content: response.content });
@@ -121,7 +123,7 @@ export async function POST(request: NextRequest) {
             continue;
           }
           try {
-            const found = await productDetails(input.data.slug);
+            const found = await productDetails(input.data.slug, character);
             results.push({ type: "tool_result", tool_use_id: call.id, content: found ? JSON.stringify(found) : "No published product with that slug." });
           } catch (e) {
             console.error("[assistant] details failed:", (e as Error).message);
@@ -135,7 +137,7 @@ export async function POST(request: NextRequest) {
           continue;
         }
         try {
-          const found = await searchProducts({ query: input.data.query, maxPriceNaira: input.data.max_price_naira, onSale: input.data.on_sale, inStockOnly: input.data.in_stock_only });
+          const found = await searchProducts({ query: input.data.query, maxPriceNaira: input.data.max_price_naira, onSale: input.data.on_sale, inStockOnly: input.data.in_stock_only }, character);
           products.push(...found);
           results.push({ type: "tool_result", tool_use_id: call.id, content: found.length ? JSON.stringify(found.map((p) => ({ name: p.name, slug: p.slug, link: p.href, price: p.price, was_price: p.wasPrice, in_stock: p.inStock, sizes: p.variants?.map((v) => v.label) }))) : "No matching products found." });
         } catch (e) {
