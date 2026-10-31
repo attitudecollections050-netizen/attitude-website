@@ -187,17 +187,15 @@ No supplier API is integrated, so supplier orders are never placed automatically
 
 Reviews are never published automatically: only product reviews where the customer ticked consent and an admin pressed **Publish review** appear on the site. Staff can mark feedback reviewed, add private notes, flag spam/abuse (hides it but keeps the record), reply publicly and export CSV. Ratings and customer wording can't be edited. Submissions are validated on the server, rate-limited, and protected by a hidden spam-trap field and a minimum fill time; link-stuffed text is flagged for moderation rather than discarded.
 
-## 7a. Staff payouts (bank details → pay → they confirm)
+## 7a. Staff withdrawals (they request → you approve)
 
-1. **Staff add their bank details** on their dashboard (💳 My Account Details: bank from a list of Nigerian banks and wallets or "Other", a 10-digit account number, account name). Until then they see "⚠️ Add your bank details to receive payments", and you can't record a payout for them (bonuses still work).
-2. **You pay:** send the transfer from your bank app, then in **Admin → Staff Management** tap **Pay** / **Pay Staff**. The modal shows *Earned | Withdrawn | Left*, their account (Bank - number - name), the amount, then **Confirm & Pay**. Their bank details are copied onto the payment. Toast: "You paid [Name] ₦X".
-3. **They confirm:** their dashboard shows **🔔 PAYMENT ALERT** with the amount, bank, number, name and date: **✅ Yes, Confirm I Received ₦X** or **❌ No, I Did Not Receive** (with an optional note you'll see).
-- **Maths:** total earned = ₦1,000 per 10 products + bonuses/extra earnings. *Withdrawn* = confirmed payouts. A payout waiting for confirmation is shown as "awaiting confirmation" and is already taken off *Left*, so the same money can't be paid twice; if they say it didn't arrive, it goes back into *Left*.
-- **Your page:** each staff line reads *Earned (blue) | Withdrawn (orange) | Left (green) | Bank*, and the Staff payments table has Name · Account details · Total earned · Withdrawn · Left · Actions, plus Recent payments with ✅ Received / ⏳ Awaiting confirmation / ❌ Not received.
-- **Their page:** Total earned / Total withdrawn / Balance left cards, "You have been paid ₦X…", and history (Date · Description · Amount · Type · Status · Balance after). Both pages update live (Supabase Realtime).
-- **Rules:** only you can pay or see everyone's details; staff only see and change their own. Payments can't be edited or deleted.
-- **API:** `POST /api/admin/pay-staff`, `GET /api/admin/staff-payments`, `GET /api/staff/my-payments`, `POST /api/staff/bank-details`, `POST /api/staff/confirm-payout`.
-- **Database:** run `supabase/manual/live-staff-payouts.sql` once in the Supabase SQL Editor (migrations 18 + 19; safe to run twice).
+1. **Staff add their bank details** on **My Earnings** (`/staff/earnings`): bank (Nigerian banks and wallets, or "Other"), 10-digit account number, account name.
+2. **They withdraw:** when their balance is above ₦0 they see a big **WITHDRAW ₦X TO MY ACCOUNT** button with their bank details. Tapping it (and confirming) requests their whole balance and shows "Withdrawal requested". One request at a time.
+3. **You approve:** Admin → Staff Management shows **Withdrawal requests** with the amount and where to send it. Send the transfer from your bank app, then tap **Approve → I've sent it — mark paid** ("You paid [Name] ₦X"). Or **Decline** with a reason they'll see; the money goes back into their balance.
+- **Maths:** total earned = ₦1,000 per 10 products added; *Withdrawn* = paid withdrawals; a request waiting for you is already taken off *Left*. Totals are calculated from the records (never stored), so they can't drift. Records can't be edited or deleted.
+- **Pages:** your staff line reads *Earned (blue) | Withdrawn (orange) | Left (green) | Bank*; the Staff payments table has Name · Account details · Total earned · Withdrawn · Left · Request. Staff see Total earned / Withdrawn / Balance left, the status of their request and their withdrawal history. Pages update live (Supabase Realtime).
+- **API:** `POST /api/staff/withdraw`, `POST /api/admin/payouts/review` `{ payment_id, approve, note? }`, `POST /api/staff/bank-details`, `GET /api/admin/staff-payments`, `GET /api/staff/my-payments`.
+- **Database:** `supabase/manual/live-staff-payouts.sql` (already applied to the live project).
 
 ## 7a-2. Exact design on orders (so you pack the right one)
 

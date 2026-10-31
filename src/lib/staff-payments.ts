@@ -31,7 +31,8 @@ export interface BankDetails {
   accountName: string;
 }
 
-export type PaymentStatus = "pending" | "confirmed" | "rejected";
+/** pending = requested by the staff member; paid = approved by the owner; rejected = declined. ("confirmed" = older paid payouts.) */
+export type PaymentStatus = "pending" | "paid" | "confirmed" | "rejected";
 
 /** Nigerian banks and wallets for the bank dropdown ("Other" lets staff type one). */
 export const NIGERIAN_BANKS = [
@@ -52,7 +53,10 @@ export interface StaffPayment {
   description: string | null;
   createdAt: string;
   confirmedAt: string | null;
+  approvedAt: string | null;
   staffNote: string | null;
+  /** The owner's reason when a request was declined. */
+  adminNote: string | null;
   /** Bank details the payout was sent to (copied when it was recorded). */
   bank: BankDetails | null;
 }
@@ -86,8 +90,10 @@ const MESSAGES: Record<string, [string, number]> = {
   invalid_account_number: ["Account number must be exactly 10 digits.", 400],
   invalid_bank: ["Choose your bank.", 400],
   invalid_account_name: ["Enter the account name (as it appears on your bank account).", 400],
-  not_found: ["Payment not found.", 404],
-  already_answered: ["You've already answered for this payment.", 409],
+  not_found: ["Withdrawal request not found.", 404],
+  already_answered: ["This request has already been approved or declined.", 409],
+  already_requested: ["You already have a withdrawal request waiting for approval.", 409],
+  no_balance: ["You don't have a balance to withdraw yet.", 409],
 };
 function toError(e: { message: string; code?: string } | null): PaymentError {
   if (e && notInstalled(e)) return new PaymentError("Staff payments aren't set up in this database yet.", 503, "not_installed", `${e.code ?? ""} ${e.message}`.trim());
@@ -142,7 +148,7 @@ export async function staffPaymentHistory(userId?: string, limit = 100): Promise
   const db = await createClient();
   let q = db
     .from("staff_payments")
-    .select("id, staff_id, amount, type, status, description, created_at, confirmed_at, staff_note, bank_name, account_number, account_name")
+    .select("id, staff_id, amount, type, status, description, created_at, confirmed_at, approved_at, staff_note, admin_note, bank_name, account_number, account_name")
     .order("created_at", { ascending: false })
     .limit(limit);
   if (userId) q = q.eq("staff_id", userId);
@@ -157,30 +163,11 @@ export async function staffPaymentHistory(userId?: string, limit = 100): Promise
     description: r.description,
     createdAt: r.created_at,
     confirmedAt: r.confirmed_at,
+    approvedAt: r.approved_at,
     staffNote: r.staff_note,
+    adminNote: r.admin_note,
     bank: toBank(r),
   }));
-}
-
-/** The owner records a payment (a withdrawal/payout by default) and gets the new totals. */
-export async function payStaff(input: { staffId: string; amount: number; description?: string | null; type?: PaymentType }) {
-  const db = await createClient();
-  const { data, error } = await db.rpc("pay_staff", {
-    p_staff_id: input.staffId,
-    p_amount: input.amount,
-    p_description: input.description ?? null,
-    p_type: input.type ?? "withdrawal",
-  });
-  if (error) throw toError(error);
-  const r = data as { payment_id: string; status: PaymentStatus; total_earnings: number; total_withdrawn: number; pending_amount: number; balance_left: number };
-  return {
-    paymentId: r.payment_id,
-    status: r.status,
-    totalEarnings: Number(r.total_earnings),
-    totalWithdrawn: Number(r.total_withdrawn),
-    pendingAmount: Number(r.pending_amount),
-    balanceLeft: Number(r.balance_left),
-  };
 }
 
 /** A staff member saves their own bank details (10-digit account number). */
@@ -199,14 +186,26 @@ export async function myBankDetails(userId: string): Promise<BankDetails | null>
   return r ? toBank(r) : null;
 }
 
-/** A staff member confirms they received a payout (or says they didn't). */
-export async function confirmMyPayout(input: { paymentId: string; received: boolean; note?: string | null }) {
+/** A staff member asks to withdraw their whole balance to their saved bank account. */
+export async function requestWithdrawal() {
   const db = await createClient();
-  const { data, error } = await db.rpc("confirm_my_payout", { p_payment_id: input.paymentId, p_received: input.received, p_note: input.note ?? null });
+  const { data, error } = await db.rpc("request_withdrawal");
   if (error) throw toError(error);
-  const r = data as { status: PaymentStatus; total_withdrawn: number; pending_amount: number; balance_left: number };
-  return { status: r.status, totalWithdrawn: Number(r.total_withdrawn), pendingAmount: Number(r.pending_amount), balanceLeft: Number(r.balance_left) };
+  const r = data as { payment_id: string; amount: number; total_withdrawn: number; pending_amount: number; balance_left: number };
+  return { paymentId: r.payment_id, amount: Number(r.amount), totalWithdrawn: Number(r.total_withdrawn), pendingAmount: Number(r.pending_amount), balanceLeft: Number(r.balance_left) };
 }
+
+/** The owner approves (after sending the transfer) or declines a withdrawal request. */
+export async function reviewWithdrawal(input: { paymentId: string; approve: boolean; note?: string | null }) {
+  const db = await createClient();
+  const { data, error } = await db.rpc("review_withdrawal", { p_payment_id: input.paymentId, p_approve: input.approve, p_note: input.note ?? null });
+  if (error) throw toError(error);
+  const r = data as { status: PaymentStatus; amount: number; total_withdrawn: number; pending_amount: number; balance_left: number };
+  return { status: r.status, amount: Number(r.amount), totalWithdrawn: Number(r.total_withdrawn), pendingAmount: Number(r.pending_amount), balanceLeft: Number(r.balance_left) };
+}
+
+/** Paid (or older confirmed) withdrawals. */
+export const isPaid = (p: { type: PaymentType; status: PaymentStatus }) => p.type === "withdrawal" && (p.status === "paid" || p.status === "confirmed");
 
 /** ₦ with kobo only when needed: ₦12,500 or ₦12,500.50. */
 export function naira(n: number): string {

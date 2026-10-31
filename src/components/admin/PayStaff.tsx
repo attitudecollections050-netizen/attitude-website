@@ -1,222 +1,96 @@
 "use client";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Banknote, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/browser";
-import { useDialog } from "@/components/ui/useDialog";
 import { buttonClasses } from "@/components/ui/Button";
 import { inputCls } from "@/components/admin/ui";
 import { cn } from "@/lib/cn";
 
+const TOAST_EVENT = "staff-payments-toast";
 const naira = (n: number) => `₦${n.toLocaleString("en-NG", { maximumFractionDigits: 2 })}`;
 
-/** "Pay" button + modal: the owner records a payout (or a bonus) for a staff member. */
-export function PayStaffButton({
-  staffId,
+/** One withdrawal request on the owner's Staff page: send the transfer, then Approve — or Decline with a reason. */
+export function WithdrawalReview({
+  paymentId,
   name,
-  balanceLeft,
-  earned,
-  withdrawn,
-  pending = 0,
+  amount,
   bank,
-  label = "Pay",
-  testId,
 }: {
-  staffId: string;
+  paymentId: string;
   name: string;
-  balanceLeft: number;
-  earned: number;
-  withdrawn: number;
-  pending?: number;
+  amount: number;
   bank: { bankName: string; accountNumber: string; accountName: string } | null;
-  label?: string;
-  testId?: string;
 }) {
   const router = useRouter();
-  const id = useId();
-  const panel = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
-  const [amount, setAmount] = useState("");
-  const [type, setType] = useState<"withdrawal" | "bonus" | "earning">("withdrawal");
-  const [description, setDescription] = useState("");
-  const [confirming, setConfirming] = useState(false);
+  const [mode, setMode] = useState<"idle" | "approve" | "decline">("idle");
+  const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 5000);
-    return () => clearTimeout(t);
-  }, [toast]);
-  const close = () => {
-    setOpen(false);
-    setConfirming(false);
-    setError(null);
-  };
-  useDialog(open, close, panel);
 
-  const value = Number(amount);
-  const valid = amount.trim() !== "" && Number.isFinite(value) && value > 0 && value <= 100_000_000 && Math.round(value * 100) === value * 100;
-  const over = type === "withdrawal" && valid && value > balanceLeft;
-  const needsBank = type === "withdrawal" && !bank;
-
-  const submit = async () => {
+  const review = async (approve: boolean) => {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/admin/pay-staff", {
+      const res = await fetch("/api/admin/payouts/review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ staff_id: staffId, amount: value, description: description.trim() || null, type }),
+        body: JSON.stringify({ payment_id: paymentId, approve, note: approve ? null : note.trim() || null }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data.error ?? "Payment could not be saved.");
-        setConfirming(false);
-        return;
-      }
-      setDone(`${type === "withdrawal" ? "Paid" : "Added"} ${naira(value)}${typeof data.balance_left === "number" ? ` — balance left ${naira(data.balance_left)}` : ""}`);
-      setToast(type === "withdrawal" ? `You paid ${name} ${naira(value)} — waiting for them to confirm receipt` : `You added a ${naira(value)} ${type === "bonus" ? "bonus" : "extra earning"} for ${name}`);
-      setOpen(false);
-      setConfirming(false);
-      setAmount("");
-      setDescription("");
+      if (!res.ok) return setError(data.error ?? "Couldn't save. Please try again.");
+      // Shown by PaymentsLive, which stays on the page after this request disappears from the list.
+      window.dispatchEvent(new CustomEvent(TOAST_EVENT, { detail: approve ? `You paid ${name} ${naira(amount)}` : `Declined ${name}'s request — ${naira(amount)} is back in their balance` }));
+      setMode("idle");
       router.refresh();
     } catch {
       setError("Network problem. Please try again.");
-      setConfirming(false);
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <>
-      <button type="button" onClick={() => { setDone(null); setOpen(true); }} className={buttonClasses("primary", "sm")} data-testid={testId ?? `pay-${staffId}`}>
-        <Banknote className="size-4" aria-hidden /> {label}
-      </button>
-      {done && <p className="w-full text-xs font-semibold text-success" role="status">{done}</p>}
-      {toast && (
-        <div className="fixed inset-x-3 bottom-5 z-[95] mx-auto flex max-w-sm items-center gap-3 rounded-2xl bg-plum px-4 py-3 text-sm font-semibold text-white shadow-2xl" role="status" data-testid="pay-toast">
-          <Banknote className="size-5 shrink-0 text-[#4ADE80]" aria-hidden />
-          <span className="flex-1">{toast}</span>
-          <button type="button" onClick={() => setToast(null)} aria-label="Dismiss" className="-m-1 p-1 opacity-80 hover:opacity-100"><X className="size-4" /></button>
-        </div>
+    <div className="flex flex-wrap items-center gap-2" data-testid={`review-${paymentId}`}>
+      {mode === "idle" && (
+        <>
+          <button type="button" onClick={() => setMode("approve")} className={buttonClasses("primary", "sm")} data-testid="approve">
+            <Banknote className="size-4" aria-hidden /> Approve
+          </button>
+          <button type="button" onClick={() => setMode("decline")} className={buttonClasses("ghost", "sm")} data-testid="decline">
+            Decline
+          </button>
+        </>
       )}
-      {open && (
-        <div className="fixed inset-0 z-[90] flex items-end justify-center bg-plum/50 p-0 backdrop-blur-sm sm:items-center sm:p-6" onClick={close}>
-          <div
-            ref={panel}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={`${id}-t`}
-            tabIndex={-1}
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-t-3xl bg-white p-6 shadow-2xl outline-none sm:rounded-3xl"
-            data-testid="pay-modal"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 id={`${id}-t`} className="font-display text-2xl">Pay {name}</h2>
-                <p className="mt-1 text-sm" data-testid="pay-modal-totals">
-                  Earned: <strong className="text-[#2563EB]">{naira(earned)}</strong> | Withdrawn: <strong className="text-[#EA580C]">{naira(withdrawn)}</strong> | Left:{" "}
-                  <strong className="text-[#16A34A]">{naira(balanceLeft)}</strong>
-                </p>
-                {pending > 0 && <p className="mt-0.5 text-xs text-muted">{naira(pending)} sent and waiting for them to confirm.</p>}
-              </div>
-              <button type="button" onClick={close} className="grid size-9 place-items-center rounded-full hover:bg-neutral" aria-label="Close">
-                <X className="size-5" />
-              </button>
-            </div>
-
-            <div className={cn("mt-4 rounded-2xl border px-4 py-3 text-sm", bank ? "border-line bg-neutral" : "border-[#EA580C] bg-[#FFF7ED] text-[#9A3412]")} data-testid="pay-modal-bank">
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] opacity-70">Their account</p>
-              {bank ? (
-                <p className="mt-1 font-semibold">
-                  {bank.bankName} - <span className="font-mono">{bank.accountNumber}</span> - {bank.accountName}
-                </p>
-              ) : (
-                <p className="mt-1 font-semibold">⚠️ No bank details yet. Ask {name} to add them on their dashboard before you pay a payout.</p>
-              )}
-            </div>
-            {!confirming ? (
-              <form
-                className="mt-5 space-y-4"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (valid) setConfirming(true);
-                }}
-              >
-                <label className="block text-sm font-semibold">
-                  Amount (₦)
-                  <input
-                    className={cn(inputCls, "mt-1.5")}
-                    inputMode="decimal"
-                    autoFocus
-                    placeholder="e.g. 5000"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))}
-                    name="amount"
-                    aria-invalid={amount !== "" && !valid}
-                  />
-                </label>
-                <fieldset>
-                  <legend className="text-sm font-semibold">Type</legend>
-                  <div className="mt-1.5 flex flex-wrap gap-2">
-                    {([
-                      ["withdrawal", "Payout (withdrawal)"],
-                      ["bonus", "Bonus"],
-                      ["earning", "Extra earning"],
-                    ] as const).map(([v, label]) => (
-                      <label key={v} className={cn("cursor-pointer rounded-full border px-3 py-1.5 text-xs font-semibold", type === v ? "border-plum bg-plum text-white" : "border-line hover:border-plum")}>
-                        <input type="radio" name="type" value={v} checked={type === v} onChange={() => setType(v)} className="sr-only" />
-                        {label}
-                      </label>
-                    ))}
-                  </div>
-                  <p className="mt-1.5 text-xs text-muted">
-                    {type === "withdrawal" ? "Money you paid them. It's added to “Withdrawn” and taken off their balance." : "Money you owe them on top of product earnings. It's added to their earnings and balance."}
-                  </p>
-                </fieldset>
-                <label className="block text-sm font-semibold">
-                  Description <span className="font-normal text-muted">(optional)</span>
-                  <input className={cn(inputCls, "mt-1.5")} maxLength={200} placeholder="e.g. October payout, bank transfer" value={description} onChange={(e) => setDescription(e.target.value)} name="description" />
-                </label>
-                {needsBank && <p className="text-xs font-semibold text-[#9A3412]">A payout needs their bank details. You can still add a bonus.</p>}
-                {over && <p className="rounded-xl bg-[#fff8e8] px-3 py-2 text-xs text-[#6b4a00]">This is more than their balance left — the balance will go negative ({naira(balanceLeft - value)}).</p>}
-                {error && <p className="text-sm text-danger" role="alert">{error}</p>}
-                <button type="submit" disabled={!valid || needsBank} className={cn(buttonClasses("primary", "md"), "w-full disabled:opacity-50")}>Continue</button>
-              </form>
-            ) : (
-              <div className="mt-5 space-y-4" data-testid="pay-confirm">
-                <p className="rounded-2xl bg-neutral p-4 text-sm">
-                  {type === "withdrawal" ? (
-                    <>
-                      Send <strong>{naira(value)}</strong> to <strong>{bank?.bankName} - {bank?.accountNumber} - {bank?.accountName}</strong>
-                    </>
-                  ) : (
-                    <>
-                      Record <strong>{naira(value)}</strong> as a <strong>{type}</strong> for <strong>{name}</strong>
-                    </>
-                  )}
-                  {description.trim() ? <> — “{description.trim()}”</> : null}?
-                  <span className="mt-1 block text-xs text-muted">
-                    {type === "withdrawal" ? `Make the bank transfer, then confirm here. ${name} will be asked to confirm they received it.` : "Payments can't be edited later."}
-                  </span>
-                </p>
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => setConfirming(false)} className={cn(buttonClasses("outline", "md"), "flex-1")} disabled={busy}>Back</button>
-                  <button type="button" onClick={() => void submit()} className={cn(buttonClasses("primary", "md"), "flex-1")} disabled={busy} data-testid="pay-confirm-btn">
-                    {busy ? "Saving…" : type === "withdrawal" ? "Confirm & Pay" : "Confirm"}
-                  </button>
-                </div>
-              </div>
-            )}
+      {mode === "approve" && (
+        <div className="w-full rounded-2xl border border-line bg-neutral p-3 text-sm" data-testid="approve-confirm">
+          <p>
+            Send <strong>{naira(amount)}</strong> to <strong>{bank ? `${bank.bankName} - ${bank.accountNumber} - ${bank.accountName}` : "their account"}</strong>, then mark it paid.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button type="button" disabled={busy} onClick={() => void review(true)} className={buttonClasses("primary", "sm")} data-testid="approve-yes">
+              {busy ? "Saving…" : "I've sent it — mark paid"}
+            </button>
+            <button type="button" disabled={busy} onClick={() => setMode("idle")} className={buttonClasses("outline", "sm")}>Back</button>
           </div>
         </div>
       )}
-    </>
+      {mode === "decline" && (
+        <div className="w-full rounded-2xl border border-line bg-neutral p-3 text-sm">
+          <label className="block font-semibold">
+            Reason <span className="font-normal text-muted">(they&apos;ll see it)</span>
+            <input className={cn(inputCls, "mt-1.5")} maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Account name doesn't match" />
+          </label>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button type="button" disabled={busy} onClick={() => void review(false)} className={buttonClasses("outline", "sm")} data-testid="decline-yes">
+              {busy ? "Saving…" : "Decline request"}
+            </button>
+            <button type="button" disabled={busy} onClick={() => setMode("idle")} className={buttonClasses("ghost", "sm")}>Back</button>
+          </div>
+        </div>
+      )}
+      {error && <p className="w-full text-xs text-danger" role="alert">{error}</p>}
+    </div>
   );
 }
 
@@ -226,6 +100,17 @@ export function PayStaffButton({
  */
 export function PaymentsLive({ staffId }: { staffId?: string }) {
   const router = useRouter();
+  const [toast, setToast] = useState<string | null>(null);
+  useEffect(() => {
+    const onToast = (e: Event) => setToast((e as CustomEvent<string>).detail);
+    window.addEventListener(TOAST_EVENT, onToast);
+    return () => window.removeEventListener(TOAST_EVENT, onToast);
+  }, []);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(t);
+  }, [toast]);
   useEffect(() => {
     let channel: ReturnType<ReturnType<typeof createClient>["channel"]> | null = null;
     const db = (() => {
@@ -249,5 +134,12 @@ export function PaymentsLive({ staffId }: { staffId?: string }) {
       if (channel && db) void db.removeChannel(channel);
     };
   }, [router, staffId]);
-  return null;
+  if (!toast) return null;
+  return (
+    <div className="fixed inset-x-3 bottom-5 z-[95] mx-auto flex max-w-sm items-center gap-3 rounded-2xl bg-plum px-4 py-3 text-sm font-semibold text-white shadow-2xl" role="status" data-testid="pay-toast">
+      <Banknote className="size-5 shrink-0 text-[#4ADE80]" aria-hidden />
+      <span className="flex-1">{toast}</span>
+      <button type="button" onClick={() => setToast(null)} aria-label="Dismiss" className="-m-1 p-1 opacity-80 hover:opacity-100"><X className="size-4" /></button>
+    </div>
+  );
 }

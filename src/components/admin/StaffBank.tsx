@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, CreditCard, XCircle } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import { buttonClasses } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 
@@ -126,93 +126,65 @@ export function BankDetailsForm({ banks, initial, readOnly = false }: { banks: r
   );
 }
 
-/** 🔔 PAYMENT ALERT — the staff member confirms whether a payout reached their account. */
-export function PayoutAlert({
-  payout,
-  canAnswer,
-  readOnly = false,
-}: {
-  payout: { id: string; amount: number; createdAt: string; bank: Bank | null };
-  canAnswer: boolean;
-  readOnly?: boolean;
-}) {
+/** The staff member's big "Withdraw to my account" button (their whole balance, to their saved bank). */
+export function WithdrawButton({ balance, bank }: { balance: number; bank: Bank | null }) {
   const router = useRouter();
+  const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [asking, setAsking] = useState(false);
-  const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [answered, setAnswered] = useState<string | null>(null);
-  const date = new Date(payout.createdAt).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric", timeZone: "Africa/Lagos" });
+  const [done, setDone] = useState<string | null>(null);
 
-  const answer = async (received: boolean) => {
+  const withdraw = async () => {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/staff/confirm-payout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payment_id: payout.id, received, note: received ? null : note.trim() || null }),
-      });
+      const res = await fetch("/api/staff/withdraw", { method: "POST", headers: { "Content-Type": "application/json" } });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) return setError(data.error ?? "Couldn't save your answer.");
-      setAnswered(received ? `Thanks! ${naira(payout.amount)} is now in your Withdrawn total.` : "Thanks — the owner has been told it didn't arrive. The money is back in your balance.");
+      if (!res.ok) {
+        setError(data.error ?? "Couldn't request your withdrawal.");
+        setConfirming(false);
+        return;
+      }
+      setDone(`Withdrawal requested ✓ ${naira(Number(data.amount))} will be sent to your account once the owner approves it.`);
       router.refresh();
     } catch {
       setError("Network problem. Please try again.");
+      setConfirming(false);
     } finally {
       setBusy(false);
     }
   };
 
-  if (answered) return <p className="border-2 border-[#16A34A] bg-[#F0FDF4] p-4 text-sm font-semibold text-[#166534]" role="status">{answered}</p>;
+  if (done) return <p className="border-2 border-[#16A34A] bg-[#F0FDF4] p-4 text-sm font-semibold text-[#166534]" role="status" data-testid="withdraw-done">{done}</p>;
   return (
-    <section className="border-2 border-[#E94E8A] bg-[#FFF0F7] p-6 shadow-[6px_6px_0_#E94E8A]" aria-labelledby={`alert-${payout.id}`} data-testid="payout-alert">
-      <h2 id={`alert-${payout.id}`} className="text-sm font-extrabold uppercase tracking-[0.18em] text-[#C2185B]">🔔 Payment alert</h2>
-      <p className="mt-3 text-lg font-semibold">
-        Owner sent <span className="text-2xl font-extrabold">{naira(payout.amount)}</span> to your account:
-      </p>
-      <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-        <dt className="text-black/60">Bank:</dt>
-        <dd className="font-semibold">{payout.bank?.bankName ?? "—"}</dd>
-        <dt className="text-black/60">Number:</dt>
-        <dd className="font-mono font-semibold">{payout.bank?.accountNumber ?? "—"}</dd>
-        <dt className="text-black/60">Name:</dt>
-        <dd className="font-semibold">{payout.bank?.accountName ?? "—"}</dd>
-        <dt className="text-black/60">Date:</dt>
-        <dd className="font-semibold">{date}</dd>
-      </dl>
-      {readOnly ? (
-        <p className="mt-4 text-xs text-black/60">Waiting for the staff member to confirm.</p>
+    <div data-testid="withdraw">
+      {!confirming ? (
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          disabled={!bank || balance <= 0}
+          className="flex w-full flex-col items-center justify-center gap-1 rounded-2xl bg-[#2563EB] px-6 py-5 text-white shadow-[6px_6px_0_#1E3A8A] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-[22rem]"
+          data-testid="withdraw-btn"
+        >
+          <span className="text-lg font-extrabold uppercase tracking-[0.12em]">Withdraw {naira(balance)} to my account</span>
+          {bank && <span className="text-xs font-semibold opacity-90">{bank.bankName} · {bank.accountNumber} · {bank.accountName}</span>}
+        </button>
       ) : (
-        <>
-          <p className="mt-4 font-semibold">Did you receive it?</p>
-          {!canAnswer && <p className="mt-1 text-xs text-[#9A3412]">⚠️ Add your bank details above first.</p>}
-          {asking ? (
-            <div className="mt-3 space-y-2">
-              <label className="block text-sm">
-                What happened? <span className="text-black/50">(optional)</span>
-                <input className={field} value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} placeholder="e.g. Nothing arrived yet" />
-              </label>
-              <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={() => void answer(false)} disabled={busy || !canAnswer} className={cn(buttonClasses("outline", "sm"), "disabled:opacity-50")} data-testid="payout-no-confirm">
-                  Send: I did not receive it
-                </button>
-                <button type="button" onClick={() => setAsking(false)} className="text-xs font-semibold underline">Back</button>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" onClick={() => void answer(true)} disabled={busy || !canAnswer} className="inline-flex items-center gap-2 rounded-full bg-[#16A34A] px-5 py-3 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-50" data-testid="payout-yes">
-                <CheckCircle2 className="size-4" aria-hidden /> ✅ Yes, Confirm I Received {naira(payout.amount)}
-              </button>
-              <button type="button" onClick={() => setAsking(true)} disabled={busy || !canAnswer} className="inline-flex items-center gap-2 rounded-full border-2 border-danger px-5 py-3 text-sm font-bold text-danger transition hover:bg-white disabled:opacity-50" data-testid="payout-no">
-                <XCircle className="size-4" aria-hidden /> ❌ No, I Did Not Receive
-              </button>
-            </div>
-          )}
-        </>
+        <div className="border-2 border-[#2563EB] bg-[#EFF6FF] p-4 text-sm" data-testid="withdraw-confirm">
+          <p>
+            Withdraw <strong>{naira(balance)}</strong> to <strong>{bank?.bankName} - {bank?.accountNumber} - {bank?.accountName}</strong>?
+          </p>
+          <p className="mt-1 text-xs text-black/60">The owner sends it and marks it paid. Check your account details are right.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" disabled={busy} onClick={() => void withdraw()} className="rounded-full bg-[#2563EB] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50" data-testid="withdraw-yes">
+              {busy ? "Sending request…" : "Yes, withdraw"}
+            </button>
+            <button type="button" disabled={busy} onClick={() => setConfirming(false)} className="rounded-full border border-black px-5 py-2.5 text-sm font-semibold">Back</button>
+          </div>
+        </div>
       )}
+      {!bank && <p className="mt-2 text-xs font-semibold text-[#9A3412]">⚠️ Add your bank details above to withdraw.</p>}
       {error && <p className="mt-2 text-sm text-danger" role="alert">{error}</p>}
-    </section>
+    </div>
   );
 }

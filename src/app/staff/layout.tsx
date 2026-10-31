@@ -30,7 +30,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
                 <>
                   <Link href="/admin/products/new" className={link}>Add New Product</Link>
                   <Link href="/admin/products" className={link}>My Products</Link>
-                  <Link href="/staff/dashboard#earnings" className={link}>My Earnings</Link>
+                  <Link href="/staff/earnings" className={link}>My Earnings</Link>
                 </>
               )}
               <form action={signOut}>

@@ -10,7 +10,7 @@ import { ActionForm } from "@/components/admin/ActionForm";
 import { ResendInviteButton, StaffInviteForm } from "@/components/admin/StaffForms";
 import { Badge, Card, Empty, PageHeader } from "@/components/admin/ui";
 import { Notice } from "@/components/ui/Notice";
-import { PayStaffButton, PaymentsLive } from "@/components/admin/PayStaff";
+import { PaymentsLive, WithdrawalReview } from "@/components/admin/PayStaff";
 import { naira, PaymentError, staffPaymentHistory, staffPaymentTotals, type StaffPayment, type StaffPaymentTotals } from "@/lib/staff-payments";
 
 export const metadata = { title: "Staff Management" };
@@ -55,9 +55,13 @@ export default async function StaffPage() {
   // Ask the database directly; only a "function/table not found" error means payments aren't set up.
   let payTotals: StaffPaymentTotals[] = [];
   let recentPayments: StaffPayment[] = [];
+  let pendingRequests: StaffPayment[] = [];
   let payProblem: { kind: "not_installed" | "error"; message: string } | null = null;
   try {
-    [payTotals, recentPayments] = await Promise.all([staffPaymentTotals(), staffPaymentHistory(undefined, 20)]);
+    let history: StaffPayment[];
+    [payTotals, history] = await Promise.all([staffPaymentTotals(), staffPaymentHistory(undefined, 300)]);
+    pendingRequests = history.filter((r) => r.type === "withdrawal" && r.status === "pending");
+    recentPayments = history.slice(0, 20);
   } catch (e) {
     const err = e instanceof PaymentError ? e : null;
     payProblem = { kind: err?.code === "not_installed" ? "not_installed" : "error", message: err?.message ?? "Couldn't load staff payments." };
@@ -65,6 +69,7 @@ export default async function StaffPage() {
     console.error("[staff-payments] check failed", { supabaseUrl: env.supabaseUrl || "(NEXT_PUBLIC_SUPABASE_URL not set)", code: err?.code, detail: err?.detail ?? String(e) });
   }
   const pay = new Map(payTotals.map((t) => [t.userId, t]));
+
   const payReady = !payProblem;
   const supabaseProject = (() => {
     try {
@@ -91,7 +96,46 @@ export default async function StaffPage() {
       />
 
       <PaymentsLive />
-      <Card title="Staff payments" description="What each person has earned, what you've paid them (withdrawn) and what's left. Send the money to their account, then tap Pay — they confirm on their dashboard when it arrives.">
+      {payReady && (
+        <Card
+          title={`Withdrawal requests${pendingRequests.length ? ` (${pendingRequests.length})` : ""}`}
+          description="Staff ask to withdraw their balance from their earnings page. Send the transfer to the account shown, then tap Approve."
+        >
+          {pendingRequests.length === 0 ? (
+            <Empty>No withdrawal requests right now.</Empty>
+          ) : (
+            <ul className="divide-y divide-line" data-testid="withdrawal-requests">
+              {pendingRequests.map((r) => {
+                const who = pay.get(r.staffId);
+                const name = who?.name ?? who?.email ?? "Staff member";
+                return (
+                  <li key={r.id} className="grid gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto] sm:items-center" data-testid={`request-${r.staffId}`}>
+                    <div>
+                      <p className="font-semibold">{name}</p>
+                      <p className="text-xs text-muted">Requested {when(r.createdAt)}</p>
+                      <p className="mt-1 text-2xl font-extrabold tabular-nums text-plum">{naira(r.amount)}</p>
+                    </div>
+                    <div className="rounded-xl bg-neutral px-3 py-2 text-sm">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted">Send to</p>
+                      {r.bank ? (
+                        <>
+                          <p className="font-semibold">{r.bank.bankName}</p>
+                          <p className="font-mono text-base tracking-wider">{r.bank.accountNumber}</p>
+                          <p>{r.bank.accountName}</p>
+                        </>
+                      ) : (
+                        <p className="text-danger">No bank details on this request.</p>
+                      )}
+                    </div>
+                    <WithdrawalReview paymentId={r.id} name={name} amount={r.amount} bank={r.bank} />
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+      )}
+      <Card title="Staff payments" description="What each person has earned, what you've paid them (withdrawn), what's waiting for approval and what's left.">
         {payProblem?.kind === "not_installed" ? (
           <Notice tone="warning">
             Payments aren&apos;t switched on in this database yet. This site is connected to Supabase project <code>{supabaseProject}</code>. In that project&apos;s SQL Editor, run{" "}
@@ -113,7 +157,7 @@ export default async function StaffPage() {
                   <th className="py-2 pr-3 font-bold">Total earned</th>
                   <th className="py-2 pr-3 font-bold">Withdrawn</th>
                   <th className="py-2 pr-3 font-bold">Left</th>
-                  <th className="py-2 font-bold">Actions</th>
+                  <th className="py-2 font-bold">Request</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -140,13 +184,11 @@ export default async function StaffPage() {
                     </td>
                     <td className="py-3 pr-3 font-semibold tabular-nums text-[#EA580C]" data-testid="withdrawn">
                       {naira(t.totalWithdrawn)}
-                      {t.pendingAmount > 0 && <span className="block text-[11px] font-normal text-muted" data-testid="pending">+ {naira(t.pendingAmount)} awaiting confirmation</span>}
+                      {t.pendingAmount > 0 && <span className="block text-[11px] font-normal text-muted" data-testid="pending">+ {naira(t.pendingAmount)} requested</span>}
                     </td>
                     <td className={`py-3 pr-3 font-extrabold tabular-nums ${t.balanceLeft < 0 ? "text-danger" : "text-[#16A34A]"}`} data-testid="balance">{naira(t.balanceLeft)}</td>
                     <td className="py-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <PayStaffButton staffId={t.userId} name={t.name ?? t.email} balanceLeft={t.balanceLeft} earned={t.totalEarnings} withdrawn={t.totalWithdrawn} pending={t.pendingAmount} bank={t.bank} />
-                      </div>
+                      {t.pendingAmount > 0 ? <Badge tone="warning">⏳ Waiting for you</Badge> : <span className="text-xs text-muted">—</span>}
                     </td>
                   </tr>
                 ))}
@@ -170,10 +212,10 @@ export default async function StaffPage() {
                       <Badge tone={r.type === "withdrawal" ? "plum" : "success"}>{r.type === "withdrawal" ? "Withdrawal" : r.type === "bonus" ? "Bonus" : "Earning"}</Badge>
                       {r.type === "withdrawal" && (
                         <Badge tone={r.status === "confirmed" ? "success" : r.status === "pending" ? "warning" : "danger"}>
-                          {r.status === "confirmed" ? "✅ Received" : r.status === "pending" ? "⏳ Awaiting confirmation" : "❌ Not received"}
+                          {r.status === "paid" || r.status === "confirmed" ? "✅ Paid" : r.status === "pending" ? "⏳ Requested" : "❌ Declined"}
                         </Badge>
                       )}
-                      {r.status === "rejected" && r.staffNote && <span className="text-xs text-danger">“{r.staffNote}”</span>}
+                      {r.status === "rejected" && (r.adminNote ?? r.staffNote) && <span className="text-xs text-danger">“{r.adminNote ?? r.staffNote}”</span>}
                       <span className="font-semibold tabular-nums">{r.type === "withdrawal" ? "−" : "+"}{naira(r.amount)}</span>
                       <span className="text-xs text-muted">{when(r.createdAt)}</span>
                     </span>
@@ -249,12 +291,7 @@ export default async function StaffPage() {
                             )}
                           </span>
                         </p>
-                        {t && t.pendingAmount > 0 && <p className="text-xs text-muted">⏳ {naira(t.pendingAmount)} sent, waiting for them to confirm</p>}
-                        {s.status === "active" && payReady && (
-                          <div className="flex flex-wrap items-center gap-2">
-                            <PayStaffButton staffId={s.user_id} name={s.full_name ?? info?.name ?? s.email} balanceLeft={left} earned={earnedNaira} withdrawn={withdrawn} pending={t?.pendingAmount ?? 0} bank={t?.bank ?? null} label="Pay Staff" testId={`team-pay-${s.user_id}`} />
-                          </div>
-                        )}
+                        {t && t.pendingAmount > 0 && <p className="text-xs font-semibold text-[#EA580C]">⏳ Requested {naira(t.pendingAmount)} — approve it above</p>}
                       </div>
                     );
                   })()}

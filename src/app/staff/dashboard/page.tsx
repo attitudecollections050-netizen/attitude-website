@@ -9,8 +9,7 @@ import { formatMoney } from "@/lib/money";
 import { earningsFor, PRODUCTS_PER_REWARD, REWARD_KOBO } from "@/lib/staff-earnings";
 import { buttonClasses } from "@/components/ui/Button";
 import { PaymentsLive } from "@/components/admin/PayStaff";
-import { NIGERIAN_BANKS, naira, staffPaymentHistory, staffPaymentTotals, type StaffPayment } from "@/lib/staff-payments";
-import { BankDetailsForm, PayoutAlert } from "@/components/admin/StaffBank";
+import { naira, staffPaymentHistory, staffPaymentTotals, type StaffPayment } from "@/lib/staff-payments";
 
 export const metadata = { title: "My Dashboard" };
 
@@ -53,22 +52,8 @@ export default async function StaffDashboardPage({ searchParams }: PageProps<"/s
   const withdrawn = payTotals?.totalWithdrawn ?? 0;
   const totalEarned = payTotals?.totalEarnings ?? earningsFor(0).earnedKobo / 100;
   const balanceLeft = payTotals?.balanceLeft ?? totalEarned - withdrawn;
-  const lastPayout = payments.find((p) => p.type === "withdrawal" && p.status === "confirmed") ?? null;
   const pendingPayouts = payments.filter((p) => p.type === "withdrawal" && p.status === "pending");
   const bank = payTotals?.bank ?? null;
-  // Balance after each payment: product earnings + bonuses so far − payouts so far (oldest first).
-  const balanceAfter = new Map<string, number>();
-  {
-    let running = payTotals?.productEarnings ?? 0;
-    for (const p of [...payments].reverse()) {
-      if (p.status === "rejected") {
-        balanceAfter.set(p.id, running);
-        continue;
-      }
-      running += p.type === "withdrawal" ? -p.amount : p.amount;
-      balanceAfter.set(p.id, running);
-    }
-  }
   const row = (stats as { products_added: number; live_products: number }[] | null)?.[0];
   const added = row?.products_added ?? 0;
   const live = row?.live_products ?? 0;
@@ -90,37 +75,18 @@ export default async function StaffDashboardPage({ searchParams }: PageProps<"/s
       </div>
 
       <PaymentsLive staffId={targetId} />
-      {pendingPayouts.map((p) => (
-        <PayoutAlert key={p.id} payout={{ id: p.id, amount: p.amount, createdAt: p.createdAt, bank: p.bank }} canAnswer={Boolean(bank)} readOnly={isOwner} />
-      ))}
-      <BankDetailsForm banks={NIGERIAN_BANKS} initial={bank} readOnly={isOwner} />
-      {lastPayout && (
-        <p className="border border-[#16A34A] bg-[#F0FDF4] px-4 py-3 text-sm font-semibold text-[#166534]" role="status" data-testid="paid-banner">
-          You have been paid {naira(lastPayout.amount)} on {dateFmt.format(new Date(lastPayout.createdAt))}. Balance left {naira(balanceLeft)}.
-        </p>
-      )}
-      <section className="grid gap-px border border-black bg-black sm:grid-cols-3" aria-label="My payments" data-testid="payment-cards">
-        <div className="bg-white p-6">
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/50">Total earned</p>
-          <p className="mt-3 text-4xl font-extrabold tracking-tight text-[#2563EB] sm:text-5xl" data-testid="total-earned">{naira(totalEarned)}</p>
-          <p className="mt-1 text-xs text-black/60">{payTotals && payTotals.extraEarnings > 0 ? `Includes ${naira(payTotals.extraEarnings)} bonus/extra` : "From the products you've added"}</p>
-        </div>
-        <div className="bg-white p-6">
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/50">Total withdrawn</p>
-          <p className="mt-3 text-4xl font-extrabold tracking-tight text-[#EA580C] sm:text-5xl" data-testid="total-withdrawn">{naira(withdrawn)}</p>
+      <section className="flex flex-wrap items-center justify-between gap-4 border border-black p-6" aria-label="My balance" data-testid="earnings-summary">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/50">Balance left</p>
+          <p className="mt-2 text-4xl font-extrabold tracking-tight text-[#16A34A]" data-testid="balance-left">{naira(balanceLeft)}</p>
           <p className="mt-1 text-xs text-black/60">
-            {payTotals && payTotals.pendingAmount > 0
-              ? `+ ${naira(payTotals.pendingAmount)} waiting for you to confirm`
-              : payTotals?.lastPaidAt
-                ? `Last paid ${dateFmt.format(new Date(payTotals.lastPaidAt))}`
-                : "Nothing paid out yet"}
+            Earned {naira(totalEarned)} · Withdrawn {naira(withdrawn)}
+            {pendingPayouts.length > 0 ? ` · ${naira(pendingPayouts.reduce((n, p) => n + p.amount, 0))} waiting for approval` : ""}
           </p>
         </div>
-        <div className="bg-white p-6">
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/50">Balance left</p>
-          <p className={`mt-3 text-4xl font-extrabold tracking-tight sm:text-5xl ${balanceLeft < 0 ? "text-danger" : "text-[#16A34A]"}`} data-testid="balance-left">{naira(balanceLeft)}</p>
-          <p className="mt-1 text-xs text-black/60">Total earned {naira(totalEarned)} − withdrawn {naira(withdrawn)}</p>
-        </div>
+        <Link href={isOwner ? `/staff/earnings?as=${targetId}` : "/staff/earnings"} className="rounded-full bg-[#2563EB] px-6 py-3 text-sm font-bold uppercase tracking-[0.12em] text-white" data-testid="go-withdraw">
+          {pendingPayouts.length > 0 ? "See my withdrawal" : !bank ? "Add bank details" : "Withdraw →"}
+        </Link>
       </section>
 
       {!isOwner && (
@@ -188,38 +154,6 @@ export default async function StaffDashboardPage({ searchParams }: PageProps<"/s
         )}
       </section>
 
-      <section aria-labelledby="pay-history">
-        <h2 id="pay-history" className="mb-4 font-display text-3xl">Payment history</h2>
-        {payments.length === 0 ? (
-          <p className="border border-dashed border-black/30 px-6 py-8 text-center text-sm text-black/60">No payments yet. When the owner pays you, it shows up here.</p>
-        ) : (
-          <div className="overflow-x-auto border border-black">
-            <table className="w-full min-w-[40rem] text-left text-sm" data-testid="payment-history">
-              <thead className="border-b border-black text-[11px] uppercase tracking-[0.16em]">
-                <tr><th className="px-4 py-3 font-bold">Date</th><th className="px-4 py-3 font-bold">Description</th><th className="px-4 py-3 font-bold">Amount</th><th className="px-4 py-3 font-bold">Type</th><th className="px-4 py-3 font-bold">Status</th><th className="px-4 py-3 font-bold">Balance after</th></tr>
-              </thead>
-              <tbody className="divide-y divide-black/10">
-                {payments.map((p) => (
-                  <tr key={p.id}>
-                    <td className="px-4 py-3 text-black/60">{dateFmt.format(new Date(p.createdAt))}</td>
-                    <td className="px-4 py-3">{p.description ?? (p.type === "withdrawal" ? "Payout" : "—")}</td>
-                    <td className="px-4 py-3 font-semibold tabular-nums">{p.type === "withdrawal" ? "−" : "+"}{naira(p.amount)}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] ${p.type === "withdrawal" ? "border-black bg-black text-white" : "border-success text-success"}`}>
-                        {p.type === "withdrawal" ? "Withdrawal" : p.type === "bonus" ? "Bonus" : "Earning"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs font-semibold">
-                      {p.type !== "withdrawal" ? "—" : p.status === "confirmed" ? <span className="text-[#16A34A]">✅ Received</span> : p.status === "pending" ? <span className="text-[#EA580C]">⏳ Please confirm</span> : <span className="text-danger">❌ Not received</span>}
-                    </td>
-                    <td className="px-4 py-3 font-semibold tabular-nums">{naira(balanceAfter.get(p.id) ?? 0)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
 
       <aside className="border border-black bg-neutral p-6">
         <p className="text-[11px] font-bold uppercase tracking-[0.18em]">How you earn</p>

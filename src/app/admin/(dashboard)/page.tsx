@@ -224,12 +224,12 @@ function MyStats({
       {forbidden && <Notice tone="error">You don&apos;t have permission to open that section.</Notice>}
       <PaymentsLive staffId={userId} />
       {pending > 0 && (
-        <Link href="/staff/dashboard" className="block border-2 border-[#E94E8A] bg-[#FFF0F7] px-4 py-3 text-sm font-semibold text-[#C2185B]" data-testid="my-pending-alert">
-          🔔 The owner sent you {naira(pending)}. Tap here to confirm you received it.
+        <Link href="/staff/earnings" className="block border-2 border-[#EA580C] bg-[#FFF7ED] px-4 py-3 text-sm font-semibold text-[#9A3412]" data-testid="my-pending-alert">
+          ⏳ Withdrawal requested: {naira(pending)} is waiting for the owner to approve.
         </Link>
       )}
       {!hasBank && (
-        <Link href="/staff/dashboard#bank-h" className="block border border-[#EA580C] bg-[#FFF7ED] px-4 py-3 text-sm font-semibold text-[#9A3412]" data-testid="my-bank-warning">
+        <Link href="/staff/earnings#bank-h" className="block border border-[#EA580C] bg-[#FFF7ED] px-4 py-3 text-sm font-semibold text-[#9A3412]" data-testid="my-bank-warning">
           ⚠️ Add your bank details to receive payments →
         </Link>
       )}
@@ -237,11 +237,16 @@ function MyStats({
         <li className="border border-line bg-white p-5">
           <p className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-muted">Total withdrawn</p>
           <p className="mt-2 text-4xl font-extrabold tabular-nums" data-testid="my-withdrawn">{naira(withdrawn)}</p>
-          <Link href="/staff/dashboard#pay-history" className="mt-1 inline-block text-xs underline">See payment history</Link>
+          <Link href="/staff/earnings#pay-history" className="mt-1 inline-block text-xs underline">See withdrawal history</Link>
         </li>
         <li className="border border-line bg-white p-5">
           <p className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-muted">Balance left</p>
           <p className={`mt-2 text-4xl font-extrabold tabular-nums ${balanceLeft < 0 ? "text-danger" : "text-success"}`} data-testid="my-balance">{naira(balanceLeft)}</p>
+          {balanceLeft > 0 && pending === 0 && (
+            <Link href="/staff/earnings#withdraw" className="mt-2 inline-block rounded-full bg-[#2563EB] px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white" data-testid="my-withdraw-link">
+              Withdraw {naira(balanceLeft)} →
+            </Link>
+          )}
         </li>
       </ul>
       <ul className="grid gap-3 sm:grid-cols-3" data-testid="my-stats">
