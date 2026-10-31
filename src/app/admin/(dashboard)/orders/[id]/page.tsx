@@ -88,14 +88,17 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
                   const sup = info && (Array.isArray(info.supplier) ? info.supplier[0] : info.supplier) as { name: string } | null;
                   const v = i.variant_id ? variantBy.get(i.variant_id) : undefined;
                   const photos = photosBy.get(i.product_id ?? "") ?? [];
-                  const shown = i.selected_image ?? i.image_url ?? photos[0]?.url ?? null;
                   return (
                     <Fragment key={i.id}>
                     <tr data-testid={`item-${i.id}`}>
                       <td className="align-top">
-                        <span className={`relative block size-20 overflow-hidden rounded-xl border-2 bg-neutral ${i.selected_image ? "border-success" : "border-line"}`}>
-                          <SmartImage src={shown} alt={i.product_name} fill sizes="80px" className="object-cover" />
-                        </span>
+                        {i.selected_image ? (
+                          <span className="relative block size-20 overflow-hidden rounded-xl border-2 border-success bg-neutral">
+                            <SmartImage src={i.selected_image} alt={`${i.product_name} — chosen design`} fill sizes="80px" className="object-cover" />
+                          </span>
+                        ) : (
+                          <span className="grid size-20 place-items-center rounded-xl border-2 border-dashed border-warning bg-[#fff8e8] text-2xl" aria-hidden>?</span>
+                        )}
                         <span className={`mt-1 block text-[10px] font-semibold ${i.selected_image ? "text-success" : "text-warning"}`} data-testid="design-status">
                           {i.selected_image ? (i.selected_set_by ? "✓ Set by team" : "✓ Customer's pick") : "⚠ Design not recorded"}
                         </span>

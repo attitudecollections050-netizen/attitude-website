@@ -19,9 +19,9 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
   const orders = (data ?? []) as unknown as { id: string; order_number: string; customer_name: string; email: string; total: number; currency: string; status: OrderStatus; payment_status: string; inventory_conflict: boolean; created_at: string; shipping_address: { city: string; country_code: string } }[];
   const pages = Math.ceil((count ?? 0) / ORDER_PAGE_SIZE);
   // Item photos for these orders: the exact design the customer picked where it was recorded.
-  type Thumb = { order_id: string; product_name: string; variant_label: string | null; quantity: number; image_url: string | null; selected_image: string | null };
+  type Thumb = { order_id: string; product_name: string; variant_label: string | null; quantity: number; selected_image: string | null };
   const { data: itemRows } = orders.length
-    ? await (await createClient()).from("order_items").select("order_id, product_name, variant_label, quantity, image_url, selected_image").in("order_id", orders.map((o) => o.id))
+    ? await (await createClient()).from("order_items").select("order_id, product_name, variant_label, quantity, selected_image").in("order_id", orders.map((o) => o.id))
     : { data: [] as Thumb[] };
   const itemsBy = new Map<string, Thumb[]>();
   for (const i of (itemRows ?? []) as Thumb[]) itemsBy.set(i.order_id, [...(itemsBy.get(i.order_id) ?? []), i]);
@@ -60,20 +60,28 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
         <Empty>No orders match.</Empty>
       ) : (
         <Table>
-          <thead><tr><th>Item image</th><th>Order</th><th>Customer</th><th>Destination</th><th>Status</th><th>Payment</th><th className="!text-right">Total</th></tr></thead>
+          <thead><tr><th>Item image (exact design)</th><th>Order</th><th>Customer</th><th>Destination</th><th>Status</th><th>Payment</th><th className="!text-right">Total</th></tr></thead>
           <tbody>
             {orders.map((o) => (
               <tr key={o.id}>
                 <td className="!py-2">
-                  <Link href={`/admin/orders/${o.id}`} className="flex flex-wrap gap-1" aria-label={`Items in ${o.order_number}`} data-testid={`thumbs-${o.order_number}`}>
+                  <Link href={`/admin/orders/${o.id}`} className="flex flex-col gap-2" aria-label={`Items in ${o.order_number}`} data-testid={`thumbs-${o.order_number}`}>
                     {(itemsBy.get(o.id) ?? []).slice(0, 6).map((i, n) => (
-                      <span
-                        key={n}
-                        className={`relative block size-11 overflow-hidden rounded-lg border-2 bg-neutral ${i.selected_image ? "border-success" : "border-line"}`}
-                        title={`${i.product_name}${i.variant_label ? ` · ${i.variant_label}` : ""} × ${i.quantity}${i.selected_image ? " (exact design picked)" : " (design not recorded)"}`}
-                      >
-                        <SmartImage src={i.selected_image ?? i.image_url} alt={i.product_name} fill sizes="44px" className="object-cover" />
-                        {i.quantity > 1 && <span className="absolute bottom-0 right-0 bg-plum px-1 text-[9px] font-bold text-white">×{i.quantity}</span>}
+                      <span key={n} className="flex items-center gap-2.5">
+                        {i.selected_image ? (
+                          <span className="relative block size-20 shrink-0 overflow-hidden rounded-xl border-2 border-success bg-neutral">
+                            <SmartImage src={i.selected_image} alt={`${i.product_name} — chosen design`} fill sizes="80px" className="object-cover" />
+                            {i.quantity > 1 && <span className="absolute bottom-0 right-0 bg-plum px-1 text-[10px] font-bold text-white">×{i.quantity}</span>}
+                          </span>
+                        ) : (
+                          <span className="grid size-20 shrink-0 place-items-center rounded-xl border-2 border-dashed border-warning bg-[#fff8e8] px-1 text-center text-[10px] font-semibold leading-tight text-[#6b4a00]" data-testid="no-design">
+                            ⚠ Design not recorded
+                          </span>
+                        )}
+                        <span className="min-w-0 max-w-[11rem] text-xs leading-snug">
+                          <span className="line-clamp-2 font-semibold text-plum">{i.product_name}</span>
+                          <span className="block text-muted">{i.variant_label ?? "—"}{i.quantity > 1 ? ` · ×${i.quantity}` : ""}</span>
+                        </span>
                       </span>
                     ))}
                   </Link>
