@@ -126,10 +126,10 @@ export default async function StaffEarningsPage({ searchParams }: { searchParams
                 {payments.map((p) => (
                   <tr key={p.id}>
                     <td className="px-4 py-3 text-black/60">{dateFmt.format(new Date(p.createdAt))}</td>
-                    <td className="px-4 py-3 font-semibold tabular-nums">{p.type === "withdrawal" ? "−" : "+"}{naira(p.amount)}</td>
+                    <td className="px-4 py-3 font-semibold tabular-nums">{p.type === "withdrawal" || p.type === "penalty" ? "−" : "+"}{naira(p.amount)}</td>
                     <td className="px-4 py-3 text-xs">{p.bank ? `${p.bank.bankName} · ${p.bank.accountNumber}` : p.description ?? "—"}</td>
                     <td className={`px-4 py-3 text-xs font-semibold ${STATUS[p.status]?.cls ?? ""}`}>
-                      {p.type === "withdrawal" ? STATUS[p.status]?.label ?? p.status : "✅ Added"}
+                      {p.type === "withdrawal" ? STATUS[p.status]?.label ?? p.status : p.type === "penalty" ? "🌱 Deducted" : "✅ Added"}
                       {p.status === "rejected" && p.adminNote && <span className="block font-normal text-black/60">“{p.adminNote}”</span>}
                     </td>
                   </tr>

@@ -10,7 +10,7 @@ import { cn } from "@/lib/cn";
 
 interface Alert {
   id: string;
-  kind: "order" | "withdrawal";
+  kind: "order" | "withdrawal" | "work";
   title: string;
   body: string;
   href: string;
@@ -26,7 +26,7 @@ const permission = () => (typeof Notification === "undefined" ? "unsupported" : 
  * when the admin tab is in the background. Uses Supabase Realtime, which only sends rows
  * the signed-in person is allowed to read.
  */
-export function AdminPinkNotifications({ orders, withdrawals }: { orders: boolean; withdrawals: boolean }) {
+export function AdminPinkNotifications({ orders, withdrawals, staffWork = false }: { orders: boolean; withdrawals: boolean; staffWork?: boolean }) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [perm, setPerm] = useState<string>("default");
   const initialPerm = useSyncExternalStore(noSubscribe, permission, () => "default");
@@ -43,7 +43,7 @@ export function AdminPinkNotifications({ orders, withdrawals }: { orders: boolea
       document.title = `(${unseen.current}) ${a.title} · ${baseTitle.current}`;
       if (permission() === "granted") {
         try {
-          const n = new Notification(a.title, { body: a.body, icon: a.kind === "order" ? "/mascots/girl-face.png" : "/mascots/boy-face.png", tag: a.id });
+          const n = new Notification(a.title, { body: a.body, icon: a.kind === "withdrawal" ? "/mascots/boy-face.png" : "/mascots/girl-face.png", tag: a.id });
           n.onclick = () => {
             window.focus();
             window.location.href = a.href;
@@ -67,7 +67,7 @@ export function AdminPinkNotifications({ orders, withdrawals }: { orders: boolea
   }, []);
 
   useEffect(() => {
-    if (!orders && !withdrawals) return;
+    if (!orders && !withdrawals && !staffWork) return;
     const db = createClient();
     const channel = db.channel("admin-alerts");
     if (orders) {
@@ -91,13 +91,21 @@ export function AdminPinkNotifications({ orders, withdrawals }: { orders: boolea
         });
       });
     }
+    if (staffWork) {
+      // Haru: a staff member finished some work (or fixed it) and it needs a rating.
+      channel.on("postgres_changes", { event: "INSERT", schema: "public", table: "staff_notifications" }, (payload) => {
+        const n = payload.new as { id: string; to_role: string; title: string; message: string };
+        if (n.to_role !== "admin") return;
+        push({ id: `work-${n.id}`, kind: "work", title: n.title, body: n.message, href: "/admin/staff-tasks" });
+      });
+    }
     channel.subscribe();
     return () => {
       void db.removeChannel(channel);
     };
-  }, [orders, withdrawals, push]);
+  }, [orders, withdrawals, staffWork, push]);
 
-  if (!orders && !withdrawals) return null;
+  if (!orders && !withdrawals && !staffWork) return null;
   const close = (id: string) => setAlerts((list) => list.filter((a) => a.id !== id));
 
   return (
@@ -113,7 +121,7 @@ export function AdminPinkNotifications({ orders, withdrawals }: { orders: boolea
             transition={{ type: "spring", stiffness: 380, damping: 24 }}
             className={cn(
               "pointer-events-auto relative w-full overflow-hidden rounded-[1.4rem] border-2 p-4 shadow-[0_18px_40px_-12px_rgba(233,78,138,0.55)]",
-              a.kind === "order" ? "border-[#FFB6D9] bg-[#FFE4EF]" : "border-[#C084FC] bg-[#F5E8FF]",
+              a.kind === "withdrawal" ? "border-[#C084FC] bg-[#F5E8FF]" : "border-[#FFB6D9] bg-[#FFE4EF]",
             )}
             role="status"
             data-testid={`alert-${a.kind}`}
@@ -129,18 +137,18 @@ export function AdminPinkNotifications({ orders, withdrawals }: { orders: boolea
                 transition={{ duration: 1.2, repeat: 2 }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={a.kind === "order" ? "/mascots/girl-face.png" : "/mascots/boy-face.png"} alt={a.kind === "order" ? "Haru" : "Jin"} className="size-full object-cover" />
+                <img src={a.kind === "withdrawal" ? "/mascots/boy-face.png" : "/mascots/girl-face.png"} alt={a.kind === "withdrawal" ? "Jin" : "Haru"} className="size-full object-cover" />
               </m.span>
               <div className="min-w-0">
-                <p className={cn("font-display text-lg font-semibold leading-tight", a.kind === "order" ? "text-[#C2185B]" : "text-[#7E22CE]")}>{a.title}</p>
+                <p className={cn("font-display text-lg font-semibold leading-tight", a.kind === "withdrawal" ? "text-[#7E22CE]" : "text-[#C2185B]")}>{a.title}</p>
                 <p className="mt-0.5 text-sm text-plum">{a.body}</p>
                 <div className="mt-2 flex gap-2">
                   <Link
                     href={a.href}
                     onClick={() => close(a.id)}
-                    className={cn("rounded-full px-3.5 py-1.5 text-xs font-bold text-white", a.kind === "order" ? "bg-[#E94E8A]" : "bg-[#9333EA]")}
+                    className={cn("rounded-full px-3.5 py-1.5 text-xs font-bold text-white", a.kind === "withdrawal" ? "bg-[#9333EA]" : "bg-[#E94E8A]")}
                   >
-                    View
+                    {a.kind === "work" ? "Rate now" : "View"}
                   </Link>
                   <button type="button" onClick={() => close(a.id)} className="rounded-full border border-current bg-white px-3.5 py-1.5 text-xs font-bold text-[#C2185B]">
                     Close
@@ -162,7 +170,7 @@ export function AdminPinkNotifications({ orders, withdrawals }: { orders: boolea
           data-testid="alerts-enable"
         >
           {effectivePerm === "denied" ? <BellOff className="size-3.5" aria-hidden /> : <Bell className="size-3.5" aria-hidden />}
-          {effectivePerm === "denied" ? "Phone alerts blocked in browser settings" : "Turn on order & withdrawal alerts"}
+          {effectivePerm === "denied" ? "Phone alerts blocked in browser settings" : staffWork ? "Turn on order, staff & withdrawal alerts" : "Turn on order & withdrawal alerts"}
         </button>
       )}
     </div>

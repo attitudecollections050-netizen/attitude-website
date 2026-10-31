@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 // Everything runs with the signed-in person's session, so the database decides who may
 // see or pay what: the owner sees and pays everyone, staff only see themselves.
 
-export type PaymentType = "withdrawal" | "earning" | "bonus";
+export type PaymentType = "withdrawal" | "earning" | "bonus" | "penalty";
 export const PAYMENT_TYPES: PaymentType[] = ["withdrawal", "bonus", "earning"];
 
 export interface StaffPaymentTotals {

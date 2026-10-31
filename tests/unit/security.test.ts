@@ -46,7 +46,7 @@ describe("staff roles", async () => {
 
   it("Product Staff can manage products and nothing else", () => {
     const p = permissionsFor(["product_staff"]);
-    expect(p).toEqual(["products:write", "earnings:self"]);
+    expect(p).toEqual(["products:write", "earnings:self", "work:self"]);
     for (const perm of ownerOnly) expect(p, perm).not.toContain(perm);
     expect(p).not.toContain("products:delete");
   });

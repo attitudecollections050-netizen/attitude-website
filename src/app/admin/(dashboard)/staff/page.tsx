@@ -209,14 +209,14 @@ export default async function StaffPage() {
                       <span className="text-muted"> · {r.description ?? (r.type === "withdrawal" ? "Payout" : r.type)}</span>
                     </span>
                     <span className="flex flex-wrap items-center gap-3">
-                      <Badge tone={r.type === "withdrawal" ? "plum" : "success"}>{r.type === "withdrawal" ? "Withdrawal" : r.type === "bonus" ? "Bonus" : "Earning"}</Badge>
+                      <Badge tone={r.type === "withdrawal" ? "plum" : r.type === "penalty" ? "danger" : "success"}>{r.type === "withdrawal" ? "Withdrawal" : r.type === "bonus" ? "Bonus" : r.type === "penalty" ? "Deduction" : "Earning"}</Badge>
                       {r.type === "withdrawal" && (
                         <Badge tone={r.status === "confirmed" ? "success" : r.status === "pending" ? "warning" : "danger"}>
                           {r.status === "paid" || r.status === "confirmed" ? "✅ Paid" : r.status === "pending" ? "⏳ Requested" : "❌ Declined"}
                         </Badge>
                       )}
                       {r.status === "rejected" && (r.adminNote ?? r.staffNote) && <span className="text-xs text-danger">“{r.adminNote ?? r.staffNote}”</span>}
-                      <span className="font-semibold tabular-nums">{r.type === "withdrawal" ? "−" : "+"}{naira(r.amount)}</span>
+                      <span className="font-semibold tabular-nums">{r.type === "withdrawal" || r.type === "penalty" ? "−" : "+"}{naira(r.amount)}</span>
                       <span className="text-xs text-muted">{when(r.createdAt)}</span>
                     </span>
                   </li>

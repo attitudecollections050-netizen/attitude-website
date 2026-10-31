@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { AnimatePresence, m } from "motion/react";
-import { LayoutDashboard, Package, ShoppingBag, Layers, Truck, Tag, Home, Settings, Boxes, Mail, Menu, X, Store, LogOut, FileText, CreditCard, Users, BarChart3, Heart, Globe2, UserCog, Wallet, Landmark } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingBag, Layers, Truck, Tag, Home, Settings, Boxes, Mail, Menu, X, Store, LogOut, FileText, CreditCard, Users, BarChart3, Heart, Globe2, UserCog, Wallet, Landmark, Star, Bell } from "lucide-react";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { signOut } from "@/app/actions/auth";
 import { cn } from "@/lib/cn";
@@ -29,9 +29,12 @@ const ITEMS = [
   { href: "/admin/international", label: "International", icon: Globe2, perm: "settings:write" },
   { href: "/admin/settings", label: "Store Settings", icon: Settings, perm: "settings:write" },
   { href: "/admin/staff", label: "Staff Management", icon: UserCog, perm: "staff:manage" },
+  { href: "/admin/staff-tasks", label: "Rate Staff Work", icon: Star, perm: "staff:manage" },
+  { href: "/admin/notifications", label: "Staff Notifications", icon: Bell, perm: "staff:manage" },
+  { href: "/staff/notifications", label: "Haru's Notifications", icon: Bell, perm: "work:self" },
 ] as const;
 
-export function AdminNav({ permissions, email }: { permissions: string[]; email: string }) {
+export function AdminNav({ permissions, email, badges = {} }: { permissions: string[]; email: string; badges?: Record<string, number> }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   // One link per page (someone with both order and product access sees Overview only once).
@@ -50,6 +53,11 @@ export function AdminNav({ permissions, email }: { permissions: string[]; email:
         >
           <Icon className={cn("size-4 shrink-0", isActive(href) && "text-rose")} aria-hidden />
           {label}
+          {(badges[href] ?? 0) > 0 && (
+            <span className="ml-auto rounded-full bg-[#E94E8A] px-1.5 py-0.5 text-[10px] font-bold leading-none text-white" aria-label={`${badges[href]} new`}>
+              {badges[href] > 99 ? "99+" : badges[href]}
+            </span>
+          )}
         </Link>
       ))}
     </nav>

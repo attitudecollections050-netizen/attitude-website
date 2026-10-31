@@ -13,6 +13,8 @@ export type Permission =
   | "products:delete"
   | "staff:manage"
   | "earnings:self"
+  /** See their own work ratings and Haru's notifications (every staff member, not the owner). */
+  | "work:self"
   | "payments:verify"
   | "shipping:write"
   | "discounts:write"
@@ -42,8 +44,8 @@ const MATRIX: Record<AppRole, Permission[]> = {
     "reports:read",
   ],
   // Financial reports and analytics stay admin-only.
-  staff: ["orders:read", "orders:update", "messages:read", "customers:read", "feedback:manage"],
-  product_staff: ["products:write", "earnings:self"],
+  staff: ["orders:read", "orders:update", "messages:read", "customers:read", "feedback:manage", "work:self"],
+  product_staff: ["products:write", "earnings:self", "work:self"],
 };
 
 export const ROLE_LABELS: Record<AppRole, string> = { admin: "Owner", staff: "Order staff", product_staff: "Product Staff" };
