@@ -149,6 +149,41 @@ run("database: staff work ratings, auto ₦25 bonus/penalty and Haru notificatio
     await expect(as(db, user(staffA), () => db.query(`select log_staff_task($1, 'set_design', 'fake')`, [staffA]))).rejects.toThrow();
   });
 
+  it("streak counters persist in the database exactly as asked, and every rating stays in the history", async () => {
+    const streak = async () => (await db.query(`select good_streak, poor_streak from staff_members where user_id = $1`, [staffB])).rows[0];
+    await db.query(`update staff_members set good_streak = 0, poor_streak = 0 where user_id = $1`, [staffB]);
+    const before = (await db.query(`select count(*)::int c from staff_ratings where staff_id = $1`, [staffB])).rows[0].c;
+    // Good, Good -> Good 2/3, Poor 0/3
+    await rate(owner, (await addProduct(staffB))!, "good");
+    await rate(owner, (await addProduct(staffB))!, "good");
+    expect(await streak()).toEqual({ good_streak: 2, poor_streak: 0 });
+    // Poor -> Poor 1/3, Good back to 0
+    await rate(owner, (await addProduct(staffB))!, "poor", "Wrong colour");
+    expect(await streak()).toEqual({ good_streak: 0, poor_streak: 1 });
+    // Good -> Good 1/3, Poor back to 0
+    await rate(owner, (await addProduct(staffB))!, "good");
+    expect(await streak()).toEqual({ good_streak: 1, poor_streak: 0 });
+    // The history keeps every rating, newest first: Good, Poor, Good, Good
+    const hist = (await as(db, user(staffB), () => db.query(`select rating from staff_ratings where staff_id = $1 order by created_at desc, id limit 4`, [staffB]))).rows.map((r) => r.rating);
+    expect(hist).toEqual(["good", "poor", "good", "good"]);
+    expect((await db.query(`select count(*)::int c from staff_ratings where staff_id = $1`, [staffB])).rows[0].c).toBe(before + 4);
+    // Staff can read their own history but not someone else's
+    expect((await as(db, user(staffB), () => db.query(`select 1 from staff_ratings where staff_id = $1`, [staffA]))).rowCount).toBe(0);
+  });
+
+  it("push subscriptions: each person manages only their own devices", async () => {
+    const ins = (who: string, endpoint: string) =>
+      as(db, user(who), () => db.query(`insert into push_subscriptions (user_id, endpoint, subscription) values ($1, $2, '{}'::jsonb)`, [who, endpoint]));
+    await ins(owner, "https://push.example.com/owner-phone");
+    await expect(as(db, user(staffA), () => db.query(`insert into push_subscriptions (user_id, endpoint, subscription) values ($1, 'https://push.example.com/fake', '{}'::jsonb)`, [owner]))).rejects.toThrow();
+    await expect(ins(staffA, "http://insecure.example.com/x")).rejects.toThrow();
+    expect((await as(db, user(staffA), () => db.query(`select * from push_subscriptions`))).rowCount).toBe(0);
+    expect((await as(db, user(staffA), () => db.query(`delete from push_subscriptions returning id`))).rowCount).toBe(0);
+    expect((await as(db, user(owner), () => db.query(`select endpoint from push_subscriptions`))).rows).toEqual([{ endpoint: "https://push.example.com/owner-phone" }]);
+    // New notifications start un-pushed
+    expect((await db.query(`select count(*)::int c from staff_notifications where pushed_at is not null`)).rows[0].c).toBe(0);
+  });
+
   const addProducts10 = async (who: string) => {
     for (let i = 0; i < 10; i++) {
       n += 1;

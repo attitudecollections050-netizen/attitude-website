@@ -1,4 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
+import { dispatchPendingPushesSafe } from "@/lib/push";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { assertPermission, AuthorizationError } from "@/lib/auth";
@@ -27,6 +28,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid rating." }, { status: 400 });
   try {
     const r = await rateTask({ taskId: parsed.data.task_id, rating: parsed.data.rating, reason: parsed.data.reason });
+    after(dispatchPendingPushesSafe);
     revalidatePath("/admin/staff-tasks");
     revalidatePath("/admin/staff");
     return NextResponse.json({ ok: true, ...r });

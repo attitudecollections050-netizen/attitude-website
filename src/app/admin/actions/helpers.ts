@@ -1,5 +1,7 @@
 import "server-only";
 import { z } from "zod";
+import { after } from "next/server";
+import { dispatchPendingPushesSafe } from "@/lib/push";
 import { assertPermission, AuthorizationError, getCurrentRoles } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { Permission } from "@/lib/permissions";
@@ -17,6 +19,9 @@ export async function guarded(
   try {
     const { user } = await assertPermission(permission);
     const db = await createClient();
+    // Staff work (products, designs, order updates) creates notifications in the database;
+    // push them to phones once the response is sent.
+    after(dispatchPendingPushesSafe);
     return await fn({ db, userId: user.id });
   } catch (e) {
     if (e instanceof AuthorizationError) return { ok: false, message: e.message };

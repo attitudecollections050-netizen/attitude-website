@@ -3,9 +3,9 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, m } from "motion/react";
-import { Volume2, X } from "lucide-react";
+import { Bell, Volume2, VolumeX, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/browser";
-import { playChime } from "@/components/assistant/chime";
+import { isSoundOn, notify, playTestSound, setSoundOn, subscribeSound } from "@/lib/notify-sound";
 import { canSpeak, speak, stopSpeaking } from "@/components/assistant/voice";
 import { cn } from "@/lib/cn";
 
@@ -81,6 +81,49 @@ function HaruAvatar({ size = "size-12", wiggle = false }: { size?: string; wiggl
   );
 }
 
+// Where Web Push works, the "Enable Push Notifications" panel asks for permission instead.
+const permissionNow = () => (typeof Notification === "undefined" || "PushManager" in window ? "unsupported" : Notification.permission);
+
+/** "Sound On/Off" (remembered on this device) and, until allowed, "Allow phone alerts". */
+export function SoundControls() {
+  const on = useSyncExternalStore(subscribeSound, isSoundOn, () => true);
+  const initialPerm = useSyncExternalStore(noSubscribe, permissionNow, () => "unsupported");
+  const [perm, setPerm] = useState<string | null>(null);
+  const p = perm ?? initialPerm;
+  return (
+    <span className="ml-auto inline-flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        onClick={() => {
+          setSoundOn(!on);
+          if (!on) playTestSound(); // let them hear it (this tap also unlocks sound on phones)
+        }}
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-full border-2 px-3 py-1 text-xs font-bold",
+          on ? "border-[#E94E8A] bg-[#FFE4EF] text-[#C2185B]" : "border-black/20 bg-white text-black/50",
+        )}
+        data-testid="sound-toggle"
+      >
+        {on ? <Volume2 className="size-3.5" aria-hidden /> : <VolumeX className="size-3.5" aria-hidden />}
+        Sound {on ? "On" : "Off"}
+      </button>
+      {p === "default" && (
+        <button
+          type="button"
+          onClick={async () => setPerm(await Notification.requestPermission())}
+          className="inline-flex items-center gap-1.5 rounded-full border-2 border-[#FFB6D9] bg-white px-3 py-1 text-xs font-bold text-[#C2185B]"
+          data-testid="allow-alerts"
+        >
+          <Bell className="size-3.5" aria-hidden /> Allow phone alerts
+        </button>
+      )}
+      {p === "denied" && <span className="text-[11px] text-black/50">Phone alerts blocked in browser settings</span>}
+    </span>
+  );
+}
+
 /**
  * Haru's messages as pink anime cards, newest first, live. Staff get "Go Correct Now" and
  * "I fixed it" on work rated Poor; the owner gets a "Rate now" link on new work.
@@ -101,6 +144,9 @@ export function HaruNotificationList({ initial, role, taskStatus = {} }: { initi
         const r = payload.new as Row;
         if (r.to_role !== role) return;
         setItems((list) => (list.some((x) => x.id === r.id) ? list : [fromRow(r), ...list]));
+        // Ding (unless Sound is off) + a phone notification if allowed. Once per message, even
+        // though the pink pop-up hears it too.
+        notify(`note-${r.id}`, r.title, r.message, { href: role === "admin" ? "/admin/staff-tasks" : r.link ?? "/staff/notifications" });
       })
       .subscribe();
     return () => {
@@ -142,6 +188,7 @@ export function HaruNotificationList({ initial, role, taskStatus = {} }: { initi
             <span className="text-black/50">All caught up 💖</span>
           )}
         </p>
+        <SoundControls />
         {unread > 0 && (
           <button type="button" onClick={() => void readAll()} className="text-xs font-semibold underline underline-offset-4" data-testid="read-all">
             Mark all as read
@@ -228,12 +275,7 @@ export function HaruToasts() {
         const r = payload.new as Row;
         if (r.to_role !== "staff") return;
         setToasts((list) => [fromRow(r), ...list.filter((x) => x.id !== r.id)].slice(0, 3));
-        playChime();
-        if (document.hidden && typeof Notification !== "undefined" && Notification.permission === "granted") {
-          try {
-            new Notification(r.title, { body: r.message, icon: "/mascots/girl-face.png", tag: r.id });
-          } catch {}
-        }
+        notify(`note-${r.id}`, r.title, r.message, { href: r.link ?? "/staff/notifications" });
       })
       .subscribe();
     return () => {

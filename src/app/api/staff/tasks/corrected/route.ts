@@ -1,4 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
+import { dispatchPendingPushesSafe } from "@/lib/push";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
@@ -17,6 +18,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   try {
     await markTaskCorrected(parsed.data.task_id);
+    after(dispatchPendingPushesSafe);
     revalidatePath("/staff/notifications");
     return NextResponse.json({ ok: true });
   } catch (e) {

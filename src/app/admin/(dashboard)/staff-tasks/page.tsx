@@ -5,27 +5,19 @@ import { Badge, Card, Empty, PageHeader } from "@/components/admin/ui";
 import { Notice } from "@/components/ui/Notice";
 import { RateTask } from "@/components/admin/RateTask";
 import { RefreshOnNotification } from "@/components/work/HaruNotifications";
-import { staffStreaks, staffTasks, TASK_LABELS, WorkError, type StaffTask, type Streak } from "@/lib/staff-work";
+import { ratingSummaries, staffStreaks, staffTasks, TASK_LABELS, WorkError, type RatingSummary, type StaffTask, type Streak } from "@/lib/staff-work";
+import { RatingStats } from "@/components/work/RatingStats";
 
 export const metadata = { title: "Rate Staff Work" };
 
 const when = (iso: string) => new Date(iso).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Lagos" });
-
-function Dots({ n, tone }: { n: number; tone: "good" | "poor" }) {
-  return (
-    <span className="inline-flex gap-1" aria-label={`${n} of 3`}>
-      {[0, 1, 2].map((i) => (
-        <span key={i} className={`size-2.5 rounded-full ${i < n ? (tone === "good" ? "bg-[#16A34A]" : "bg-[#DC2626]") : "bg-black/10"}`} />
-      ))}
-    </span>
-  );
-}
 
 export default async function StaffTasksPage() {
   await requireStaffPage("staff:manage");
   let waiting: StaffTask[] = [];
   let rated: StaffTask[] = [];
   let streaks: Streak[] = [];
+  let summaries = new Map<string, RatingSummary>();
   let problem: string | null = null;
   try {
     [waiting, rated, streaks] = await Promise.all([
@@ -33,6 +25,7 @@ export default async function StaffTasksPage() {
       staffTasks({ status: ["rated_good", "rated_poor"], limit: 30 }),
       staffStreaks(),
     ]);
+    summaries = await ratingSummaries({ limit: 3 });
   } catch (e) {
     problem = e instanceof WorkError ? e.message : "Couldn't load staff work.";
   }
@@ -61,7 +54,7 @@ export default async function StaffTasksPage() {
       <RefreshOnNotification role="admin" />
       <PageHeader
         title="Rate Staff Work"
-        description="Every product, design or order update your staff finish appears here. Rate it Good or Poor and Haru tells them straight away. 3 Good in a row = +₦25 bonus; 3 Poor in a row = −₦25 (never below ₦0). Added and taken from their wallet automatically."
+        description="Every product, design or order update your staff finish appears here. Rate it Good or Poor and Haru tells them straight away. Good adds 1 to the Good count and clears Poor; Poor adds 1 to Poor and clears Good. At Good 3/3 they get +₦25, at Poor 3/3 −₦25 (never below ₦0), then that count starts again. Every rating is kept in their history. Added and taken from their wallet automatically."
         actions={<Link href="/admin/notifications" className="text-sm font-semibold underline underline-offset-4">Staff notifications →</Link>}
       />
       {problem && <Notice tone="warning">{problem}</Notice>}
@@ -69,10 +62,9 @@ export default async function StaffTasksPage() {
       {streaks.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-testid="streaks">
           {streaks.map((s) => (
-            <div key={s.staffId} className="border border-line bg-white p-4">
-              <p className="truncate font-semibold">{s.name}</p>
-              <p className="mt-2 flex items-center justify-between text-xs"><span className="text-muted">Good streak → +₦25</span><Dots n={s.good} tone="good" /></p>
-              <p className="mt-1.5 flex items-center justify-between text-xs"><span className="text-muted">Poor streak → −₦25</span><Dots n={s.poor} tone="poor" /></p>
+            <div key={s.staffId} className="border border-line bg-white p-4" data-testid="streak-card">
+              <p className="mb-2 truncate font-semibold">{s.name}</p>
+              <RatingStats good={s.good} poor={s.poor} summary={summaries.get(s.staffId)} />
             </div>
           ))}
         </div>

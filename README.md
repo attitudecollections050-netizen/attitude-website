@@ -351,3 +351,14 @@ docs/DATABASE.md          schema documentation
 - Optional: Anthropic API key for the Haru & Jin chat (basic mode works without it).
 - Groundmail API key (`GROUNDMAIL_API_KEY`) and a sender on a verified domain (`EMAIL_FROM`) for order receipts, staff invitations and notifications; optionally Groundmail SMTP for Supabase Auth emails.
 - Staff Management and bank transfers: `SUPABASE_SECRET_KEY` and the production `NEXT_PUBLIC_SITE_URL` on Vercel; apply migrations 11–16. For the live project (12 and 13 already applied), paste `supabase/manual/live-repair-14-15-16.sql` into the Supabase SQL Editor and run it; it is safe to run more than once.
+
+
+## Push notifications (staff work and ratings)
+
+The owner gets a phone/laptop notification when staff finish work (new product, design set on an order, order update) or say they fixed something; staff get Haru's ratings, bonuses and deductions. These arrive even when the site is closed.
+
+- **Set up once on Vercel:** add `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` (make them with `npx web-push generate-vapid-keys`), then redeploy. Never share the private key.
+- **On each device:** open **Admin → Staff Notifications** (staff: **Notifications**), tap **Enable Push Notifications**, allow, then **Send Test Push**.
+- **iPhone/iPad (iOS 16.4+):** push only works from the Home Screen app. In Safari tap **Share → Add to Home Screen**, open Attitude from the icon, then enable.
+- Pushes are sent by the site right after staff work and ratings (`/api/send-push`). Each notification is pushed once; devices that were removed are cleaned up automatically. Optionally, point a Supabase Database Webhook (insert on `staff_notifications`) or a cron at `POST /api/send-push` with `Authorization: Bearer <CRON_SECRET>` as a backup.
+- **Sound:** open pages play `/notification.mp3` on each new notification. Use **Sound On/Off** on the notifications pages (remembered per device). Push notifications use the device's own notification sound.

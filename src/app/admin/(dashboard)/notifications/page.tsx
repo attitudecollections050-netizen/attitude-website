@@ -3,6 +3,7 @@ import { requireStaffPage } from "@/lib/auth";
 import { PageHeader } from "@/components/admin/ui";
 import { Notice } from "@/components/ui/Notice";
 import { HaruNotificationList } from "@/components/work/HaruNotifications";
+import { PushControls } from "@/components/work/PushControls";
 import { myNotifications, WorkError, type StaffNotification } from "@/lib/staff-work";
 
 export const metadata = { title: "Staff Notifications" };
@@ -23,6 +24,7 @@ export default async function AdminNotificationsPage() {
         description="Haru tells you here, live, whenever a staff member finishes some work or fixes something you rated Poor."
         actions={<Link href="/admin/staff-tasks" className="text-sm font-semibold underline underline-offset-4">Rate staff work →</Link>}
       />
+      <PushControls who="admin" />
       {problem && <Notice tone="warning">{problem}</Notice>}
       <HaruNotificationList role="admin" initial={items} />
     </div>

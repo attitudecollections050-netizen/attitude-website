@@ -200,3 +200,56 @@ export async function navBadges(permissions: string[]): Promise<Record<string, n
   } catch {}
   return {};
 }
+
+export interface RatingEntry {
+  staffId: string;
+  rating: "good" | "poor";
+  reason: string | null;
+  details: string | null;
+  createdAt: string;
+}
+
+export interface RatingSummary {
+  /** Newest first. Kept for ever in staff_ratings; this is the latest page of it. */
+  recent: RatingEntry[];
+  totalGood: number;
+  totalPoor: number;
+  bonuses: number;
+  deductions: number;
+}
+
+/**
+ * Every staff member's rating history (owner), or the signed-in staff member's own (RLS).
+ * Totals count every rating ever given; `recent` is the latest `limit` per person.
+ */
+export async function ratingSummaries(opts: { staffId?: string; limit?: number } = {}): Promise<Map<string, RatingSummary>> {
+  const db = await createClient();
+  let ratings = db.from("staff_ratings").select("staff_id, rating, reason, created_at, staff_tasks ( task_details )").order("created_at", { ascending: false }).limit(2000);
+  let money = db.from("staff_payments").select("staff_id, type").in("type", ["bonus", "penalty"]).like("description", "Auto %");
+  if (opts.staffId) {
+    ratings = ratings.eq("staff_id", opts.staffId);
+    money = money.eq("staff_id", opts.staffId);
+  }
+  const [{ data, error }, { data: pay }] = await Promise.all([ratings, money]);
+  if (error) throw toError(error);
+  const out = new Map<string, RatingSummary>();
+  const get = (id: string) => {
+    let s = out.get(id);
+    if (!s) out.set(id, (s = { recent: [], totalGood: 0, totalPoor: 0, bonuses: 0, deductions: 0 }));
+    return s;
+  };
+  type Row = { staff_id: string; rating: "good" | "poor"; reason: string | null; created_at: string; staff_tasks: { task_details: string } | { task_details: string }[] | null };
+  for (const r of (data ?? []) as Row[]) {
+    const s = get(r.staff_id);
+    if (r.rating === "good") s.totalGood += 1;
+    else s.totalPoor += 1;
+    const t = Array.isArray(r.staff_tasks) ? r.staff_tasks[0] : r.staff_tasks;
+    if (s.recent.length < (opts.limit ?? 10)) s.recent.push({ staffId: r.staff_id, rating: r.rating, reason: r.reason, details: t?.task_details ?? null, createdAt: r.created_at });
+  }
+  for (const p of (pay ?? []) as { staff_id: string; type: string }[]) {
+    const s = get(p.staff_id);
+    if (p.type === "bonus") s.bonuses += 1;
+    else s.deductions += 1;
+  }
+  return out;
+}

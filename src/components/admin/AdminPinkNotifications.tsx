@@ -5,6 +5,8 @@ import { AnimatePresence, m } from "motion/react";
 import { Bell, BellOff, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/browser";
 import { playChime } from "@/components/assistant/chime";
+import { notify } from "@/lib/notify-sound";
+import { usePush } from "@/components/work/PushControls";
 import { formatMoney } from "@/lib/money";
 import { cn } from "@/lib/cn";
 
@@ -31,25 +33,18 @@ export function AdminPinkNotifications({ orders, withdrawals, staffWork = false 
   const [perm, setPerm] = useState<string>("default");
   const initialPerm = useSyncExternalStore(noSubscribe, permission, () => "default");
   const effectivePerm = perm === "default" ? initialPerm : perm;
+  const pushDevice = usePush();
   const unseen = useRef(0);
   const baseTitle = useRef<string | null>(null);
 
   const push = useCallback((a: Alert) => {
     setAlerts((list) => [a, ...list.filter((x) => x.id !== a.id)].slice(0, 5));
-    playChime();
+    // Sound (unless switched off) + a phone/system notification when the tab is in the background.
+    notify(a.id, a.title, a.body, { icon: a.kind === "withdrawal" ? "/mascots/boy-face.png" : "/mascots/girl-face.png", href: a.href });
     if (document.hidden) {
       unseen.current += 1;
       baseTitle.current ??= document.title;
       document.title = `(${unseen.current}) ${a.title} · ${baseTitle.current}`;
-      if (permission() === "granted") {
-        try {
-          const n = new Notification(a.title, { body: a.body, icon: a.kind === "withdrawal" ? "/mascots/boy-face.png" : "/mascots/girl-face.png", tag: a.id });
-          n.onclick = () => {
-            window.focus();
-            window.location.href = a.href;
-          };
-        } catch {}
-      }
     }
   }, []);
 
@@ -96,7 +91,7 @@ export function AdminPinkNotifications({ orders, withdrawals, staffWork = false 
       channel.on("postgres_changes", { event: "INSERT", schema: "public", table: "staff_notifications" }, (payload) => {
         const n = payload.new as { id: string; to_role: string; title: string; message: string };
         if (n.to_role !== "admin") return;
-        push({ id: `work-${n.id}`, kind: "work", title: n.title, body: n.message, href: "/admin/staff-tasks" });
+        push({ id: `note-${n.id}`, kind: "work", title: n.title, body: n.message, href: "/admin/staff-tasks" });
       });
     }
     channel.subscribe();
@@ -159,19 +154,39 @@ export function AdminPinkNotifications({ orders, withdrawals, staffWork = false 
           </m.div>
         ))}
       </AnimatePresence>
-      {effectivePerm !== "granted" && effectivePerm !== "unsupported" && (
+      {/* When the owner logs in: one tap turns on push (alerts even when the site is closed). */}
+      {pushDevice.support === "yes" && pushDevice.configured && pushDevice.subscribed === false && effectivePerm !== "denied" ? (
         <button
           type="button"
           onClick={async () => {
-            playChime(); // also unlocks sound on this device
-            setPerm(await Notification.requestPermission());
+            try {
+              await pushDevice.enable();
+              setPerm("granted");
+            } catch {
+              setPerm(typeof Notification === "undefined" ? "unsupported" : Notification.permission);
+            }
           }}
           className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border-2 border-[#FFB6D9] bg-white px-3 py-1.5 text-xs font-bold text-[#C2185B] shadow"
           data-testid="alerts-enable"
         >
-          {effectivePerm === "denied" ? <BellOff className="size-3.5" aria-hidden /> : <Bell className="size-3.5" aria-hidden />}
-          {effectivePerm === "denied" ? "Phone alerts blocked in browser settings" : staffWork ? "Turn on order, staff & withdrawal alerts" : "Turn on order & withdrawal alerts"}
+          <Bell className="size-3.5" aria-hidden /> Enable push notifications on this device
         </button>
+      ) : (
+        effectivePerm !== "granted" &&
+        effectivePerm !== "unsupported" && (
+          <button
+            type="button"
+            onClick={async () => {
+              playChime(); // also unlocks sound on this device
+              setPerm(await Notification.requestPermission());
+            }}
+            className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border-2 border-[#FFB6D9] bg-white px-3 py-1.5 text-xs font-bold text-[#C2185B] shadow"
+            data-testid="alerts-enable"
+          >
+            {effectivePerm === "denied" ? <BellOff className="size-3.5" aria-hidden /> : <Bell className="size-3.5" aria-hidden />}
+            {effectivePerm === "denied" ? "Phone alerts blocked in browser settings" : staffWork ? "Turn on order, staff & withdrawal alerts" : "Turn on order & withdrawal alerts"}
+          </button>
+        )
       )}
     </div>
   );
