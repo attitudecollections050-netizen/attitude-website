@@ -84,9 +84,12 @@ export function buildOrderPayload(input: BuildOrderInput) {
     variant_id: l.variantId,
     product_name: l.name,
     product_slug: l.slug,
-    variant_label: variantLabel(l.size, l.color),
+    // The design the shopper picked is part of the label everyone sees ("Photo 3 of 12 · Size L").
+    variant_label: [l.pickedImage ? l.design : null, variantLabel(l.size, l.color)].filter(Boolean).join(" · ") || null,
     sku: l.sku,
     image_url: l.imageUrl,
+    selected_image: l.pickedImage ? l.imageUrl : null,
+    selected_variant_name: l.pickedImage ? (l.design ?? null) : null,
     unit_price: l.unitPrice,
     quantity: l.quantity,
   }));

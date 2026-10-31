@@ -512,7 +512,8 @@
       "reduce": "Nur noch {count} auf Lager. Bitte verringere die Menge.",
       "low_stock": "Nur noch {count}"
     },
-    "freeSize": "Einheitsgröße"
+    "freeSize": "Einheitsgröße",
+    "design": "Dein Design: {name}"
   },
   "cartErrors": {
     "notConnected": "Der Shop ist noch nicht mit seiner Datenbank verbunden.",

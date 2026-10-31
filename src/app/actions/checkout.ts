@@ -95,12 +95,31 @@ export async function placeOrder(input: unknown): Promise<PlaceOrderResult> {
   }
 
   const db = createServiceClient();
+  // Several designs of the same size share one stock count.
+  const perVariant = new Map<string, number>();
+  for (const l of priced.lines) if (!l.allowBackorder) perVariant.set(l.variantId, (perVariant.get(l.variantId) ?? 0) + l.quantity);
+  const shared = [...perVariant.entries()].filter(([id]) => priced.lines.filter((l) => l.variantId === id).length > 1);
+  if (shared.length) {
+    const { data: inv } = await db.from("inventory").select("variant_id, on_hand").in("variant_id", shared.map(([id]) => id));
+    if (shared.some(([id, n]) => n > (inv?.find((r) => r.variant_id === id)?.on_hand ?? 0))) return { ok: false, error: t("stock"), refreshCart: true };
+  }
   const { data: created, error } = await db.rpc("create_order", { p_order: payload.order, p_items: payload.items });
   if (error || !created) {
     console.error("[checkout] create_order:", error?.message);
     return { ok: false, error: t(orderErrorKey(error?.message ?? "")), refreshCart: true };
   }
   const order = created as { order_id: string; order_number: string; access_token: string; total: number; currency: string; payment_status: string };
+  // Save the exact design (photo) the shopper picked on each order item, for packing.
+  if ((created as { created?: boolean }).created) {
+    for (const item of payload.items.filter((i) => i.selected_image)) {
+      await db
+        .from("order_items")
+        .update({ selected_image: item.selected_image, selected_variant_name: item.selected_variant_name })
+        .eq("order_id", order.order_id)
+        .eq("variant_id", item.variant_id)
+        .eq("image_url", item.selected_image!);
+    }
+  }
 
   if (order.payment_status === "paid") {
     return { ok: true, redirectUrl: `/order/${order.order_number}?token=${order.access_token}` };

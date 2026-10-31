@@ -512,7 +512,8 @@
       "reduce": "Plus que {count} en stock. Veuillez réduire la quantité.",
       "low_stock": "Plus que {count}"
     },
-    "freeSize": "Taille unique"
+    "freeSize": "Taille unique",
+    "design": "Votre modèle : {name}"
   },
   "cartErrors": {
     "notConnected": "La boutique n’est pas encore connectée à sa base de données.",

@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { bool, dbError, guarded, optMoney, optStr, uuid } from "./helpers";
+import { createServiceClient } from "@/lib/supabase/admin";
 import type { AdminResult } from "./types";
 
 const STATUSES = ["pending_payment", "paid", "processing", "awaiting_supplier", "ordered_from_supplier", "shipped", "in_transit", "delivered", "cancelled", "refunded"] as const;
@@ -78,3 +79,30 @@ export async function removeTracking(_prev: AdminResult, formData: FormData): Pr
   });
 }
 
+
+/**
+ * Records which design (photo) the customer chose for an order item, for orders where it
+ * wasn't captured automatically (older orders, or confirmed with the customer on WhatsApp).
+ */
+export async function setOrderItemDesign(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
+  return guarded("orders:update", async ({ userId }) => {
+    const input = z.object({ item_id: uuid, image_url: z.string().trim().min(1).max(2000) }).parse(Object.fromEntries(formData));
+    const svc = createServiceClient();
+    const { data: item } = await svc.from("order_items").select("id, order_id, product_id").eq("id", input.item_id).maybeSingle();
+    if (!item?.product_id) return { ok: false, message: "That item's product no longer exists, so its photos can't be shown." };
+    const { data: images } = await svc.from("product_images").select("url, alt, sort_order").eq("product_id", item.product_id).order("sort_order");
+    const list = images ?? [];
+    const n = list.findIndex((i) => i.url === input.image_url);
+    if (n === -1) return { ok: false, message: "Choose one of this product's photos." };
+    const alt = list[n].alt?.trim();
+    const label = alt ? alt : `Photo ${n + 1} of ${list.length}`;
+    const { error } = await svc
+      .from("order_items")
+      .update({ selected_image: input.image_url, selected_variant_name: label, selected_set_by: userId, selected_set_at: new Date().toISOString() })
+      .eq("id", item.id);
+    if (error) return dbError(error);
+    revalidatePath(`/admin/orders/${item.order_id}`);
+    revalidatePath("/admin/orders");
+    return { ok: true, message: `Design saved: ${label}.` };
+  });
+}

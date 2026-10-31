@@ -12,7 +12,8 @@ interface CartContextValue {
   setOpen: (open: boolean) => void;
   pending: boolean;
   toast: { id: number; text: string; tone: "success" | "error" } | null;
-  add: (variantId: string, quantity?: number, opts?: { openDrawer?: boolean }) => Promise<CartActionResult>;
+  /** imageUrl: the product photo the shopper was looking at (their chosen design). */
+  add: (variantId: string, quantity?: number, opts?: { openDrawer?: boolean; imageUrl?: string | null }) => Promise<CartActionResult>;
   update: (itemId: string, quantity: number) => Promise<CartActionResult>;
   remove: (itemId: string) => Promise<CartActionResult>;
   applyCode: (code: string) => Promise<CartActionResult>;
@@ -66,7 +67,7 @@ export function CartProvider({ initialCart, children }: { initialCart: CartView;
       pending,
       toast,
       add: (variantId, quantity = 1, opts) =>
-        run(() => addToCart(variantId, quantity), { openDrawer: opts?.openDrawer ?? true }).then((r) => {
+        run(() => addToCart(variantId, quantity, opts?.imageUrl ?? null), { openDrawer: opts?.openDrawer ?? true }).then((r) => {
           if (r.ok) {
             track("add_to_cart", { variantId });
             emitDrip({ type: "add_to_cart" });

@@ -512,7 +512,8 @@
       "reduce": "库存仅剩 {count} 件，请减少数量。",
       "low_stock": "仅剩 {count} 件"
     },
-    "freeSize": "均码"
+    "freeSize": "均码",
+    "design": "你选的款式：{name}"
   },
   "cartErrors": {
     "notConnected": "商店尚未连接到数据库。",

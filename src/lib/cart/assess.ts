@@ -8,6 +8,10 @@ export interface RawCartLine {
   name: string;
   imageUrl: string | null;
   imageAlt: string | null;
+  /** The design the shopper picked (e.g. "Photo 3 of 12"), when they chose a specific photo. */
+  design?: string | null;
+  /** True when imageUrl is the exact photo the shopper picked. */
+  pickedImage?: boolean;
   sku: string;
   size: string | null;
   color: string | null;
@@ -49,6 +53,8 @@ export function assessLine(line: RawCartLine, maxPerItem: number): CartLine {
     name: line.name,
     imageUrl: line.imageUrl,
     imageAlt: line.imageAlt,
+    design: line.design ?? null,
+    pickedImage: line.pickedImage ?? false,
     sku: line.sku,
     size: line.size,
     color: line.color,

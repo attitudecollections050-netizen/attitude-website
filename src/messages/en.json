@@ -512,7 +512,8 @@
       "reduce": "Only {count} left in stock. Please reduce the quantity.",
       "low_stock": "Only {count} left"
     },
-    "freeSize": "Free Size"
+    "freeSize": "Free Size",
+    "design": "Your design: {name}"
   },
   "cartErrors": {
     "notConnected": "The store is not connected to its database yet.",

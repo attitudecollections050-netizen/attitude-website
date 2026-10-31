@@ -512,7 +512,8 @@
       "reduce": "تبقّى {count} فقط في المخزون. يُرجى تقليل الكمية.",
       "low_stock": "تبقّى {count} فقط"
     },
-    "freeSize": "مقاس حر"
+    "freeSize": "مقاس حر",
+    "design": "تصميمك: {name}"
   },
   "cartErrors": {
     "notConnected": "المتجر غير متصل بقاعدة بياناته بعد.",

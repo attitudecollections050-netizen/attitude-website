@@ -199,6 +199,15 @@ Reviews are never published automatically: only product reviews where the custom
 - **API:** `POST /api/admin/pay-staff`, `GET /api/admin/staff-payments`, `GET /api/staff/my-payments`, `POST /api/staff/bank-details`, `POST /api/staff/confirm-payout`.
 - **Database:** run `supabase/manual/live-staff-payouts.sql` once in the Supabase SQL Editor (migrations 18 + 19; safe to run twice).
 
+## 7a-2. Exact design on orders (so you pack the right one)
+
+Many products come in several designs that are told apart only by their photos (the variants are just sizes). When a shopper taps **Add to bag**, the photo they're looking at is saved as their design ("Photo 3 of 12", or the photo's description if you wrote one in the product's image alt text). Two designs in the same size become two bag lines, and the bag shows "Your design: …".
+- **Orders list** (Admin → Orders): an **Item image** column with a thumbnail of each item's exact design (green border = the customer's pick).
+- **Order page**: Items table with **Exact image (80×80) · Product name · Variant/design · Size · Qty · Price**, marked "✓ Customer's pick", "✓ Set by team" or "⚠ Design not recorded".
+- **Older orders** (placed before this) didn't record the design. Confirm with the customer (e.g. WhatsApp), then on the order page tap **Set the design they picked**, choose the photo and **Save design**.
+- **Tip:** give each design photo a short description (alt text) like "Vintage Yellow Comic" in the product editor, and the order shows that name instead of "Photo 3 of 12".
+- **Database:** run `supabase/manual/live-exact-designs.sql` once in the Supabase SQL Editor. Until then the shop works as before (no design recorded).
+
 ## 7b. DJ ATTITUDE mini HARU & JIN (AI mascot assistants)
 
 `<AttitudeAI />` (mounted in the store layout) adds two Korean anime-style DJ mascots, drawn from the brand artwork in `public/mascots/` (`girl.png`, `boy.png` and the `-face.png` crops):

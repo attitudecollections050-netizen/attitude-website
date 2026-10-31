@@ -164,7 +164,8 @@ export function Showcase({ products, mode, maxPerItem, headline, caption, footer
     setError(null);
     if (!variant) return setError(t("chooseSize"));
     if (!available(variant)) return setError(t("optionSoldOutDot"));
-    const r = await add(variant.id, Math.min(qty, maxQty), { openDrawer: !buyNow });
+    // On a product page the photo on screen is the design they chose (many designs share sizes).
+    const r = await add(variant.id, Math.min(qty, maxQty), { openDrawer: !buyNow, imageUrl: mode === "product" ? (image?.url ?? null) : null });
     if (!r.ok) setError(r.error);
     else if (buyNow) router.push("/checkout");
   };

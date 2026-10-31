@@ -512,7 +512,8 @@
       "reduce": "재고가 {count}개만 남았어요. 수량을 줄여 주세요.",
       "low_stock": "{count}개 남음"
     },
-    "freeSize": "프리 사이즈"
+    "freeSize": "프리 사이즈",
+    "design": "선택한 디자인: {name}"
   },
   "cartErrors": {
     "notConnected": "스토어가 아직 데이터베이스에 연결되지 않았어요.",

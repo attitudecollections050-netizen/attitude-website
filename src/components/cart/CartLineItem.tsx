@@ -34,6 +34,7 @@ export function CartLineItem({ line, compact = false }: { line: CartLine; compac
               {name}
             </Link>
             <p className="mt-1 text-xs text-muted">{text.variant(line.size, line.color)}</p>
+            {line.design && <p className="mt-0.5 text-xs font-semibold text-rose-deep" data-testid="line-design">{t("design", { name: line.design })}</p>}
           </div>
           <button
             type="button"

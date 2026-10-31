@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireStaffPage } from "@/lib/auth";
@@ -6,9 +7,10 @@ import { formatMoney, toMajorString } from "@/lib/money";
 import { ORDER_STATUS_LABELS, allowedTransitions, type OrderStatus } from "@/lib/orders/status";
 import { statusTone } from "@/lib/orders/labels";
 import { formatDeliveryWindow } from "@/lib/shipping/calculator";
-import { addTracking, removeTracking, saveFulfilment, updateOrderStatus } from "@/app/admin/actions/orders";
+import { addTracking, removeTracking, saveFulfilment, setOrderItemDesign, updateOrderStatus } from "@/app/admin/actions/orders";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { Badge, Card, Field, PageHeader, Table, inputCls } from "@/components/admin/ui";
+import { SmartImage } from "@/components/ui/SmartImage";
 import { Notice } from "@/components/ui/Notice";
 
 export const metadata = { title: "Order" };
@@ -18,20 +20,21 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const db = await createClient();
-  const [{ data: order }, { data: suppliers }] = await Promise.all([
+  const orderQuery = (withDesign: boolean) =>
     db
       .from("orders")
       .select(
-        `*, order_items ( id, product_id, product_name, product_slug, variant_label, sku, unit_price, quantity, line_total ),
+        `*, order_items ( id, product_id, variant_id, product_name, product_slug, variant_label, sku, image_url,${withDesign ? " selected_image, selected_variant_name, selected_set_by," : ""} unit_price, quantity, line_total ),
          order_status_history ( id, status, public_note, created_at ),
          shipment_tracking ( id, carrier, tracking_number, tracking_url, dispatched_at ),
          fulfilments ( supplier_id, supplier_order_ref, supplier_cost_total, status, dispatched_at, internal_notes ),
          payments ( reference, amount, currency, status, channel, paid_at, failure_reason, created_at )`,
       )
       .eq("id", id)
-      .maybeSingle(),
-    db.from("suppliers").select("id, name").order("name"),
-  ]);
+      .maybeSingle();
+  const [first, { data: suppliers }] = await Promise.all([orderQuery(true), db.from("suppliers").select("id, name").order("name")]);
+  // Until the "exact design" database update has run, load the order without the design columns.
+  const { data: order } = first.error && /selected_/.test(first.error.message) ? await orderQuery(false) : first;
   if (!order) notFound();
 
   const productIds = (order.order_items as { product_id: string | null }[]).map((i) => i.product_id).filter(Boolean) as string[];
@@ -39,6 +42,17 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
     ? await db.from("product_supplier_info").select("product_id, supplier_product_ref, supplier_cost, supplier:suppliers ( name )").in("product_id", productIds)
     : { data: [] };
   const infoBy = new Map((supplierInfo ?? []).map((s) => [s.product_id, s]));
+  // Photos and sizes for the items: the exact pick is shown; otherwise the product's photos are offered.
+  type Item = { id: string; product_id: string | null; variant_id: string | null; product_name: string; variant_label: string | null; sku: string | null; image_url: string | null; selected_image: string | null; selected_variant_name: string | null; selected_set_by: string | null; unit_price: number; quantity: number; line_total: number };
+  const items = order.order_items as Item[];
+  const variantIds = items.map((i) => i.variant_id).filter(Boolean) as string[];
+  const [{ data: photoRows }, { data: variantRows }] = await Promise.all([
+    productIds.length ? db.from("product_images").select("product_id, url, alt, sort_order").in("product_id", productIds).order("sort_order") : Promise.resolve({ data: [] }),
+    variantIds.length ? db.from("product_variants").select("id, size, color").in("id", variantIds) : Promise.resolve({ data: [] }),
+  ]);
+  const photosBy = new Map<string, { url: string; alt: string | null }[]>();
+  for (const r of (photoRows ?? []) as { product_id: string; url: string; alt: string | null }[]) photosBy.set(r.product_id, [...(photosBy.get(r.product_id) ?? []), r]);
+  const variantBy = new Map(((variantRows ?? []) as { id: string; size: string | null; color: string | null }[]).map((v) => [v.id, v]));
 
   const status = order.status as OrderStatus;
   const paid = order.payment_status === "paid";
@@ -65,19 +79,67 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
         <div className="space-y-6">
           <Card title="Items">
             <Table>
-              <thead><tr><th>Product</th><th>SKU</th><th>Supplier ref (internal)</th><th>Qty</th><th className="!text-right">Line total</th></tr></thead>
+              <thead>
+                <tr><th>Exact image</th><th>Product name</th><th>Variant / design</th><th>Size</th><th>Qty</th><th className="!text-right">Price</th></tr>
+              </thead>
               <tbody>
-                {(order.order_items as { id: string; product_id: string | null; product_name: string; variant_label: string | null; sku: string | null; unit_price: number; quantity: number; line_total: number }[]).map((i) => {
+                {items.map((i) => {
                   const info = infoBy.get(i.product_id ?? "");
                   const sup = info && (Array.isArray(info.supplier) ? info.supplier[0] : info.supplier) as { name: string } | null;
+                  const v = i.variant_id ? variantBy.get(i.variant_id) : undefined;
+                  const photos = photosBy.get(i.product_id ?? "") ?? [];
+                  const shown = i.selected_image ?? i.image_url ?? photos[0]?.url ?? null;
                   return (
-                    <tr key={i.id}>
-                      <td>{i.product_name}<span className="block text-xs text-muted">{i.variant_label}</span></td>
-                      <td className="font-mono text-xs">{i.sku}</td>
-                      <td className="text-xs">{info ? <>{sup?.name ?? "—"}<span className="block text-muted">{info.supplier_product_ref ?? ""}{info.supplier_cost != null ? ` · cost ${formatMoney(info.supplier_cost)}` : ""}</span></> : <span className="text-muted">Not set</span>}</td>
-                      <td>{i.quantity} × {formatMoney(i.unit_price, order.currency)}</td>
-                      <td className="text-right tabular-nums">{formatMoney(i.line_total, order.currency)}</td>
+                    <Fragment key={i.id}>
+                    <tr data-testid={`item-${i.id}`}>
+                      <td className="align-top">
+                        <span className={`relative block size-20 overflow-hidden rounded-xl border-2 bg-neutral ${i.selected_image ? "border-success" : "border-line"}`}>
+                          <SmartImage src={shown} alt={i.product_name} fill sizes="80px" className="object-cover" />
+                        </span>
+                        <span className={`mt-1 block text-[10px] font-semibold ${i.selected_image ? "text-success" : "text-warning"}`} data-testid="design-status">
+                          {i.selected_image ? (i.selected_set_by ? "✓ Set by team" : "✓ Customer's pick") : "⚠ Design not recorded"}
+                        </span>
+                      </td>
+                      <td className="align-top">
+                        <span className="font-semibold">{i.product_name}</span>
+                        <span className="block font-mono text-[11px] text-muted">{i.sku}</span>
+                        <span className="block text-[11px] text-muted">
+                          {info ? <>Supplier (internal): {sup?.name ?? "—"} {info.supplier_product_ref ?? ""}{info.supplier_cost != null ? ` · cost ${formatMoney(info.supplier_cost)}` : ""}</> : "Supplier not set"}
+                        </span>
+                      </td>
+                      <td className="align-top text-sm" data-testid="design-name">
+                        {i.selected_variant_name ?? v?.color ?? <span className="text-muted">—</span>}
+                      </td>
+                      <td className="align-top">{v?.size ?? "—"}</td>
+                      <td className="align-top">{i.quantity}</td>
+                      <td className="align-top text-right tabular-nums">
+                        {formatMoney(i.line_total, order.currency)}
+                        <span className="block text-[11px] text-muted">{formatMoney(i.unit_price, order.currency)} each</span>
+                      </td>
                     </tr>
+                    {canUpdate && photos.length > 1 && (
+                      <tr data-testid={`picker-${i.id}`}>
+                        <td colSpan={6} className="!pt-0">
+                          <details className="rounded-xl bg-neutral/60 px-3 py-2" open={!i.selected_image}>
+                            <summary className="cursor-pointer text-xs font-semibold text-rose-deep">{i.selected_image ? "Change design" : "Set the design they picked"}</summary>
+                            <p className="mt-1 text-[11px] text-muted">Confirm with the customer first (e.g. on WhatsApp), then tap their design.</p>
+                            <ActionForm action={setOrderItemDesign} submitLabel="Save design" variant="outline">
+                              <input type="hidden" name="item_id" value={i.id} />
+                              <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label={`Photos of ${i.product_name}`}>
+                                {photos.map((p, n) => (
+                                  <label key={p.url} className="relative block size-16 cursor-pointer overflow-hidden rounded-lg border-2 border-line bg-white has-[:checked]:border-rose-deep has-[:checked]:ring-2 has-[:checked]:ring-rose/40">
+                                    <input type="radio" name="image_url" value={p.url} defaultChecked={p.url === i.selected_image} className="sr-only" required />
+                                    <SmartImage src={p.url} alt={p.alt || `Photo ${n + 1}`} fill sizes="64px" className="object-cover" />
+                                    <span className="absolute left-0.5 top-0.5 rounded bg-white/90 px-1 text-[9px] font-bold">{n + 1}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </ActionForm>
+                          </details>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   );
                 })}
               </tbody>

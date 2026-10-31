@@ -39,6 +39,8 @@ export async function getOrCreateCartId(userId: string | null): Promise<string> 
 interface CartItemRow {
   id: string;
   quantity: number;
+  selected_image_url: string | null;
+  selected_design: string | null;
   variant: {
     id: string;
     sku: string;
@@ -71,12 +73,11 @@ function one<T>(v: T | T[] | null | undefined): T | null {
 
 export async function loadRawLines(cartId: string): Promise<{ lines: RawCartLine[]; discountCode: string | null }> {
   const db = createServiceClient();
-  const [{ data: cart }, { data: items, error }] = await Promise.all([
-    db.from("carts").select("discount_code").eq("id", cartId).maybeSingle(),
+  const select = (withDesign: boolean) =>
     db
       .from("cart_items")
       .select(
-        `id, quantity,
+        `id, quantity${withDesign ? ", selected_image_url, selected_design" : ""},
          variant:product_variants (
            id, sku, size, color, is_active,
            inventory ( on_hand ),
@@ -85,15 +86,20 @@ export async function loadRawLines(cartId: string): Promise<{ lines: RawCartLine
          )`,
       )
       .eq("cart_id", cartId)
-      .order("created_at"),
-  ]);
+      .order("created_at");
+  const [{ data: cart }, first] = await Promise.all([db.from("carts").select("discount_code").eq("id", cartId).maybeSingle(), select(true)]);
+  // Until the "exact design" database update has run, read the bag without the design columns.
+  let { data: items, error } = first;
+  if (error && /selected_(image_url|design)/.test(error.message)) ({ data: items, error } = await select(false));
   if (error) throw error;
   const lines: RawCartLine[] = [];
   for (const row of (items ?? []) as unknown as CartItemRow[]) {
     const v = row.variant;
     if (!v) continue;
     const images = [...(v.product.product_images ?? [])].sort((a, b) => a.sort_order - b.sort_order);
-    const image = images.find((i) => v.color && i.color === v.color) ?? images[0] ?? null;
+    // The exact photo the shopper picked, else the photo for the variant's colour, else the first.
+    const picked = row.selected_image_url ? images.find((i) => i.url === row.selected_image_url) : null;
+    const image = picked ?? images.find((i) => v.color && i.color === v.color) ?? images[0] ?? null;
     lines.push({
       itemId: row.id,
       variantId: v.id,
@@ -102,6 +108,8 @@ export async function loadRawLines(cartId: string): Promise<{ lines: RawCartLine
       name: v.product.name,
       imageUrl: image?.url ?? null,
       imageAlt: image?.alt ?? null,
+      design: picked ? (row.selected_design ?? null) : null,
+      pickedImage: Boolean(picked),
       sku: v.sku,
       size: isFreeSize(v.product, (v.product.product_variants ?? []).map((x) => x.size)) ? FREE_SIZE_LABEL : v.size,
       color: v.color,
@@ -210,15 +218,21 @@ export async function attachCartToUser(userId: string) {
   }
   await db.from("carts").update({ user_id: userId }).eq("id", cartId);
   if (older) {
-    const { data: olderItems } = await db.from("cart_items").select("variant_id, quantity").eq("cart_id", older.id);
+    type Line = { variant_id: string; quantity?: number; selected_image_url?: string | null; selected_design?: string | null };
+    // (Falls back to the plain columns until the "exact design" database update has run.)
+    const read = async (id: string): Promise<Line[]> => {
+      const r = await db.from("cart_items").select("variant_id, quantity, selected_image_url, selected_design").eq("cart_id", id);
+      return (r.error ? (await db.from("cart_items").select("variant_id, quantity").eq("cart_id", id)).data : r.data) ?? [];
+    };
+    const [olderItems, current] = await Promise.all([read(older.id), read(cartId)]);
     for (const item of olderItems ?? []) {
-      const { data: existing } = await db
-        .from("cart_items")
-        .select("id")
-        .eq("cart_id", cartId)
-        .eq("variant_id", item.variant_id)
-        .maybeSingle();
-      if (!existing) await db.from("cart_items").insert({ cart_id: cartId, variant_id: item.variant_id, quantity: item.quantity });
+      // The same size in the same design is already in the bag: keep the current line.
+      const dup = (current ?? []).some((c) => c.variant_id === item.variant_id && (c.selected_image_url ?? null) === (item.selected_image_url ?? null));
+      if (!dup) {
+        const row = { cart_id: cartId, variant_id: item.variant_id, quantity: item.quantity ?? 1 };
+        const r = await db.from("cart_items").insert({ ...row, selected_image_url: item.selected_image_url ?? null, selected_design: item.selected_design ?? null });
+        if (r.error) await db.from("cart_items").insert(row);
+      }
     }
     await db.from("carts").delete().eq("id", older.id);
   }
