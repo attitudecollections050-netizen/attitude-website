@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { earningsFor } from "@/lib/staff-earnings";
-import { serverSecrets } from "@/lib/env";
+import { env, serverSecrets } from "@/lib/env";
 import { ROLE_LABELS, type AppRole } from "@/lib/permissions";
 import { removeStaff, setDeletePermission, setStaffDisabled } from "@/app/admin/actions/staff";
 import { ActionForm } from "@/components/admin/ActionForm";
@@ -11,7 +11,7 @@ import { ResendInviteButton, StaffInviteForm } from "@/components/admin/StaffFor
 import { Badge, Card, Empty, PageHeader } from "@/components/admin/ui";
 import { Notice } from "@/components/ui/Notice";
 import { PayStaffButton, PaymentsLive } from "@/components/admin/PayStaff";
-import { naira, staffPaymentHistory, staffPaymentTotals, type StaffPayment, type StaffPaymentTotals } from "@/lib/staff-payments";
+import { naira, PaymentError, staffPaymentHistory, staffPaymentTotals, type StaffPayment, type StaffPaymentTotals } from "@/lib/staff-payments";
 
 export const metadata = { title: "Staff Management" };
 
@@ -52,13 +52,27 @@ export default async function StaffPage() {
   const { data: statRows } = await (await createClient()).rpc("staff_product_stats");
   const stats = new Map(((statRows ?? []) as { user_id: string; products_added: number; live_products: number }[]).map((r) => [r.user_id, r]));
   // Payments: totals per staff member and the latest payouts (owner's session; the database checks it).
-  const [payTotals, recentPayments] = await Promise.all([
-    staffPaymentTotals().catch((): StaffPaymentTotals[] => []),
-    staffPaymentHistory(undefined, 20).catch((): StaffPayment[] => []),
-  ]);
+  // Ask the database directly; only a "function/table not found" error means payments aren't set up.
+  let payTotals: StaffPaymentTotals[] = [];
+  let recentPayments: StaffPayment[] = [];
+  let payProblem: { kind: "not_installed" | "error"; message: string } | null = null;
+  try {
+    [payTotals, recentPayments] = await Promise.all([staffPaymentTotals(), staffPaymentHistory(undefined, 20)]);
+  } catch (e) {
+    const err = e instanceof PaymentError ? e : null;
+    payProblem = { kind: err?.code === "not_installed" ? "not_installed" : "error", message: err?.message ?? "Couldn't load staff payments." };
+    // Server log (Vercel → Logs): which Supabase project this deployment talks to, and the raw error.
+    console.error("[staff-payments] check failed", { supabaseUrl: env.supabaseUrl || "(NEXT_PUBLIC_SUPABASE_URL not set)", code: err?.code, detail: err?.detail ?? String(e) });
+  }
   const pay = new Map(payTotals.map((t) => [t.userId, t]));
-  // Until the payments migration has run on the database, show a clear note instead of Pay buttons.
-  const payReady = payTotals.length > 0 || staff.length === 0;
+  const payReady = !payProblem;
+  const supabaseProject = (() => {
+    try {
+      return new URL(env.supabaseUrl).host.split(".")[0];
+    } catch {
+      return "(not set)";
+    }
+  })();
   // Last sign-in comes from Supabase Auth (server only).
   const authInfo = new Map(
     await Promise.all(
@@ -78,9 +92,14 @@ export default async function StaffPage() {
 
       <PaymentsLive />
       <Card title="Staff payments" description="What each person has earned, what you've paid them (withdrawn) and what's left. Send the money to their account, then tap Pay — they confirm on their dashboard when it arrives.">
-        {!payReady ? (
+        {payProblem?.kind === "not_installed" ? (
           <Notice tone="warning">
-            Payments aren&apos;t switched on in your database yet. In Supabase → SQL Editor, run the file <code>supabase/manual/live-staff-payouts.sql</code> once, then reload this page.
+            Payments aren&apos;t switched on in this database yet. This site is connected to Supabase project <code>{supabaseProject}</code>. In that project&apos;s SQL Editor, run{" "}
+            <code>supabase/manual/live-staff-payouts.sql</code> once, then reload this page.
+          </Notice>
+        ) : payProblem ? (
+          <Notice tone="error">
+            Couldn&apos;t load staff payments: {payProblem.message} (Supabase project <code>{supabaseProject}</code>; details are in the server log.)
           </Notice>
         ) : payTotals.length === 0 ? (
           <Empty>No staff yet.</Empty>

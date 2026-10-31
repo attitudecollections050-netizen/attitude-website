@@ -61,10 +61,21 @@ export class PaymentError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    /** "not_installed" when the payments tables/functions aren't in the database yet. */
+    readonly code: string | null = null,
+    /** The raw database error, for the server log. */
+    readonly detail: string | null = null,
   ) {
     super(message);
   }
 }
+
+/**
+ * True when the database says the payments functions/tables don't exist (the SQL hasn't run on
+ * this project): PostgREST PGRST202 "function not found", Postgres 42883/42P01.
+ */
+const notInstalled = (e: { code?: string; message: string }) =>
+  e.code === "PGRST202" || e.code === "PGRST205" || e.code === "42883" || e.code === "42P01" || /could not find the function|does not exist|schema cache/i.test(e.message);
 
 const MESSAGES: Record<string, [string, number]> = {
   forbidden: ["Only the store owner can do that.", 403],
@@ -78,10 +89,11 @@ const MESSAGES: Record<string, [string, number]> = {
   not_found: ["Payment not found.", 404],
   already_answered: ["You've already answered for this payment.", 409],
 };
-function toError(e: { message: string } | null): PaymentError {
+function toError(e: { message: string; code?: string } | null): PaymentError {
+  if (e && notInstalled(e)) return new PaymentError("Staff payments aren't set up in this database yet.", 503, "not_installed", `${e.code ?? ""} ${e.message}`.trim());
   const key = Object.keys(MESSAGES).find((k) => e?.message.includes(k));
   const [msg, status] = key ? MESSAGES[key] : ["Something went wrong. Please try again.", 500];
-  return new PaymentError(msg, status);
+  return new PaymentError(msg, status, key ?? null, e ? `${e.code ?? ""} ${e.message}`.trim() : null);
 }
 
 type TotalsRow = {
