@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { adminHome } from "@/lib/permissions";
 import { PRODUCTS_PER_REWARD, REWARD_KOBO, earningsFor } from "@/lib/staff-earnings";
 import { formatMoney } from "@/lib/money";
-import { NIGERIAN_BANKS, isPaid, naira, staffPaymentHistory, staffPaymentTotals, type StaffPayment } from "@/lib/staff-payments";
+import { MIN_WITHDRAWAL, NIGERIAN_BANKS, isPaid, naira, staffPaymentHistory, staffPaymentTotals, type StaffPayment } from "@/lib/staff-payments";
 import { BankDetailsForm, WithdrawButton } from "@/components/admin/StaffBank";
 import { PaymentsLive } from "@/components/admin/PayStaff";
 
@@ -76,7 +76,7 @@ export default async function StaffEarningsPage({ searchParams }: { searchParams
         <div className="bg-white p-6">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/50">Balance left</p>
           <p className={`mt-3 text-4xl font-extrabold tracking-tight sm:text-5xl ${balance < 0 ? "text-danger" : "text-[#16A34A]"}`} data-testid="balance-left">{naira(balance)}</p>
-          <p className="mt-1 text-xs text-black/60">Available to withdraw</p>
+          <p className="mt-1 text-xs text-black/60">Available to withdraw (from {naira(MIN_WITHDRAWAL)})</p>
         </div>
       </section>
 
@@ -85,15 +85,17 @@ export default async function StaffEarningsPage({ searchParams }: { searchParams
         <div className="mt-4">
           {request ? (
             <p className="border-2 border-[#EA580C] bg-[#FFF7ED] p-4 text-sm font-semibold text-[#9A3412]" role="status" data-testid="withdraw-pending">
-              Withdrawal requested ✓ {naira(request.amount)} to {request.bank ? `${request.bank.bankName} · ${request.bank.accountNumber} · ${request.bank.accountName}` : "your account"} on{" "}
+              Withdrawal request of {naira(request.amount)} sent! ✓ To {request.bank ? `${request.bank.bankName} · ${request.bank.accountNumber} · ${request.bank.accountName}` : "your account"} on{" "}
               {dateFmt.format(new Date(request.createdAt))}. Waiting for the owner to send it and approve.
             </p>
           ) : isOwner ? (
             <p className="text-sm text-black/60">No withdrawal request right now.</p>
-          ) : balance > 0 ? (
-            <WithdrawButton balance={balance} bank={bank} />
+          ) : balance >= MIN_WITHDRAWAL ? (
+            <WithdrawButton balance={balance} bank={bank} min={MIN_WITHDRAWAL} />
           ) : (
-            <p className="text-sm text-black/60" data-testid="withdraw-none">No balance to withdraw yet. Keep adding products — every {PRODUCTS_PER_REWARD} adds {reward}.</p>
+            <p className="text-sm text-black/60" data-testid="withdraw-none">
+              You can withdraw once your balance reaches {naira(MIN_WITHDRAWAL)}. Keep adding products — every {PRODUCTS_PER_REWARD} adds {reward}.
+            </p>
           )}
           {lastPaid && !request && (
             <p className="mt-3 text-sm font-semibold text-[#166534]" data-testid="paid-banner">

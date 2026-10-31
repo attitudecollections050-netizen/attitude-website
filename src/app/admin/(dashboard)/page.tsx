@@ -242,9 +242,9 @@ function MyStats({
         <li className="border border-line bg-white p-5">
           <p className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-muted">Balance left</p>
           <p className={`mt-2 text-4xl font-extrabold tabular-nums ${balanceLeft < 0 ? "text-danger" : "text-success"}`} data-testid="my-balance">{naira(balanceLeft)}</p>
-          {balanceLeft > 0 && pending === 0 && (
+          {balanceLeft >= 500 && pending === 0 && (
             <Link href="/staff/earnings#withdraw" className="mt-2 inline-block rounded-full bg-[#2563EB] px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white" data-testid="my-withdraw-link">
-              Withdraw {naira(balanceLeft)} →
+              Withdraw money →
             </Link>
           )}
         </li>

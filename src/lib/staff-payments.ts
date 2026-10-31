@@ -93,7 +93,9 @@ const MESSAGES: Record<string, [string, number]> = {
   not_found: ["Withdrawal request not found.", 404],
   already_answered: ["This request has already been approved or declined.", 409],
   already_requested: ["You already have a withdrawal request waiting for approval.", 409],
-  no_balance: ["You don't have a balance to withdraw yet.", 409],
+  no_balance: [`You need at least ${"₦"}500 in your balance to withdraw.`, 409],
+  amount_too_small: [`The smallest withdrawal is ${"₦"}500.`, 400],
+  amount_too_large: ["That's more than your available balance.", 400],
 };
 function toError(e: { message: string; code?: string } | null): PaymentError {
   if (e && notInstalled(e)) return new PaymentError("Staff payments aren't set up in this database yet.", 503, "not_installed", `${e.code ?? ""} ${e.message}`.trim());
@@ -186,10 +188,13 @@ export async function myBankDetails(userId: string): Promise<BankDetails | null>
   return r ? toBank(r) : null;
 }
 
-/** A staff member asks to withdraw their whole balance to their saved bank account. */
-export async function requestWithdrawal() {
+/** Smallest withdrawal, in naira (the database checks it too). */
+export const MIN_WITHDRAWAL = 500;
+
+/** A staff member asks to withdraw an amount (₦500 up to their balance) to their saved bank account. */
+export async function requestWithdrawal(amount: number) {
   const db = await createClient();
-  const { data, error } = await db.rpc("request_withdrawal");
+  const { data, error } = await db.rpc("request_withdrawal", { p_amount: amount });
   if (error) throw toError(error);
   const r = data as { payment_id: string; amount: number; total_withdrawn: number; pending_amount: number; balance_left: number };
   return { paymentId: r.payment_id, amount: Number(r.amount), totalWithdrawn: Number(r.total_withdrawn), pendingAmount: Number(r.pending_amount), balanceLeft: Number(r.balance_left) };

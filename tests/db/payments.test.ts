@@ -41,7 +41,7 @@ run("database: staff withdrawals (staff request, owner approves)", () => {
   });
 
   const totals = async (who: string, target: string | null = who) => (await as(db, user(who), () => db.query(`select * from staff_payment_totals($1)`, [target]))).rows;
-  const request = (who: string) => as(db, user(who), () => db.query(`select request_withdrawal() as res`));
+  const request = (who: string, amount: number | null = null) => as(db, user(who), () => db.query(`select request_withdrawal($1) as res`, [amount]));
   const review = (who: string, id: string, approve: boolean, note: string | null = null) =>
     as(db, user(who), () => db.query(`select review_withdrawal($1, $2, $3) as res`, [id, approve, note]));
 
@@ -58,27 +58,34 @@ run("database: staff withdrawals (staff request, owner approves)", () => {
     expect((await as(db, user(staffA), () => db.query(`select * from staff_bank_details()`))).rows[0]).toMatchObject({ account_number: "0123456789", account_name: "ADA TEST" });
   });
 
-  it("a staff member requests their whole balance; it waits for the owner", async () => {
-    const r = (await request(staffA)).rows[0].res;
-    expect(r).toMatchObject({ ok: true, total_withdrawn: 0, pending_amount: 2000, balance_left: 0 });
-    expect(Number(r.amount)).toBe(2000);
+  it("staff choose any amount from ₦500 up to their balance (₦10,000 / ₦499 refused)", async () => {
+    await expect(request(staffA, 10000)).rejects.toThrow(/amount_too_large/);
+    await expect(request(staffA, 499)).rejects.toThrow(/amount_too_small/);
+    await expect(request(staffA, 10.555)).rejects.toThrow(/invalid_amount/);
+    const r = (await request(staffA, 500)).rows[0].res;
+    expect(r).toMatchObject({ ok: true, total_withdrawn: 0, pending_amount: 500, balance_left: 1500 });
+    expect(Number(r.amount)).toBe(500);
     const pay = (await db.query(`select * from staff_payments where id = $1`, [r.payment_id])).rows[0];
     expect(pay).toMatchObject({ status: "pending", type: "withdrawal", created_by: staffA, bank_name: "Access Bank", account_number: "0123456789", account_name: "ADA TEST" });
-    await expect(request(staffA)).rejects.toThrow(/already_requested/);
+    await expect(request(staffA, 500)).rejects.toThrow(/already_requested/);
   });
 
   it("nothing to withdraw, or not staff, is refused", async () => {
-    await expect(request(staffB)).rejects.toThrow(/no_balance/);
-    await expect(request(customer)).rejects.toThrow(/forbidden/);
+    await expect(request(staffB, 500)).rejects.toThrow(/no_balance/);
+    await expect(request(customer, 500)).rejects.toThrow(/forbidden/);
   });
 
   it("only the owner can approve, once; then it counts as withdrawn", async () => {
     const id = (await db.query(`select id from staff_payments where staff_id = $1 and status = 'pending'`, [staffA])).rows[0].id;
     await expect(review(staffA, id, true)).rejects.toThrow(/forbidden/);
     await expect(review(customer, id, true)).rejects.toThrow(/forbidden/);
-    const r = (await review(owner, id, true)).rows[0].res;
-    expect(r).toMatchObject({ status: "paid", total_withdrawn: 2000, pending_amount: 0, balance_left: 0 });
+    expect((await review(owner, id, true)).rows[0].res).toMatchObject({ status: "paid", total_withdrawn: 500, pending_amount: 0, balance_left: 1500 });
     await expect(review(owner, id, false)).rejects.toThrow(/already_answered/);
+    // then ₦1,500 (the rest)
+    await expect(request(staffA, 1500.01)).rejects.toThrow(/amount_too_large/);
+    const r2 = (await request(staffA, 1500)).rows[0].res;
+    expect((await review(owner, r2.payment_id, true)).rows[0].res).toMatchObject({ status: "paid", total_withdrawn: 2000, balance_left: 0 });
+    await expect(request(staffA, 500)).rejects.toThrow(/no_balance/);
     const row = (await totals(owner, null)).find((t) => t.user_id === staffA);
     expect(Number(row.total_earnings)).toBe(2000);
     expect(Number(row.total_withdrawn)).toBe(2000);
@@ -95,7 +102,7 @@ run("database: staff withdrawals (staff request, owner approves)", () => {
   });
 
   it("staff only see their own requests; nobody can edit or delete them", async () => {
-    expect((await as(db, user(staffA), () => db.query(`select status from staff_payments order by created_at`))).rows.map((x) => x.status)).toEqual(["paid", "rejected"]);
+    expect((await as(db, user(staffA), () => db.query(`select status from staff_payments order by created_at`))).rows.map((x) => x.status)).toEqual(["paid", "paid", "rejected"]);
     expect((await as(db, user(staffB), () => db.query(`select * from staff_payments`))).rowCount).toBe(0);
     await expect(totals(staffA, null)).rejects.toThrow(/forbidden/);
     await expect(totals(staffA, staffB)).rejects.toThrow(/forbidden/);

@@ -126,26 +126,40 @@ export function BankDetailsForm({ banks, initial, readOnly = false }: { banks: r
   );
 }
 
-/** The staff member's big "Withdraw to my account" button (their whole balance, to their saved bank). */
-export function WithdrawButton({ balance, bank }: { balance: number; bank: Bank | null }) {
+/** Withdraw any amount from ₦500 up to the available balance, to the saved bank account. */
+export function WithdrawButton({ balance, bank, min = 500 }: { balance: number; bank: Bank | null; min?: number }) {
   const router = useRouter();
+  const [amount, setAmount] = useState(String(Math.floor(balance)));
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
+  const value = Number(amount);
+  const problem =
+    amount.trim() === "" || !Number.isFinite(value)
+      ? "Enter an amount."
+      : Math.round(value * 100) !== value * 100
+        ? "Use at most 2 decimals."
+        : value < min
+          ? `The smallest withdrawal is ${naira(min)}.`
+          : value > balance
+            ? `You can withdraw up to ${naira(balance)}.`
+            : null;
+  const canWithdraw = Boolean(bank) && balance >= min;
+
   const withdraw = async () => {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/staff/withdraw", { method: "POST", headers: { "Content-Type": "application/json" } });
+      const res = await fetch("/api/staff/withdraw", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount: value }) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data.error ?? "Couldn't request your withdrawal.");
         setConfirming(false);
         return;
       }
-      setDone(`Withdrawal requested ✓ ${naira(Number(data.amount))} will be sent to your account once the owner approves it.`);
+      setDone(`Withdrawal request of ${naira(Number(data.amount))} sent! The owner will send it to your account and mark it paid.`);
       router.refresh();
     } catch {
       setError("Network problem. Please try again.");
@@ -156,25 +170,65 @@ export function WithdrawButton({ balance, bank }: { balance: number; bank: Bank 
   };
 
   if (done) return <p className="border-2 border-[#16A34A] bg-[#F0FDF4] p-4 text-sm font-semibold text-[#166534]" role="status" data-testid="withdraw-done">{done}</p>;
+  if (balance < min) return <p className="text-sm text-black/60" data-testid="withdraw-none">You can withdraw once your balance reaches {naira(min)}. Balance now: {naira(balance)}.</p>;
   return (
     <div data-testid="withdraw">
       {!confirming ? (
-        <button
-          type="button"
-          onClick={() => setConfirming(true)}
-          disabled={!bank || balance <= 0}
-          className="flex w-full flex-col items-center justify-center gap-1 rounded-2xl bg-[#2563EB] px-6 py-5 text-white shadow-[6px_6px_0_#1E3A8A] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-[22rem]"
-          data-testid="withdraw-btn"
+        <form
+          className="max-w-md space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!problem && canWithdraw) setConfirming(true);
+          }}
         >
-          <span className="text-lg font-extrabold uppercase tracking-[0.12em]">Withdraw {naira(balance)} to my account</span>
-          {bank && <span className="text-xs font-semibold opacity-90">{bank.bankName} · {bank.accountNumber} · {bank.accountName}</span>}
-        </button>
+          <label className="block text-sm font-semibold">
+            How much do you want to withdraw?
+            <span className={cn("mt-1.5 flex items-center border-2 bg-white px-3", problem && amount ? "border-danger" : "border-black focus-within:border-[#2563EB]")}>
+              <span className="text-lg font-bold">₦</span>
+              <input
+                className="w-full bg-transparent px-2 py-3 text-2xl font-extrabold tabular-nums outline-none"
+                inputMode="decimal"
+                min={min}
+                max={balance}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))}
+                aria-describedby="withdraw-hint"
+                aria-invalid={Boolean(problem)}
+                name="amount"
+                data-testid="withdraw-amount"
+              />
+            </span>
+            <span id="withdraw-hint" className={cn("mt-1 block text-xs font-normal", problem && amount ? "text-danger" : "text-black/60")}>
+              {problem && amount ? problem : `Between ${naira(min)} and ${naira(balance)}.`}
+            </span>
+          </label>
+          <div className="flex flex-wrap gap-2" aria-label="Quick amounts">
+            {[min, Math.floor(balance / 2), balance]
+              .filter((v, i, list) => v >= min && v <= balance && list.indexOf(v) === i)
+              .map((v) => (
+                <button key={v} type="button" onClick={() => setAmount(String(v))} className="rounded-full border border-black px-3 py-1 text-xs font-semibold hover:bg-black hover:text-white">
+                  {v === balance ? `All (${naira(v)})` : naira(v)}
+                </button>
+              ))}
+          </div>
+          <button
+            type="submit"
+            disabled={!canWithdraw || Boolean(problem)}
+            className="flex w-full flex-col items-center justify-center gap-1 rounded-2xl bg-[#2563EB] px-6 py-4 text-white shadow-[6px_6px_0_#1E3A8A] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            data-testid="withdraw-btn"
+          >
+            <span className="text-lg font-extrabold uppercase tracking-[0.12em]">Withdraw {problem ? "" : naira(value)} to my account</span>
+            {bank && <span className="text-xs font-semibold opacity-90">{bank.bankName} · {bank.accountNumber} · {bank.accountName}</span>}
+          </button>
+        </form>
       ) : (
-        <div className="border-2 border-[#2563EB] bg-[#EFF6FF] p-4 text-sm" data-testid="withdraw-confirm">
+        <div className="max-w-md border-2 border-[#2563EB] bg-[#EFF6FF] p-4 text-sm" data-testid="withdraw-confirm">
           <p>
-            Withdraw <strong>{naira(balance)}</strong> to <strong>{bank?.bankName} - {bank?.accountNumber} - {bank?.accountName}</strong>?
+            Withdraw <strong>{naira(value)}</strong> to <strong>{bank?.bankName} - {bank?.accountNumber} - {bank?.accountName}</strong>?
           </p>
-          <p className="mt-1 text-xs text-black/60">The owner sends it and marks it paid. Check your account details are right.</p>
+          <p className="mt-1 text-xs text-black/60">
+            {naira(balance - value)} will stay in your balance. The owner sends it and marks it paid.
+          </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button type="button" disabled={busy} onClick={() => void withdraw()} className="rounded-full bg-[#2563EB] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50" data-testid="withdraw-yes">
               {busy ? "Sending request…" : "Yes, withdraw"}
@@ -183,7 +237,7 @@ export function WithdrawButton({ balance, bank }: { balance: number; bank: Bank 
           </div>
         </div>
       )}
-      {!bank && <p className="mt-2 text-xs font-semibold text-[#9A3412]">⚠️ Add your bank details above to withdraw.</p>}
+      {!bank && <p className="mt-2 text-xs font-semibold text-[#9A3412]">⚠️ Add your bank details below to withdraw.</p>}
       {error && <p className="mt-2 text-sm text-danger" role="alert">{error}</p>}
     </div>
   );
