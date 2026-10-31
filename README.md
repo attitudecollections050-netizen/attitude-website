@@ -197,6 +197,10 @@ Reviews are never published automatically: only product reviews where the custom
 - **API:** `POST /api/staff/withdraw`, `POST /api/admin/payouts/review` `{ payment_id, approve, note? }`, `POST /api/staff/bank-details`, `GET /api/admin/staff-payments`, `GET /api/staff/my-payments`.
 - **Database:** `supabase/manual/live-staff-payouts.sql` (already applied to the live project).
 
+## 7a-1. Admin pop-up alerts
+
+While any admin page is open (phone or laptop), new orders pop up in pink with Haru (**🎀 New Order!** order number, customer, total) and staff withdrawal requests in purple with Jin (**💜 Withdrawal Request! ₦X**, who and which account), with a chime. Tap **View** to open it. Tap **Turn on order & withdrawal alerts** once on each device to also get system notifications while the admin tab is in the background (the tab title shows a count too). Alerts use Supabase Realtime (migration `20261031000022_orders_realtime.sql`, applied live) and follow the database's read rules: order alerts go to people who can see orders, withdrawal alerts to the owner; Product Staff get neither.
+
 ## 7a-2. Exact design on orders (so you pack the right one)
 
 Many products come in several designs that are told apart only by their photos (the variants are just sizes). When a shopper taps **Add to bag**, the photo they're looking at is saved as their design ("Photo 3 of 12", or the photo's description if you wrote one in the product's image alt text). Two designs in the same size become two bag lines, and the bag shows "Your design: …".

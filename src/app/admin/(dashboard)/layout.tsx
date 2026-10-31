@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { requireStaffPage } from "@/lib/auth";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { MotionProvider } from "@/components/ui/MotionProvider";
+import { AdminPinkNotifications } from "@/components/admin/AdminPinkNotifications";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 
@@ -21,6 +22,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <AdminNav permissions={permissions} email={user.email ?? ""} />
         <main className="min-w-0 flex-1 px-4 py-8 sm:px-8 lg:px-10">{children}</main>
       </div>
+      {/* Pink pop-ups: new orders (anyone who can see orders) and withdrawal requests (the owner). */}
+      <AdminPinkNotifications orders={permissions.includes("orders:read")} withdrawals={permissions.includes("staff:manage")} />
     </MotionProvider>
     </NextIntlClientProvider>
   );
