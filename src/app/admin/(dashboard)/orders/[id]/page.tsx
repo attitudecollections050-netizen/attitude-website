@@ -96,11 +96,17 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
                           <span className="relative block size-20 overflow-hidden rounded-xl border-2 border-success bg-neutral">
                             <SmartImage src={i.selected_image} alt={`${i.product_name} — chosen design`} fill sizes="80px" className="object-cover" />
                           </span>
+                        ) : i.image_url ?? photos[0]?.url ? (
+                          // No pick recorded (older orders): the general product photo, clearly marked.
+                          <span className="relative block size-20 overflow-hidden rounded-xl border-2 border-dashed border-warning bg-neutral">
+                            <SmartImage src={i.image_url ?? photos[0]!.url} alt={`${i.product_name} — general product photo`} fill sizes="80px" className="object-cover opacity-80" />
+                            <span className="absolute inset-x-0 bottom-0 bg-[#fff8e8]/95 py-0.5 text-center text-[8.5px] font-bold text-[#6b4a00]">⚠ General photo</span>
+                          </span>
                         ) : (
                           <span className="grid size-20 place-items-center rounded-xl border-2 border-dashed border-warning bg-[#fff8e8] text-2xl" aria-hidden>?</span>
                         )}
                         <span className={`mt-1 block text-[10px] font-semibold ${i.selected_image ? "text-success" : "text-warning"}`} data-testid="design-status">
-                          {i.selected_image ? (i.selected_set_by ? "✓ Set by team" : "✓ Customer's pick") : "⚠ Design not recorded"}
+                          {i.selected_image ? (i.selected_set_by ? "✓ Set by team" : "✓ Customer's pick") : "⚠ Design not recorded — check with the customer"}
                         </span>
                       </td>
                       <td className="align-top">

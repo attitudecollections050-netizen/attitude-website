@@ -19,9 +19,9 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
   const orders = (data ?? []) as unknown as { id: string; order_number: string; customer_name: string; email: string; total: number; currency: string; status: OrderStatus; payment_status: string; inventory_conflict: boolean; created_at: string; shipping_address: { city: string; country_code: string } }[];
   const pages = Math.ceil((count ?? 0) / ORDER_PAGE_SIZE);
   // Item photos for these orders: the exact design the customer picked where it was recorded.
-  type Thumb = { order_id: string; product_name: string; variant_label: string | null; quantity: number; selected_image: string | null };
+  type Thumb = { order_id: string; product_name: string; variant_label: string | null; quantity: number; image_url: string | null; selected_image: string | null };
   const { data: itemRows } = orders.length
-    ? await (await createClient()).from("order_items").select("order_id, product_name, variant_label, quantity, selected_image").in("order_id", orders.map((o) => o.id))
+    ? await (await createClient()).from("order_items").select("order_id, product_name, variant_label, quantity, image_url, selected_image").in("order_id", orders.map((o) => o.id))
     : { data: [] as Thumb[] };
   const itemsBy = new Map<string, Thumb[]>();
   for (const i of (itemRows ?? []) as Thumb[]) itemsBy.set(i.order_id, [...(itemsBy.get(i.order_id) ?? []), i]);
@@ -72,6 +72,12 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
                           <span className="relative block size-20 shrink-0 overflow-hidden rounded-xl border-2 border-success bg-neutral">
                             <SmartImage src={i.selected_image} alt={`${i.product_name} — chosen design`} fill sizes="80px" className="object-cover" />
                             {i.quantity > 1 && <span className="absolute bottom-0 right-0 bg-plum px-1 text-[10px] font-bold text-white">×{i.quantity}</span>}
+                          </span>
+                        ) : i.image_url ? (
+                          // No pick recorded (older orders): the general product photo, clearly marked.
+                          <span className="relative block size-20 shrink-0 overflow-hidden rounded-xl border-2 border-dashed border-warning bg-neutral" data-testid="no-design">
+                            <SmartImage src={i.image_url} alt={`${i.product_name} — general product photo`} fill sizes="80px" className="object-cover opacity-80" />
+                            <span className="absolute inset-x-0 bottom-0 bg-[#fff8e8]/95 px-0.5 py-0.5 text-center text-[8.5px] font-bold leading-tight text-[#6b4a00]">⚠ General photo</span>
                           </span>
                         ) : (
                           <span className="grid size-20 shrink-0 place-items-center rounded-xl border-2 border-dashed border-warning bg-[#fff8e8] px-1 text-center text-[10px] font-semibold leading-tight text-[#6b4a00]" data-testid="no-design">
