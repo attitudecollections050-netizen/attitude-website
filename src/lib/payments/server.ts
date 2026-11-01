@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/admin";
 import { sendOrderConfirmation } from "@/lib/email";
 import { processPaymentReference, type FinalizeResult, type PaymentDeps } from "./process";
 import { verifyTransaction, type PaystackVerification } from "./paystack";
+import { schedulePushDispatch } from "@/lib/push";
 
 async function finalize(v: PaystackVerification): Promise<FinalizeResult> {
   const { data, error } = await createServiceClient().rpc("finalize_payment", {
@@ -47,6 +48,10 @@ export async function onFirstPaid(result: FinalizeResult) {
 
 export const livePaymentDeps: PaymentDeps = { verify: verifyTransaction, finalize, recordFailure, onFirstPaid };
 
-export function processPayment(reference: string) {
-  return processPaymentReference(reference, livePaymentDeps);
+export async function processPayment(reference: string) {
+  try {
+    return await processPaymentReference(reference, livePaymentDeps);
+  } finally {
+    schedulePushDispatch(); // 💰 Payment Received / ❌ Payment Failed, low stock
+  }
 }

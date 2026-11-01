@@ -1,4 +1,5 @@
 "use server";
+import { schedulePushDispatch } from "@/lib/push";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
@@ -108,6 +109,7 @@ export async function placeOrder(input: unknown): Promise<PlaceOrderResult> {
     console.error("[checkout] create_order:", error?.message);
     return { ok: false, error: t(orderErrorKey(error?.message ?? "")), refreshCart: true };
   }
+  schedulePushDispatch(); // 🛒 New Order! to the owner's devices
   const order = created as { order_id: string; order_number: string; access_token: string; total: number; currency: string; payment_status: string };
   // Save the exact design (photo) the shopper picked on each order item, for packing.
   if ((created as { created?: boolean }).created) {

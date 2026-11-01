@@ -12,7 +12,7 @@ import { cn } from "@/lib/cn";
 
 interface Alert {
   id: string;
-  kind: "order" | "withdrawal" | "work";
+  kind: "order" | "withdrawal" | "work" | "payment" | "stock";
   title: string;
   body: string;
   href: string;
@@ -40,7 +40,7 @@ export function AdminPinkNotifications({ orders, withdrawals, staffWork = false 
   const push = useCallback((a: Alert) => {
     setAlerts((list) => [a, ...list.filter((x) => x.id !== a.id)].slice(0, 5));
     // Sound (unless switched off) + a phone/system notification when the tab is in the background.
-    notify(a.id, a.title, a.body, { icon: a.kind === "withdrawal" ? "/mascots/boy-face.png" : "/mascots/girl-face.png", href: a.href });
+    notify(a.id, a.title, a.body, { icon: a.kind === "withdrawal" ? "/mascots/boy-face.png" : "/mascots/girl-face.png", href: a.href, sound: a.kind === "payment" ? "payment" : "default" });
     if (document.hidden) {
       unseen.current += 1;
       baseTitle.current ??= document.title;
@@ -87,6 +87,19 @@ export function AdminPinkNotifications({ orders, withdrawals, staffWork = false 
       });
     }
     if (staffWork) {
+      // Business alerts: payments (ka-ching), bank transfers to check, order updates, low stock.
+      // New orders already pop up from the orders feed above.
+      channel.on("postgres_changes", { event: "INSERT", schema: "public", table: "admin_alerts" }, (payload) => {
+        const al = payload.new as { id: string; category: string; kind: string; title: string; message: string; link: string | null };
+        if (al.kind === "order_new" && orders) return;
+        push({
+          id: `alert-${al.id}`,
+          kind: al.category === "payments" ? "payment" : al.category === "low_stock" ? "stock" : "order",
+          title: al.title,
+          body: al.message,
+          href: al.link ?? "/admin/notifications",
+        });
+      });
       // Haru: a staff member finished some work (or fixed it) and it needs a rating.
       channel.on("postgres_changes", { event: "INSERT", schema: "public", table: "staff_notifications" }, (payload) => {
         const n = payload.new as { id: string; to_role: string; title: string; message: string };
@@ -116,7 +129,7 @@ export function AdminPinkNotifications({ orders, withdrawals, staffWork = false 
             transition={{ type: "spring", stiffness: 380, damping: 24 }}
             className={cn(
               "pointer-events-auto relative w-full overflow-hidden rounded-[1.4rem] border-2 p-4 shadow-[0_18px_40px_-12px_rgba(233,78,138,0.55)]",
-              a.kind === "withdrawal" ? "border-[#C084FC] bg-[#F5E8FF]" : "border-[#FFB6D9] bg-[#FFE4EF]",
+              a.kind === "withdrawal" ? "border-[#C084FC] bg-[#F5E8FF]" : a.kind === "payment" ? "border-[#86EFAC] bg-gradient-to-br from-[#ECFDF5] to-[#FEF9C3]" : a.kind === "stock" ? "border-[#FDBA74] bg-[#FFF7ED]" : "border-[#FFB6D9] bg-[#FFE4EF]",
             )}
             role="status"
             data-testid={`alert-${a.kind}`}
@@ -135,13 +148,13 @@ export function AdminPinkNotifications({ orders, withdrawals, staffWork = false 
                 <img src={a.kind === "withdrawal" ? "/mascots/boy-face.png" : "/mascots/girl-face.png"} alt={a.kind === "withdrawal" ? "Jin" : "Haru"} className="size-full object-cover" />
               </m.span>
               <div className="min-w-0">
-                <p className={cn("font-display text-lg font-semibold leading-tight", a.kind === "withdrawal" ? "text-[#7E22CE]" : "text-[#C2185B]")}>{a.title}</p>
+                <p className={cn("font-display text-lg font-semibold leading-tight", a.kind === "withdrawal" ? "text-[#7E22CE]" : a.kind === "payment" ? "text-[#166534]" : a.kind === "stock" ? "text-[#C2410C]" : "text-[#C2185B]")}>{a.title}</p>
                 <p className="mt-0.5 text-sm text-plum">{a.body}</p>
                 <div className="mt-2 flex gap-2">
                   <Link
                     href={a.href}
                     onClick={() => close(a.id)}
-                    className={cn("rounded-full px-3.5 py-1.5 text-xs font-bold text-white", a.kind === "withdrawal" ? "bg-[#9333EA]" : "bg-[#E94E8A]")}
+                    className={cn("rounded-full px-3.5 py-1.5 text-xs font-bold text-white", a.kind === "withdrawal" ? "bg-[#9333EA]" : a.kind === "payment" ? "bg-[#16A34A]" : a.kind === "stock" ? "bg-[#EA580C]" : "bg-[#E94E8A]")}
                   >
                     {a.kind === "work" ? "Rate now" : "View"}
                   </Link>

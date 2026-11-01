@@ -12,6 +12,7 @@ self.addEventListener("push", (event) => {
     data = { body: event.data ? event.data.text() : "" };
   }
   const title = data.title || "Attitude Collections";
+  const payment = data.sound === "payment";
   const options = {
     body: data.body || "",
     icon: data.icon || "/icons/icon-192.png",
@@ -19,7 +20,9 @@ self.addEventListener("push", (event) => {
     tag: data.tag || undefined,
     renotify: Boolean(data.tag),
     silent: false, // let the phone/laptop play its notification sound
-    vibrate: [120, 60, 120],
+    // Money in: long buzz pattern, and it stays on screen until tapped.
+    vibrate: payment ? [400, 120, 400, 120, 400, 120, 800] : [120, 60, 120],
+    requireInteraction: payment,
     data: { url: data.url || "/admin/notifications" },
   };
   event.waitUntil(
@@ -27,7 +30,7 @@ self.addEventListener("push", (event) => {
       await self.registration.showNotification(title, options);
       // Open tabs play the shop's own ding.
       const tabs = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-      tabs.forEach((c) => c.postMessage({ type: "push", title, body: options.body, tag: options.tag }));
+      tabs.forEach((c) => c.postMessage({ type: "push", title, body: options.body, tag: options.tag, sound: data.sound || "default" }));
     })(),
   );
 });

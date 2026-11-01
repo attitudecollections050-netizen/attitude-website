@@ -1,4 +1,5 @@
 "use server";
+import { schedulePushDispatch } from "@/lib/push";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -113,6 +114,7 @@ export async function submitTransferClaim(_prev: TransferClaimState, formData: F
     console.error("[transfer] claim:", error.message);
     return fail("Something went wrong on our side. Please try again.");
   }
+  schedulePushDispatch(); // 🏦 Bank Transfer to Check
 
   await db.from("orders").update({ payment_status: "pending" }).eq("id", order.id).in("payment_status", ["unpaid", "failed"]);
   await db.from("order_status_history").insert({ order_id: order.id, status: order.status, public_note: "We've received your transfer details and we're checking them now." });

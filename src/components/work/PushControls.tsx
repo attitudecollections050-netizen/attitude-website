@@ -153,7 +153,7 @@ export function PushControls({ who }: { who: "admin" | "staff" }) {
           <p className="font-display text-lg font-semibold text-[#C2185B]">Push notifications on this phone or laptop</p>
           <p className="mt-0.5 text-sm text-black/60">
             {who === "admin"
-              ? "Get Haru's alerts (new staff work, fixes) even when the site is closed. Turn it on once on each device."
+              ? "Get new orders, payments (received / failed / bank transfers), low stock and staff work on your phone, even when the site is closed. Turn it on once on each device."
               : "Get Haru's messages (ratings, bonuses) even when the site is closed. Turn it on once on each device."}
           </p>
         </div>
@@ -191,12 +191,21 @@ export function PushControls({ who }: { who: "admin" | "staff" }) {
         )}
       </div>
       {msg && <p className={cn("mt-2 text-sm font-semibold", msg.tone === "ok" ? "text-[#166534]" : "text-danger")} role="status" data-testid="push-msg">{msg.text}</p>}
-      <MyDevices currentId={push.deviceId} refreshKey={`${push.subscribed}-${push.deviceId}`} onRevokedCurrent={push.forgetLocal} />
+      <MyDevices who={who} currentId={push.deviceId} refreshKey={`${push.subscribed}-${push.deviceId}`} onRevokedCurrent={push.forgetLocal} />
     </section>
   );
 }
 
+const ALERTS = [
+  { key: "staff_work", label: "Staff work" },
+  { key: "orders", label: "New Orders" },
+  { key: "payments", label: "Payments (Received / Failed)" },
+  { key: "low_stock", label: "Low stock" },
+] as const;
+type AlertKey = (typeof ALERTS)[number]["key"];
+
 interface Device {
+  alertTypes: AlertKey[];
   id: string;
   name: string;
   browser: string | null;
@@ -218,7 +227,7 @@ const dateFmt = (iso: string) => new Date(iso).toLocaleDateString("en-NG", { dat
  * "My Devices Receiving Push": every phone/laptop getting this person's notifications, with
  * Revoke — so a phone you once logged in on (someone else's) can be cut off from anywhere.
  */
-function MyDevices({ currentId, refreshKey, onRevokedCurrent }: { currentId: string | null; refreshKey: string; onRevokedCurrent: () => Promise<void> }) {
+function MyDevices({ who, currentId, refreshKey, onRevokedCurrent }: { who: "admin" | "staff"; currentId: string | null; refreshKey: string; onRevokedCurrent: () => Promise<void> }) {
   const [devices, setDevices] = useState<Device[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -233,6 +242,17 @@ function MyDevices({ currentId, refreshKey, onRevokedCurrent }: { currentId: str
       alive = false;
     };
   }, [refreshKey]);
+
+  const toggle = async (d: Device, key: AlertKey) => {
+    const next = d.alertTypes.includes(key) ? d.alertTypes.filter((k) => k !== key) : [...d.alertTypes, key];
+    setDevices((list) => (list ?? []).map((x) => (x.id === d.id ? { ...x, alertTypes: next } : x)));
+    setError(null);
+    const res = await fetch(`/api/push/devices/${d.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ alert_types: next }) }).catch(() => null);
+    if (!res?.ok) {
+      setDevices((list) => (list ?? []).map((x) => (x.id === d.id ? { ...x, alertTypes: d.alertTypes } : x)));
+      setError("Couldn't save that. Please try again.");
+    }
+  };
 
   const revoke = async (d: Device) => {
     if (!window.confirm(`Stop push notifications on “${d.name}”?`)) return;
@@ -257,6 +277,7 @@ function MyDevices({ currentId, refreshKey, onRevokedCurrent }: { currentId: str
         <p className="text-sm font-bold">My Devices Receiving Push {devices ? `(${devices.length}/3)` : ""}</p>
         <LogoutAllButton />
       </div>
+      {who === "admin" && <p className="mt-1 text-xs text-black/55">Tick what each device should get. Payments ring with a louder “ka-ching” and stay on screen until you tap.</p>}
       <p className="mt-1 text-xs text-black/55">Don&apos;t recognise one? Revoke it. Logging out on a device also stops its push. Devices not used for 30 days stop automatically. Up to 3 devices.</p>
       {error && <p className="mt-2 text-sm text-danger" role="alert">{error}</p>}
       {devices === null ? (
@@ -280,6 +301,26 @@ function MyDevices({ currentId, refreshKey, onRevokedCurrent }: { currentId: str
               <button type="button" disabled={busy === d.id} onClick={() => void revoke(d)} className="rounded-full border border-[#DC2626] px-3 py-1 text-xs font-bold text-[#B91C1C] disabled:opacity-50" data-testid="revoke">
                 {busy === d.id ? "Revoking…" : "Revoke"}
               </button>
+              {who === "admin" && (
+                <fieldset className="flex w-full flex-wrap gap-1.5" data-testid="alert-toggles">
+                  <legend className="sr-only">Alerts on {d.name}</legend>
+                  {ALERTS.map((a) => {
+                    const on = d.alertTypes.includes(a.key);
+                    return (
+                      <label
+                        key={a.key}
+                        className={cn(
+                          "inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold transition",
+                          on ? (a.key === "payments" ? "border-[#16A34A] bg-[#DCFCE7] text-[#166534]" : "border-[#E94E8A] bg-[#FFE4EF] text-[#C2185B]") : "border-black/15 bg-white text-black/45",
+                        )}
+                      >
+                        <input type="checkbox" className="size-3.5 accent-[#E94E8A]" checked={on} onChange={() => void toggle(d, a.key)} data-testid={`toggle-${a.key}`} />
+                        {a.label}
+                      </label>
+                    );
+                  })}
+                </fieldset>
+              )}
             </li>
           ))}
         </ul>

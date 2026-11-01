@@ -8,7 +8,11 @@ const KEY = "ac_notify_sound";
 const listeners = new Set<() => void>();
 let ctx: AudioContext | null = null;
 let clip: HTMLAudioElement | null = null;
+let cash: HTMLAudioElement | null = null;
 const SOUND_URL = "/notification.mp3";
+/** Payments get a louder, longer "ka-ching ka-ching" so money coming in stands out. */
+const PAYMENT_URL = "/payment.mp3";
+export type SoundKind = "default" | "payment";
 const played = new Map<string, number>();
 
 function audio(): AudioContext | null {
@@ -37,12 +41,24 @@ if (typeof window !== "undefined") {
         if (clip) clip.muted = false;
       });
     }
+    if (!cash && typeof Audio !== "undefined") {
+      cash = new Audio(PAYMENT_URL);
+      cash.preload = "auto";
+      cash.muted = true;
+      void cash.play().then(() => {
+        cash!.pause();
+        cash!.currentTime = 0;
+        cash!.muted = false;
+      }).catch(() => {
+        if (cash) cash.muted = false;
+      });
+    }
   };
   for (const ev of ["pointerdown", "keydown", "touchend"]) window.addEventListener(ev, unlock, { passive: true });
   // A push arrived while a tab is open: the system shows it; this tab plays the ding once.
   navigator.serviceWorker?.addEventListener("message", (e: MessageEvent) => {
-    const d = e.data as { type?: string; tag?: string } | null;
-    if (d?.type === "push" && d.tag && firstTime(d.tag) && isSoundOn()) playSound();
+    const d = e.data as { type?: string; tag?: string; sound?: SoundKind } | null;
+    if (d?.type === "push" && d.tag && firstTime(d.tag) && isSoundOn()) playSound(d.sound);
   });
 }
 
@@ -113,17 +129,23 @@ function ding() {
 }
 
 /** The notification sound: the mp3 file, or the Web Audio tone if the file can't play. */
-export function playSound() {
-  if (typeof Audio === "undefined") return ding();
-  try {
-    clip ??= new Audio(SOUND_URL);
-    clip.muted = false;
-    clip.currentTime = 0;
-    const p = clip.play();
-    if (p) p.catch(() => ding());
-  } catch {
+export function playSound(kind: SoundKind = "default") {
+  const fallback = () => {
     ding();
+    if (kind === "payment") setTimeout(ding, 450); // a double ding when the file can't play
+  };
+  if (typeof Audio === "undefined") return fallback();
+  try {
+    const el = kind === "payment" ? (cash ??= new Audio(PAYMENT_URL)) : (clip ??= new Audio(SOUND_URL));
+    el.muted = false;
+    el.volume = 1;
+    el.currentTime = 0;
+    const p = el.play();
+    if (p) p.catch(fallback);
+  } catch {
+    fallback();
   }
+  if (kind === "payment") navigator.vibrate?.([300, 100, 300, 100, 600]);
 }
 
 /** Plays the test sound (used by the toggle; the tap also unlocks audio). */
@@ -135,12 +157,12 @@ export function playTestSound() {
  * A new notification arrived: play the sound (if on) and show a system notification when
  * the person allowed them and isn't looking at the tab. Safe to call several times per id.
  */
-export function notify(id: string, title: string, body: string, opts: { icon?: string; href?: string } = {}) {
+export function notify(id: string, title: string, body: string, opts: { icon?: string; href?: string; sound?: SoundKind } = {}) {
   if (!firstTime(id)) return;
-  if (isSoundOn()) playSound();
+  if (isSoundOn()) playSound(opts.sound);
   if (typeof Notification === "undefined" || Notification.permission !== "granted" || !document.hidden) return;
   try {
-    const n = new Notification(title, { body, icon: opts.icon ?? "/mascots/girl-face.png", tag: id });
+    const n = new Notification(title, { body, icon: opts.icon ?? "/mascots/girl-face.png", tag: id, requireInteraction: opts.sound === "payment" });
     n.onclick = () => {
       window.focus();
       if (opts.href) window.location.href = opts.href;
