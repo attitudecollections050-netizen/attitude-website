@@ -46,6 +46,9 @@ export default async function AdminLoginPage({ searchParams }: PageProps<"/admin
             ) : (
               <>
                 {sp.error === "forbidden" && <Notice tone="error" className="mb-5">Please sign in with an administrator account.</Notice>}
+                {sp.signed_out === "all" && (
+                  <Notice tone="success" className="mb-5">You&apos;re logged out on all devices, and none of them will get your push notifications any more.</Notice>
+                )}
                 <LoginForm next="/admin" />
               </>
             )}

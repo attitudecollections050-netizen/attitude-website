@@ -34,15 +34,26 @@ export interface PushMessage {
   icon?: string;
 }
 
-type SubRow = { id: string; user_id: string; subscription: webpush.PushSubscription };
+type SubRow = { id: string; user_id: string; subscription_json: webpush.PushSubscription; last_active_at: string };
+
+/** Devices not used on the site (while signed in) for this long get no pushes and are removed. */
+export const INACTIVE_DAYS = 30;
+export const MAX_DEVICES = 3;
+/** httpOnly cookie naming this browser's push device, so logging out can remove it. */
+export const DEVICE_COOKIE = "ac_push_device";
 
 /** Sends to every saved device of these people. Removes devices that are gone (404/410). Returns how many got it. */
 export async function sendPushToUsers(userIds: string[], msg: PushMessage): Promise<{ sent: number; devices: number }> {
   if (!isPushConfigured() || userIds.length === 0) return { sent: 0, devices: 0 };
   setup();
   const svc = createServiceClient();
-  const { data } = await svc.from("push_subscriptions").select("id, user_id, subscription").in("user_id", [...new Set(userIds)]);
-  const subs = (data ?? []) as SubRow[];
+  const { data } = await svc.from("push_subscriptions").select("id, user_id, subscription_json, last_active_at").in("user_id", [...new Set(userIds)]);
+  const cutoff = Date.now() - INACTIVE_DAYS * 86_400_000;
+  const all = (data ?? []) as SubRow[];
+  // Auto cleanup: a device nobody has used for 30 days stops getting pushes.
+  const stale = all.filter((s) => new Date(s.last_active_at).getTime() < cutoff).map((s) => s.id);
+  if (stale.length) await svc.from("push_subscriptions").delete().in("id", stale);
+  const subs = all.filter((s) => !stale.includes(s.id));
   const payload = JSON.stringify({ ...msg, url: msg.url.startsWith("/") ? msg.url : "/admin/notifications" });
   let sent = 0;
   const gone: string[] = [];
@@ -50,7 +61,7 @@ export async function sendPushToUsers(userIds: string[], msg: PushMessage): Prom
   await Promise.all(
     subs.map(async (s) => {
       try {
-        await webpush.sendNotification(s.subscription, payload, { TTL: 60 * 60 * 24, urgency: "high" });
+        await webpush.sendNotification(s.subscription_json, payload, { TTL: 60 * 60 * 24, urgency: "high" });
         sent += 1;
         used.push(s.id);
       } catch (e) {
@@ -111,4 +122,52 @@ export async function dispatchPendingPushesSafe() {
   } catch (e) {
     console.error("[push] dispatch failed", (e as Error).message);
   }
+}
+
+// ---- Devices ("My Devices Receiving Push") ------------------------------------------------
+
+export interface PushDevice {
+  id: string;
+  name: string;
+  browser: string | null;
+  createdAt: string;
+  lastActiveAt: string;
+  lastUsedAt: string | null;
+}
+
+export async function myDevices(userId: string): Promise<PushDevice[]> {
+  const { data } = await createServiceClient()
+    .from("push_subscriptions")
+    .select("id, device_name, browser, created_at, last_active_at, last_used_at")
+    .eq("user_id", userId)
+    .order("last_active_at", { ascending: false });
+  return (data ?? []).map((d) => ({ id: d.id, name: d.device_name, browser: d.browser, createdAt: d.created_at, lastActiveAt: d.last_active_at, lastUsedAt: d.last_used_at }));
+}
+
+/** Removes one of the person's own devices (by id or by browser endpoint). */
+export async function revokeDevice(userId: string, by: { id?: string | null; endpoint?: string | null }): Promise<number> {
+  if (!by.id && !by.endpoint) return 0;
+  let q = createServiceClient().from("push_subscriptions").delete().eq("user_id", userId);
+  q = by.id ? q.eq("id", by.id) : q.eq("endpoint", by.endpoint!);
+  const { data } = await q.select("id");
+  return data?.length ?? 0;
+}
+
+export async function revokeAllDevices(userId: string): Promise<number> {
+  const { data } = await createServiceClient().from("push_subscriptions").delete().eq("user_id", userId).select("id");
+  return data?.length ?? 0;
+}
+
+/**
+ * The device was used on the site while signed in: keep it active. Never re-creates a
+ * device that was revoked — returns false so the browser drops its subscription.
+ */
+export async function touchDevice(userId: string, endpoint: string): Promise<{ exists: boolean; id: string | null }> {
+  const { data } = await createServiceClient()
+    .from("push_subscriptions")
+    .update({ last_active_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .eq("endpoint", endpoint)
+    .select("id");
+  return { exists: Boolean(data?.length), id: data?.[0]?.id ?? null };
 }

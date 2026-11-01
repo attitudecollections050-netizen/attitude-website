@@ -1,5 +1,7 @@
 import { isEmailConfigured } from "@/lib/groundmail";
 import { requireStaffPage } from "@/lib/auth";
+import Link from "next/link";
+import { LogoutAllButton } from "@/components/work/PushControls";
 import { getSettings } from "@/lib/settings";
 import { isPaystackConfigured, paystackMode, env } from "@/lib/env";
 import { saveBankTransferSettings, saveCheckoutSettings, saveStoreSettings } from "@/app/admin/actions/store";
@@ -16,6 +18,12 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Store Settings" description="Leave unknown details blank — nothing is shown on the site until you fill it in." />
+      <Card title="Security: devices" description="Logged in on someone else's phone? This signs you out everywhere and stops push notifications on every device. You can also revoke single devices under Staff Notifications → My Devices Receiving Push.">
+        <div className="flex flex-wrap items-center gap-3">
+          <LogoutAllButton big />
+          <Link href="/admin/notifications" className="text-sm font-semibold underline underline-offset-4">See my devices →</Link>
+        </div>
+      </Card>
       <Card title="Store & customer support">
         <ActionForm action={saveStoreSettings}>
           <input type="hidden" name="currency" value="NGN" />

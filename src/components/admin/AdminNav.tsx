@@ -6,6 +6,7 @@ import { AnimatePresence, m } from "motion/react";
 import { LayoutDashboard, Package, ShoppingBag, Layers, Truck, Tag, Home, Settings, Boxes, Mail, Menu, X, Store, LogOut, FileText, CreditCard, Users, BarChart3, Heart, Globe2, UserCog, Wallet, Landmark, Star, Bell } from "lucide-react";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { signOut } from "@/app/actions/auth";
+import { PushLogoutField } from "@/components/work/PushControls";
 import { cn } from "@/lib/cn";
 
 const ITEMS = [
@@ -68,6 +69,7 @@ export function AdminNav({ permissions, email, badges = {} }: { permissions: str
       <div className="mt-3 flex items-center justify-between">
         <Link href="/" className="hover:text-white">View store ↗</Link>
         <form action={signOut}>
+          <PushLogoutField />
           <button className="flex items-center gap-1.5 hover:text-white"><LogOut className="size-3.5" /> Sign out</button>
         </form>
       </div>

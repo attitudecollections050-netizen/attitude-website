@@ -171,15 +171,27 @@ run("database: staff work ratings, auto ₦25 bonus/penalty and Haru notificatio
     expect((await as(db, user(staffB), () => db.query(`select 1 from staff_ratings where staff_id = $1`, [staffA]))).rowCount).toBe(0);
   });
 
-  it("push subscriptions: each person manages only their own devices", async () => {
+  it("push devices: own devices only, named, max 3 per person", async () => {
     const ins = (who: string, endpoint: string) =>
-      as(db, user(who), () => db.query(`insert into push_subscriptions (user_id, endpoint, subscription) values ($1, $2, '{}'::jsonb)`, [who, endpoint]));
+      as(db, user(who), () => db.query(`insert into push_subscriptions (user_id, endpoint, subscription_json, device_name) values ($1, $2, '{}'::jsonb, 'Chrome on Android phone')`, [who, endpoint]));
     await ins(owner, "https://push.example.com/owner-phone");
-    await expect(as(db, user(staffA), () => db.query(`insert into push_subscriptions (user_id, endpoint, subscription) values ($1, 'https://push.example.com/fake', '{}'::jsonb)`, [owner]))).rejects.toThrow();
+    await expect(as(db, user(staffA), () => db.query(`insert into push_subscriptions (user_id, endpoint, subscription_json, device_name) values ($1, 'https://push.example.com/fake', '{}'::jsonb, 'x')`, [owner]))).rejects.toThrow();
     await expect(ins(staffA, "http://insecure.example.com/x")).rejects.toThrow();
     expect((await as(db, user(staffA), () => db.query(`select * from push_subscriptions`))).rowCount).toBe(0);
     expect((await as(db, user(staffA), () => db.query(`delete from push_subscriptions returning id`))).rowCount).toBe(0);
-    expect((await as(db, user(owner), () => db.query(`select endpoint from push_subscriptions`))).rows).toEqual([{ endpoint: "https://push.example.com/owner-phone" }]);
+    expect((await as(db, user(owner), () => db.query(`select endpoint, device_name from push_subscriptions`))).rows).toEqual([{ endpoint: "https://push.example.com/owner-phone", device_name: "Chrome on Android phone" }]);
+    // Nobody can change a device row directly (activity is recorded by the server)
+    expect((await as(db, user(owner), () => db.query(`update push_subscriptions set last_active_at = now() returning id`))).rowCount).toBe(0);
+    // Max 3 devices per person — the 4th is refused by the database itself
+    await ins(owner, "https://push.example.com/owner-laptop");
+    await ins(owner, "https://push.example.com/friends-phone");
+    await expect(ins(owner, "https://push.example.com/fourth")).rejects.toThrow(/too_many_devices/);
+    // Revoke one → room for another
+    expect((await as(db, user(owner), () => db.query(`delete from push_subscriptions where endpoint like '%friends-phone' returning id`))).rowCount).toBe(1);
+    await ins(owner, "https://push.example.com/fourth");
+    expect((await db.query(`select count(*)::int c from push_subscriptions where user_id = $1`, [owner])).rows[0].c).toBe(3);
+    // Another person's limit is separate
+    await ins(staffA, "https://push.example.com/ada-phone");
     // New notifications start un-pushed
     expect((await db.query(`select count(*)::int c from staff_notifications where pushed_at is not null`)).rows[0].c).toBe(0);
   });

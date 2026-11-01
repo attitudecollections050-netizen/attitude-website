@@ -1,6 +1,8 @@
 "use server";
 import { restoreProfilePreferences } from "./preferences";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { DEVICE_COOKIE, revokeAllDevices, revokeDevice } from "@/lib/push";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { env, isSupabaseConfigured } from "@/lib/env";
@@ -67,12 +69,55 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   return { ok: true, message: await am("checkEmail") };
 }
 
-export async function signOut() {
+/**
+ * Stops push notifications on this browser for the person signing out: the device named by
+ * the httpOnly device cookie, and the browser's push endpoint if the logout form sent it.
+ */
+async function forgetThisPushDevice(userId: string, endpoint: string | null) {
+  try {
+    const jar = await cookies();
+    const id = jar.get(DEVICE_COOKIE)?.value;
+    if (id && /^[0-9a-f-]{36}$/i.test(id)) await revokeDevice(userId, { id });
+    if (endpoint && /^https:\/\/\S{1,2000}$/.test(endpoint)) await revokeDevice(userId, { endpoint });
+    jar.delete(DEVICE_COOKIE);
+  } catch (e) {
+    console.error("[push] couldn't remove device on logout", (e as Error).message);
+  }
+}
+
+export async function signOut(formData?: FormData) {
   if (isSupabaseConfigured()) {
+    const user = await getCurrentUser();
+    if (user) {
+      const ep = formData?.get("push_endpoint");
+      await forgetThisPushDevice(user.id, typeof ep === "string" && ep ? ep : null);
+    }
     const supabase = await createClient();
-    await supabase.auth.signOut();
+    // This device only ("Log out of all devices" signs out everywhere).
+    await supabase.auth.signOut({ scope: "local" });
   }
   redirect("/");
+}
+
+/**
+ * "Log out of all devices": every phone and laptop stops getting this person's push
+ * notifications and every session (on every device) is signed out.
+ */
+export async function signOutEverywhere() {
+  if (isSupabaseConfigured()) {
+    const user = await getCurrentUser();
+    if (user) {
+      try {
+        await revokeAllDevices(user.id);
+      } catch (e) {
+        console.error("[push] couldn't remove devices", (e as Error).message);
+      }
+    }
+    (await cookies()).delete(DEVICE_COOKIE);
+    const supabase = await createClient();
+    await supabase.auth.signOut({ scope: "global" });
+  }
+  redirect("/admin/login?signed_out=all");
 }
 
 export async function requestPasswordReset(_prev: AuthState, formData: FormData): Promise<AuthState> {

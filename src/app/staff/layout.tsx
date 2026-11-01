@@ -8,6 +8,7 @@ import { signOut } from "@/app/actions/auth";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { MotionProvider } from "@/components/ui/MotionProvider";
 import { HaruToasts } from "@/components/work/HaruNotifications";
+import { PushLogoutField } from "@/components/work/PushControls";
 import { unreadCount } from "@/lib/staff-work";
 
 export const metadata: Metadata = { title: { default: "My Dashboard", template: "%s · Staff" }, robots: { index: false, follow: false } };
@@ -42,6 +43,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
                 </>
               )}
               <form action={signOut}>
+                <PushLogoutField />
                 <button className={`${link} inline-flex items-center gap-1.5`}><LogOut className="size-3.5" aria-hidden /> Logout</button>
               </form>
             </nav>
