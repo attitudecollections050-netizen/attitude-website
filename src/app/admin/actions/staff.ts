@@ -202,5 +202,17 @@ export async function setDeletePermission(_prev: AdminResult, formData: FormData
   });
 }
 
+/** How Haru greets this staff member in reward messages: "Congratulations sis!" / "bro!" / their first name. */
+export async function setStaffGreeting(_prev: AdminResult, formData: FormData): Promise<AdminResult> {
+  return guarded("staff:manage", async () => {
+    const id = uuid.parse(formData.get("user_id"));
+    const greeting = z.enum(["sis", "bro", "name"]).parse(formData.get("greeting"));
+    const { error } = await createServiceClient().from("staff_members").update({ greeting }).eq("user_id", id);
+    if (error) return dbError(error);
+    revalidatePath("/admin/staff");
+    return { ok: true, message: greeting === "name" ? "Haru will use their first name." : `Haru will call them “${greeting}”.` };
+  });
+}
+
 // ------------------------------------------------------------- accepting
 /** Called from the invitation link: the invited person chooses their own password. */

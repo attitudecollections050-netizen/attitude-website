@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { earningsFor } from "@/lib/staff-earnings";
 import { env, serverSecrets } from "@/lib/env";
 import { ROLE_LABELS, type AppRole } from "@/lib/permissions";
-import { removeStaff, setDeletePermission, setStaffDisabled } from "@/app/admin/actions/staff";
+import { removeStaff, setDeletePermission, setStaffDisabled, setStaffGreeting } from "@/app/admin/actions/staff";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { ResendInviteButton, StaffInviteForm } from "@/components/admin/StaffForms";
 import { Badge, Card, Empty, PageHeader } from "@/components/admin/ui";
@@ -28,6 +28,7 @@ interface StaffRow {
   invited_at: string;
   last_invited_at: string;
   accepted_at: string | null;
+  greeting: "sis" | "bro" | "name" | null;
 }
 
 export default async function StaffPage() {
@@ -44,7 +45,7 @@ export default async function StaffPage() {
   }
   const svc = createServiceClient();
   const [{ data: staffRows }, { data: ownerRoles }] = await Promise.all([
-    svc.from("staff_members").select("user_id, email, full_name, role, status, can_delete_products, invited_at, last_invited_at, accepted_at").order("invited_at", { ascending: false }),
+    svc.from("staff_members").select("user_id, email, full_name, role, status, can_delete_products, invited_at, last_invited_at, accepted_at, greeting").order("invited_at", { ascending: false }),
     svc.from("user_roles").select("user_id").eq("role", "admin"),
   ]);
   const staff = (staffRows ?? []) as StaffRow[];
@@ -298,6 +299,17 @@ export default async function StaffPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                   <Link href={`/staff/dashboard?as=${s.user_id}`} className="text-xs font-semibold underline underline-offset-4 hover:text-rose-deep">View as staff</Link>
+                  <ActionForm action={setStaffGreeting} submitLabel="Save" variant="ghost" inline>
+                    <input type="hidden" name="user_id" value={s.user_id} />
+                    <label className="inline-flex items-center gap-1.5 text-xs font-semibold" title="How Haru greets them when they win ₦25">
+                      Call them
+                      <select name="greeting" defaultValue={s.greeting ?? "name"} className="rounded border border-line bg-white px-1.5 py-1 text-xs" data-testid="greeting">
+                        <option value="sis">sis 💖</option>
+                        <option value="bro">bro</option>
+                        <option value="name">{s.full_name?.trim().split(/\s+/)[0] || "their name"}</option>
+                      </select>
+                    </label>
+                  </ActionForm>
                   <ActionForm action={setDeletePermission} submitLabel={s.can_delete_products ? "Stop deleting" : "Allow deleting"} variant="ghost" inline>
                     <input type="hidden" name="user_id" value={s.user_id} />
                     <input type="hidden" name="allow" value={s.can_delete_products ? "0" : "1"} />
