@@ -253,3 +253,23 @@ export async function ratingSummaries(opts: { staffId?: string; limit?: number }
   }
   return out;
 }
+
+/** The newest unread ₦25 win/loss message for the signed-in staff member (for the reward banner). */
+export async function latestUnreadReward(): Promise<{ id: string; type: "bonus" | "penalty"; title: string; message: string } | null> {
+  try {
+    const db = await createClient();
+    const { data } = await db
+      .from("staff_notifications")
+      .select("id, type, title, message, created_at")
+      .eq("to_role", "staff")
+      .eq("is_read", false)
+      .in("type", ["bonus", "penalty"])
+      .gte("created_at", new Date(Date.now() - 14 * 86_400_000).toISOString())
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return data ? { id: data.id, type: data.type as "bonus" | "penalty", title: data.title, message: data.message } : null;
+  } catch {
+    return null;
+  }
+}

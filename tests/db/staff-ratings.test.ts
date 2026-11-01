@@ -94,7 +94,7 @@ run("database: staff work ratings, auto ₦25 bonus/penalty and Haru notificatio
     expect(r).toMatchObject({ good_streak: 0, bonus: 25 });
     expect(await balance(staffA)).toBe(before + 25);
     notes = await myNotes(staffA);
-    expect(notes[0]).toMatchObject({ type: "bonus", title: "Bonus! ₦25 Added! 🎉", link: "/staff/earnings" });
+    expect(notes[0]).toMatchObject({ type: "bonus", title: "🎉 Congratulations! You just won 25 Naira!", link: "/staff/earnings" });
     expect(notes[0].message).toContain(`Your balance is now ₦${(before + 25).toLocaleString("en-US")}`);
     const pay = (await db.query(`select * from staff_payments where staff_id = $1 and type = 'bonus'`, [staffA])).rows;
     expect(pay).toHaveLength(1);
@@ -114,8 +114,22 @@ run("database: staff work ratings, auto ₦25 bonus/penalty and Haru notificatio
     expect(await rate(owner, tasks[2], "poor", "Price is wrong")).toMatchObject({ poor_streak: 0, penalty: 25 });
     expect(await balance(staffA)).toBe(before - 25);
     notes = await myNotes(staffA);
-    expect(notes[0]).toMatchObject({ type: "penalty", title: "₦25 Deducted - Try Harder" });
+    expect(notes[0]).toMatchObject({ type: "penalty", title: "😢 3 Negatives completed — you lost 25 Naira" });
     expect(notes[0].message).toMatch(/I know you can do better!.*so ₦25 was deducted\..*Reason: Price is wrong.*I believe in you!/);
+  });
+
+  it("staff_stats shows positives_count, negatives_count and naira_balance (own row only; owner sees all)", async () => {
+    const mine = (await as(db, user(staffA), () => db.query(`select user_id, positives_count, negatives_count, naira_balance from staff_stats`))).rows;
+    expect(mine).toHaveLength(1);
+    const real = (await db.query(`select good_streak, poor_streak from staff_members where user_id = $1`, [staffA])).rows[0];
+    expect(mine[0]).toMatchObject({ user_id: staffA, positives_count: real.good_streak, negatives_count: real.poor_streak });
+    expect(Number(mine[0].naira_balance)).toBe(await balance(staffA));
+    expect((await as(db, user(owner), () => db.query(`select * from staff_stats`))).rowCount).toBe(2);
+    await expect(as(db, user(staffA), () => db.query(`update staff_stats set naira_balance = 999999`))).rejects.toThrow();
+    // Same balance as the payments totals, for everyone (and readable from the SQL editor)
+    const tot = (await as(db, user(owner), () => db.query(`select user_id, balance_left from staff_payment_totals(null)`))).rows;
+    const direct = (await db.query(`select user_id, naira_balance from staff_stats`)).rows;
+    for (const t of tot) expect(Number(direct.find((d) => d.user_id === t.user_id)?.naira_balance)).toBe(Number(t.balance_left));
   });
 
   it("a penalty never takes the balance below ₦0", async () => {

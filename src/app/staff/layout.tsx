@@ -9,7 +9,8 @@ import { Wordmark } from "@/components/brand/Wordmark";
 import { MotionProvider } from "@/components/ui/MotionProvider";
 import { HaruToasts } from "@/components/work/HaruNotifications";
 import { PushLogoutField } from "@/components/work/PushControls";
-import { unreadCount } from "@/lib/staff-work";
+import { latestUnreadReward, unreadCount } from "@/lib/staff-work";
+import { RewardBannerHost } from "@/components/work/RewardBannerHost";
 
 export const metadata: Metadata = { title: { default: "My Dashboard", template: "%s · Staff" }, robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
   // Signed-in staff only; the page decides whose numbers may be shown.
   const { roles } = await requireStaffPage(null);
   const isOwner = roles.includes("admin");
-  const [messages, unread] = await Promise.all([getMessages(), isOwner ? 0 : unreadCount("staff")]);
+  const [messages, unread, reward] = await Promise.all([getMessages(), isOwner ? 0 : unreadCount("staff"), isOwner ? null : latestUnreadReward()]);
   return (
     <NextIntlClientProvider locale="en" messages={messages} timeZone="Africa/Lagos">
       <MotionProvider>
@@ -52,6 +53,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
         <main className="mx-auto max-w-6xl px-4 py-10 sm:px-8">{children}</main>
       </div>
       {!isOwner && <HaruToasts />}
+      {!isOwner && <RewardBannerHost initial={reward} />}
       </MotionProvider>
     </NextIntlClientProvider>
   );

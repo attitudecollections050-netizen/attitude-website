@@ -146,7 +146,7 @@ export function HaruNotificationList({ initial, role, taskStatus = {} }: { initi
         setItems((list) => (list.some((x) => x.id === r.id) ? list : [fromRow(r), ...list]));
         // Ding (unless Sound is off) + a phone notification if allowed. Once per message, even
         // though the pink pop-up hears it too.
-        notify(`note-${r.id}`, r.title, r.message, { href: role === "admin" ? "/admin/staff-tasks" : r.link ?? "/staff/notifications" });
+        notify(`note-${r.id}`, r.title, r.message, { href: role === "admin" ? "/admin/staff-tasks" : r.link ?? "/staff/notifications", sound: r.type === "bonus" ? "payment" : "default" });
       })
       .subscribe();
     return () => {
@@ -274,8 +274,9 @@ export function HaruToasts() {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "staff_notifications" }, (payload) => {
         const r = payload.new as Row;
         if (r.to_role !== "staff") return;
+        if (r.type === "bonus" || r.type === "penalty") return; // the full-screen reward banner shows these
         setToasts((list) => [fromRow(r), ...list.filter((x) => x.id !== r.id)].slice(0, 3));
-        notify(`note-${r.id}`, r.title, r.message, { href: r.link ?? "/staff/notifications" });
+        notify(`note-${r.id}`, r.title, r.message, { href: r.link ?? "/staff/notifications", sound: r.type === "bonus" ? "payment" : "default" });
       })
       .subscribe();
     return () => {

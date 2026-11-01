@@ -138,6 +138,7 @@ export async function dispatchPendingPushes(): Promise<number> {
       url: toAdmin ? "/admin/staff-tasks" : row.link ?? "/staff/notifications",
       tag: `note-${row.id}`,
       icon: "/mascots/girl-face.png",
+      sound: row.type === "bonus" ? "payment" : "default",
     }, toAdmin ? "staff_work" : undefined);
     n += r.sent;
   }

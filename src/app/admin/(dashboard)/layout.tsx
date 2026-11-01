@@ -4,7 +4,8 @@ import { AdminNav } from "@/components/admin/AdminNav";
 import { MotionProvider } from "@/components/ui/MotionProvider";
 import { AdminPinkNotifications } from "@/components/admin/AdminPinkNotifications";
 import { HaruToasts } from "@/components/work/HaruNotifications";
-import { navBadges } from "@/lib/staff-work";
+import { latestUnreadReward, navBadges } from "@/lib/staff-work";
+import { RewardBannerHost } from "@/components/work/RewardBannerHost";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 
@@ -16,7 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   // Any staff role may enter; each page then checks its own permission.
   const { user, permissions } = await requireStaffPage(null);
-  const [messages, badges] = await Promise.all([getMessages(), navBadges(permissions)]);
+  const [messages, badges, reward] = await Promise.all([getMessages(), navBadges(permissions), permissions.includes("work:self") ? latestUnreadReward() : null]);
   return (
     <NextIntlClientProvider locale="en" messages={messages} timeZone="Africa/Lagos">
     <MotionProvider>
@@ -28,6 +29,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <AdminPinkNotifications orders={permissions.includes("orders:read")} withdrawals={permissions.includes("staff:manage")} staffWork={permissions.includes("staff:manage")} />
       {/* Staff: Haru's pop-ups when the owner rates their work. */}
       {permissions.includes("work:self") && <HaruToasts />}
+      {/* Staff: full-screen confetti when they win ₦25 (or the sad banner when they lose it). */}
+      {permissions.includes("work:self") && <RewardBannerHost initial={reward} />}
     </MotionProvider>
     </NextIntlClientProvider>
   );
